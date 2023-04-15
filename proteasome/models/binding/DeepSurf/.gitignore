@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*~
+results/
+*models/
+*.so
+*.o
+*.7z
+
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+

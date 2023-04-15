@@ -1,0 +1,15 @@
+numpy
+pandas
+tqdm
+scikit-learn
+wget
+torch
+matplotlib
+requests
+pandas-flavor
+subword-nmt
+lifelines
+prettytable
+tensorboard
+ax-platform
+dgllife

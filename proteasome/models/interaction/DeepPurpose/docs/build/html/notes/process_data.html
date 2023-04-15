@@ -1,0 +1,470 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Processing Data &mdash; DeepPurpose 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" type="text/css" />
+  <link rel="stylesheet" href="../../build/html/_static/css/deeppurpose_docs_theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Configuration" href="configuration.html" />
+    <link rel="prev" title="Drug/Target Encoder" href="encoder.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DeepPurpose
+          
+
+          
+            
+            <img src="../_static/logo_dp_2.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Background</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Features of DeepPurpose</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#features">Features</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="DTI.html">What is drug repurposing, virtual screening and drug-target interaction prediction?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="DTI.html#drug-repurposing">Drug Repurposing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DTI.html#virtual-screening">Virtual Screening</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DTI.html#drug-target-interaction">Drug-Target Interaction</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">How to run</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download Code &amp; Install</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="download.html#download-code">Download Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="download.html#first-time-usage-setup-conda-environment">First time usage: setup conda environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="download.html#second-time-and-later">Second time and later</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="casestudy.html">Case Study</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="models.html">DeepPurpose.models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dtba/classifier.html">Classifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dtba/dbta.html">Drug Target Binding Affinity (DTBA) Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoders/transformer.html">Transformer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoders/mpnn.html">Message Passing Neural Network (MPNN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoders/cnnrnn.html">CNN+RNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoders/cnn.html">CNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoders/mlp.html">MLP</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dataset.html">DeepPurpose.dataset</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data/read_file_training_dataset_bioassay.html">read_file_training_dataset_bioassay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/read_file_training_dataset_drug_target_pairs.html">read_file_training_dataset_drug_target_pairs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/read_file_virtual_screening_drug_target_pairs.html">read_file_virtual_screening_drug_target_pairs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/read_file_repurposing_library.html">load bioarray dataset (read_file_training_dataset_bioassay)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/read_file_target_sequence.html">read_file_target_sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/download_BindingDB.html">download_DrugTargetCommons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/process_BindingDB.html">process_BindingDB</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_process_DAVIS.html">load_process_DAVIS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_process_KIBA.html">load_process_KIBA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_AID1706_txt_file.html">load_AID1706_txt_file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_AID1706_SARS_CoV_3CL.html">load_AID1706_SARS_CoV_3CL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_antiviral_drugs.html">load_antiviral_drugs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data/load_broad_repurposing_hub.html">load_broad_repurposing_hub</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="chemutils.html">DeepPurpose.chemutils</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="chem/onek_encoding_unk.html">DeepPurpose.chemutils.onek_encoding_unk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chem/atom_features.html">DeepPurpose.chemutils.atom_features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chem/bond_features.html">DeepPurpose.chemutils.bond_features</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="oneliner.html">DeepPurpose.oneliner</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="oneliner_folder/repurpose.html">DeepPurpose.oneliner.repurpose</a></li>
+<li class="toctree-l2"><a class="reference internal" href="oneliner_folder/virtual_screening.html">DeepPurpose.oneliner.virtual_screening</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model_helper.html">DeepPurpose.model_helper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">DeepPurpose.utils</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Importance Function</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="model.html">Drug Target Binding Affinity (DTBA) Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dtba/classifier.html">Classifier</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dtba/dbta.html">Drug Target Binding Affinity (DTBA) Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="encoder.html">Drug/Target Encoder</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="encoder.html#drug-encoding">Drug encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoder.html#target-encoding">Target encoding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoder.html#encoder-model">Encoder Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="encoder.html#technical-details">Technical Details</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="encoders/transformer.html">Transformer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="encoders/mpnn.html">Message Passing Neural Network (MPNN)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="encoders/cnnrnn.html">CNN+RNN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="encoders/cnn.html">CNN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="encoders/mlp.html">MLP</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Processing Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#drug-target-binding-benchmark-dataset">Drug-Target Binding Benchmark Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#repurposing-dataset">Repurposing Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bioassay-data-for-covid-19">Bioassay Data for COVID-19</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#covid-19-targets">COVID-19 Targets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="data/read_file_training_dataset_bioassay.html">read_file_training_dataset_bioassay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/read_file_training_dataset_drug_target_pairs.html">read_file_training_dataset_drug_target_pairs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/read_file_virtual_screening_drug_target_pairs.html">read_file_virtual_screening_drug_target_pairs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/read_file_repurposing_library.html">load bioarray dataset (read_file_training_dataset_bioassay)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/read_file_target_sequence.html">read_file_target_sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/download_BindingDB.html">download_DrugTargetCommons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/process_BindingDB.html">process_BindingDB</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_process_DAVIS.html">load_process_DAVIS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_process_KIBA.html">load_process_KIBA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_AID1706_txt_file.html">load_AID1706_txt_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_AID1706_SARS_CoV_3CL.html">load_AID1706_SARS_CoV_3CL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_antiviral_drugs.html">load_antiviral_drugs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/load_broad_repurposing_hub.html">load_broad_repurposing_hub</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utility_function.html">Utility Function</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DeepPurpose</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Processing Data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notes/process_data.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="processing-data">
+<h1>Processing Data<a class="headerlink" href="#processing-data" title="Permalink to this headline">¶</a></h1>
+<p>We have downloaded most of the small dataset in the repository.</p>
+<div class="section" id="drug-target-binding-benchmark-dataset">
+<h2>Drug-Target Binding Benchmark Dataset<a class="headerlink" href="#drug-target-binding-benchmark-dataset" title="Permalink to this headline">¶</a></h2>
+<p>We list public <strong>Drug-Target Binding Benchmark Dataset</strong>
+that is supported by DeepPurpose and
+corresponding downloading and processing function.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 88%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>downloading and processing Function</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>BindingDB</p></td>
+<td><p>download_BindingDB() to download the data and process_BindingDB() to process the data</p></td>
+</tr>
+<tr class="row-odd"><td><p>DAVIS</p></td>
+<td><p>load_process_DAVIS() to download and process the data</p></td>
+</tr>
+<tr class="row-even"><td><p>KIBA</p></td>
+<td><p>load_process_KIBA() to download and process the data</p></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><p><strong>Download Link</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://www.bindingdb.org/bind/index.jsp">BindingDB</a></p></li>
+<li><p><a class="reference external" href="http://staff.cs.utu.fi/~aatapa/data/DrugTarget/">DAVIS</a></p></li>
+<li><p><a class="reference external" href="https://jcheminf.biomedcentral.com/articles/10.1186/s13321-017-0209-z">KIBA</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="repurposing-dataset">
+<h2>Repurposing Dataset<a class="headerlink" href="#repurposing-dataset" title="Permalink to this headline">¶</a></h2>
+<p>We list public <strong>Repurposing Dataset</strong>
+that is supported by DeepPurpose and
+corresponding downloading and processing function.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 36%" />
+<col style="width: 64%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>downloading and processing Function</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Curated Antiviral Drugs Library</p></td>
+<td><p>load_antiviral_drugs() to load and process the data</p></td>
+</tr>
+<tr class="row-odd"><td><p>Broad Repurposing Hub</p></td>
+<td><p>load_broad_repurposing_hub() downloads and process the data</p></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><p><strong>Download Link</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/List_of_antiviral_drugs">Curated Antiviral Drugs Library</a></p></li>
+<li><p><a class="reference external" href="https://www.broadinstitute.org/drug-repurposing-hub">Broad Repurposing Hub</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="bioassay-data-for-covid-19">
+<h2>Bioassay Data for COVID-19<a class="headerlink" href="#bioassay-data-for-covid-19" title="Permalink to this headline">¶</a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>downloading and processing Function</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>AID1706</p></td>
+<td><p>load_AID1706_SARS_CoV_3CL() to load and process</p></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><p><strong>Download Link</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://pubchem.ncbi.nlm.nih.gov/bioassay/1706">AID1706</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="covid-19-targets">
+<h2>COVID-19 Targets<a class="headerlink" href="#covid-19-targets" title="Permalink to this headline">¶</a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>downloading and processing Function</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SARS-CoV 3CL Protease</p></td>
+<td><p>load_SARS_CoV_Protease_3CL()</p></td>
+</tr>
+<tr class="row-odd"><td><p>SARS-CoV2 3CL Protease</p></td>
+<td><p>load_SARS_CoV2_Protease_3CL()</p></td>
+</tr>
+<tr class="row-even"><td><p>SARS_CoV2 RNA Polymerase</p></td>
+<td><p>load_SARS_CoV2_RNA_polymerase()</p></td>
+</tr>
+<tr class="row-odd"><td><p>SARS-CoV2 Helicase</p></td>
+<td><p>load_SARS_CoV2_Helicase()</p></td>
+</tr>
+<tr class="row-even"><td><p>SARS-CoV2 3to5_exonuclease</p></td>
+<td><p>load_SARS_CoV2_3to5_exonuclease()</p></td>
+</tr>
+<tr class="row-odd"><td><p>SARS-CoV2 endoRNAse</p></td>
+<td><p>load_SARS_CoV2_endoRNAse()</p></td>
+</tr>
+</tbody>
+</table>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Technical Details of Function</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data/read_file_training_dataset_bioassay.html">read_file_training_dataset_bioassay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/read_file_training_dataset_drug_target_pairs.html">read_file_training_dataset_drug_target_pairs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/read_file_virtual_screening_drug_target_pairs.html">read_file_virtual_screening_drug_target_pairs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/read_file_repurposing_library.html">load bioarray dataset (read_file_training_dataset_bioassay)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/read_file_target_sequence.html">read_file_target_sequence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/download_BindingDB.html">download_DrugTargetCommons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/process_BindingDB.html">process_BindingDB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_process_DAVIS.html">load_process_DAVIS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_process_KIBA.html">load_process_KIBA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_AID1706_txt_file.html">load_AID1706_txt_file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_AID1706_SARS_CoV_3CL.html">load_AID1706_SARS_CoV_3CL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_antiviral_drugs.html">load_antiviral_drugs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/load_broad_repurposing_hub.html">load_broad_repurposing_hub</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="configuration.html" class="btn btn-neutral float-right" title="Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="encoder.html" class="btn btn-neutral float-left" title="Drug/Target Encoder" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Kexin Huang, Tianfan Fu
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
