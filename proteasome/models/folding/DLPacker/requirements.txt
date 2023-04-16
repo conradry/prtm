@@ -1,4 +1,0 @@
-numpy==1.19.2
-tensorflow>=2.5.0
-pickle5==0.0.11
-biopython==1.78
