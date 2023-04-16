@@ -1,3 +1,0 @@
-include colabdesign/mpnn/weights/*.pkl
-include colabdesign/tr/weights/*.npy
-include colabdesign/af/weights/*.npy

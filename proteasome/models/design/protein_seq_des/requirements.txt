@@ -1,5 +1,0 @@
-biopython
-matplotlib
-tqdm
-tensorboardX
-scipy
