@@ -13,26 +13,24 @@
 # limitations under the License.
 
 import pickle
+import unittest
+
+import numpy as np
+import openfold.utils.feats as feats
+import tests.compare_utils as compare_utils
 import torch
 import torch.nn as nn
-import numpy as np
-import unittest
 from openfold.config import model_config
 from openfold.data import data_transforms
 from openfold.model.model import AlphaFold
-import openfold.utils.feats as feats
-from openfold.utils.tensor_utils import tree_map, tensor_tree_map
-import tests.compare_utils as compare_utils
+from openfold.utils.tensor_utils import tensor_tree_map, tree_map
 from tests.config import consts
-from tests.data_utils import (
-    random_template_feats,
-    random_extra_msa_feats,
-)
+from tests.data_utils import random_extra_msa_feats, random_template_feats
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestModel(unittest.TestCase):
@@ -61,12 +59,10 @@ class TestModel(unittest.TestCase):
         batch.update({k: torch.tensor(v) for k, v in t_feats.items()})
         extra_feats = random_extra_msa_feats(n_extra_seq, n_res)
         batch.update({k: torch.tensor(v) for k, v in extra_feats.items()})
-        batch["msa_mask"] = torch.randint(
-            low=0, high=2, size=(n_seq, n_res)
-        ).float()
+        batch["msa_mask"] = torch.randint(low=0, high=2, size=(n_seq, n_res)).float()
         batch["seq_mask"] = torch.randint(low=0, high=2, size=(n_res,)).float()
         batch.update(data_transforms.make_atom14_masks(batch))
-        batch["no_recycling_iters"] = torch.tensor(2.)
+        batch["no_recycling_iters"] = torch.tensor(2.0)
 
         add_recycling_dims = lambda t: (
             t.unsqueeze(-1).expand(*t.shape, c.data.common.max_recycling_iters)
@@ -103,19 +99,22 @@ class TestModel(unittest.TestCase):
         out_gt = alphafold.model.all_atom.atom37_to_atom14(out_gt, batch)
         out_gt = torch.as_tensor(np.array(out_gt.block_until_ready()))
 
-        batch["no_recycling_iters"] = np.array([3., 3., 3., 3.,])
+        batch["no_recycling_iters"] = np.array(
+            [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+            ]
+        )
         batch = {k: torch.as_tensor(v).cuda() for k, v in batch.items()}
 
         batch["aatype"] = batch["aatype"].long()
         batch["template_aatype"] = batch["template_aatype"].long()
         batch["extra_msa"] = batch["extra_msa"].long()
-        batch["residx_atom37_to_atom14"] = batch[
-            "residx_atom37_to_atom14"
-        ].long()
+        batch["residx_atom37_to_atom14"] = batch["residx_atom37_to_atom14"].long()
         batch["template_all_atom_mask"] = batch["template_all_atom_masks"]
-        batch.update(
-            data_transforms.atom37_to_torsion_angles("template_")(batch)
-        )
+        batch.update(data_transforms.atom37_to_torsion_angles("template_")(batch))
 
         # Move the recycling dimension to the end
         move_dim = lambda t: t.permute(*range(len(t.shape))[1:], 0)

@@ -3,19 +3,17 @@ Randomly sample angles in the test set to construct a baselines for scTM scores
 
 We sample angles by
 """
-import os
-from pathlib import Path
+import argparse
 import json
 import logging
-import argparse
-
-from tqdm.auto import tqdm
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
-
 from sample import build_datasets, create_new_chain_nerf
+from tqdm.auto import tqdm
 
 
 def random_angles_to_pdb(
@@ -84,7 +82,9 @@ def main():
     logging.info(
         f"Test set array of values: {type(test_values_stacked), test_values_stacked.shape}"
     )
-    test_values_stacked_df = pd.DataFrame(test_values_stacked, columns=test_dset.feature_names['angles'])
+    test_values_stacked_df = pd.DataFrame(
+        test_values_stacked, columns=test_dset.feature_names["angles"]
+    )
 
     dirname = Path(args.dir)
     angles_folder = dirname / "sampled_angles"

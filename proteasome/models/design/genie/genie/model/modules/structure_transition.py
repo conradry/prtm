@@ -1,7 +1,7 @@
 # Adapted from OpenFold
 # Copyright 2021 AlQuraishi Laboratory
 # Copyright 2021 DeepMind Technologies Limited
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import torch.nn as nn
-
 from genie.model.modules.primitives import Linear
 
 
@@ -24,7 +23,7 @@ class StructureTransitionLayer(nn.Module):
         super(StructureTransitionLayer, self).__init__()
 
         self.c = c
-        
+
         self.linear_1 = Linear(self.c, self.c, init="relu")
         self.linear_2 = Linear(self.c, self.c, init="relu")
         self.linear_3 = Linear(self.c, self.c, init="final")

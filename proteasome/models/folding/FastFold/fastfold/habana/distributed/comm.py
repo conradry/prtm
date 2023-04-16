@@ -18,10 +18,12 @@ def _reduce(tensor: Tensor) -> Tensor:
     if dist.get_world_size() == 1:
         return tensor
 
-    dist.all_reduce(tensor,
-                    op=dist.ReduceOp.SUM,
-                    group=get_tensor_model_parallel_group(),
-                    async_op=False)
+    dist.all_reduce(
+        tensor,
+        op=dist.ReduceOp.SUM,
+        group=get_tensor_model_parallel_group(),
+        async_op=False,
+    )
 
     return tensor
 
@@ -47,18 +49,20 @@ def _gather(tensor: Tensor, dim: int = -1) -> Tensor:
         output_shape[1] *= get_tensor_model_parallel_world_size()
         output = torch.empty(output_shape, dtype=tensor.dtype, device=tensor.device)
         tensor_list = output.chunk(get_tensor_model_parallel_world_size(), dim=1)
-        dist.all_gather(list(tensor_list),
-                        tensor,
-                        group=get_tensor_model_parallel_group(),
-                        async_op=False)
+        dist.all_gather(
+            list(tensor_list),
+            tensor,
+            group=get_tensor_model_parallel_group(),
+            async_op=False,
+        )
     else:
         tensor_list = [
-            torch.empty_like(tensor) for _ in range(get_tensor_model_parallel_world_size())
+            torch.empty_like(tensor)
+            for _ in range(get_tensor_model_parallel_world_size())
         ]
-        dist.all_gather(tensor_list,
-                        tensor,
-                        group=get_tensor_model_parallel_group(),
-                        async_op=False)
+        dist.all_gather(
+            tensor_list, tensor, group=get_tensor_model_parallel_group(), async_op=False
+        )
         output = torch.cat(tensor_list, dim=dim)
 
     return output
@@ -71,7 +75,6 @@ def copy(input: Tensor) -> Tensor:
 
 
 class Copy(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx: "Copy", input: Tensor) -> Tensor:
         return input
@@ -90,7 +93,6 @@ def scatter(input: Tensor, dim: int = -1) -> Tensor:
 
 
 class Scatter(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx: "Scatter", input: Tensor, dim: int = -1) -> Tensor:
         ctx.save_for_backward(torch.tensor([dim]))
@@ -98,7 +100,7 @@ class Scatter(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx: "Scatter", grad_output: Tensor) -> Tuple[Tensor]:
-        dim, = ctx.saved_tensors
+        (dim,) = ctx.saved_tensors
         return _gather(grad_output, dim=int(dim)), None
 
 
@@ -111,7 +113,6 @@ def reduce(input: Tensor) -> Tensor:
 
 
 class Reduce(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx: "Reduce", input: Tensor) -> Tensor:
         return _reduce(input)
@@ -130,7 +131,6 @@ def gather(input: Tensor, dim: int = -1) -> Tensor:
 
 
 class Gather(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx: "Gather", input: Tensor, dim: int = -1) -> Tensor:
         ctx.save_for_backward(torch.tensor([dim]))
@@ -138,7 +138,7 @@ class Gather(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx: "Gather", grad_output: Tensor) -> Tuple[Tensor]:
-        dim, = ctx.saved_tensors
+        (dim,) = ctx.saved_tensors
         return _split(grad_output, dim=int(dim)), None
 
 
@@ -175,14 +175,20 @@ def row_to_col(input_: Tensor) -> Tensor:
 
 
 class All_to_All(torch.autograd.Function):
-
     @staticmethod
-    def forward(ctx: "All_to_All", input_: Tensor, in_dim: int = -1, out_dim: int = -1) -> Tensor:
+    def forward(
+        ctx: "All_to_All", input_: Tensor, in_dim: int = -1, out_dim: int = -1
+    ) -> Tensor:
         ctx.save_for_backward(torch.tensor([in_dim, out_dim]))
         return _all_to_all(input_, in_dim=in_dim, out_dim=out_dim)
 
     @staticmethod
     def backward(ctx: "All_to_All", grad_output: Tensor) -> Tuple[Tensor]:
         saved_tensors = ctx.saved_tensors[0]
-        return _all_to_all(grad_output, in_dim=int(saved_tensors[1]),
-                           out_dim=int(saved_tensors[0])), None, None
+        return (
+            _all_to_all(
+                grad_output, in_dim=int(saved_tensors[1]), out_dim=int(saved_tensors[0])
+            ),
+            None,
+            None,
+        )

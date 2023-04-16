@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .multihead_attention import MultiheadAttention  # noqa
 from .axial_attention import ColumnSelfAttention, RowSelfAttention
+from .multihead_attention import MultiheadAttention  # noqa
 
 
 def gelu(x):
@@ -45,7 +45,9 @@ class ESM1LayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-12, affine=True):
         """Construct a layernorm layer in the TF style (eps inside the sqrt)."""
         super().__init__()
-        self.hidden_size = (hidden_size,) if isinstance(hidden_size, int) else tuple(hidden_size)
+        self.hidden_size = (
+            (hidden_size,) if isinstance(hidden_size, int) else tuple(hidden_size)
+        )
         self.eps = eps
         self.affine = bool(affine)
         if self.affine:
@@ -118,7 +120,11 @@ class TransformerLayer(nn.Module):
         self.final_layer_norm = BertLayerNorm(self.embed_dim)
 
     def forward(
-        self, x, self_attn_mask=None, self_attn_padding_mask=None, need_head_weights=False
+        self,
+        x,
+        self_attn_mask=None,
+        self_attn_padding_mask=None,
+        need_head_weights=False,
     ):
         residual = x
         x = self.self_attn_layer_norm(x)
@@ -245,7 +251,9 @@ class LearnedPositionalEmbedding(nn.Embedding):
                 f" sequence length of {self.max_positions}"
             )
         mask = input.ne(self.padding_idx).int()
-        positions = (torch.cumsum(mask, dim=1).type_as(mask) * mask).long() + self.padding_idx
+        positions = (
+            torch.cumsum(mask, dim=1).type_as(mask) * mask
+        ).long() + self.padding_idx
         return F.embedding(
             positions,
             self.weight,
@@ -273,11 +281,17 @@ class SinusoidalPositionalEmbedding(nn.Module):
         self.weights = self.weights.type_as(self._float_tensor)
 
         positions = self.make_positions(x)
-        return self.weights.index_select(0, positions.view(-1)).view(bsz, seq_len, -1).detach()
+        return (
+            self.weights.index_select(0, positions.view(-1))
+            .view(bsz, seq_len, -1)
+            .detach()
+        )
 
     def make_positions(self, x):
         mask = x.ne(self.padding_idx)
-        range_buf = torch.arange(x.size(1), device=x.device).expand_as(x) + self.padding_idx + 1
+        range_buf = (
+            torch.arange(x.size(1), device=x.device).expand_as(x) + self.padding_idx + 1
+        )
         positions = range_buf.expand_as(x)
         return positions * mask.long() + self.padding_idx * (1 - mask.long())
 
@@ -285,8 +299,12 @@ class SinusoidalPositionalEmbedding(nn.Module):
         half_dim = self.embed_dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)
-        emb = torch.arange(num_embeddings, dtype=torch.float).unsqueeze(1) * emb.unsqueeze(0)
-        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(num_embeddings, -1)
+        emb = torch.arange(num_embeddings, dtype=torch.float).unsqueeze(
+            1
+        ) * emb.unsqueeze(0)
+        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(
+            num_embeddings, -1
+        )
         if self.embed_dim % 2 == 1:
             # zero pad
             emb = torch.cat([emb, torch.zeros(num_embeddings, 1)], dim=1)
@@ -330,7 +348,9 @@ class ContactPredictionHead(nn.Module):
         self.prepend_bos = prepend_bos
         self.append_eos = append_eos
         if append_eos and eos_idx is None:
-            raise ValueError("Using an alphabet with eos token, but no eos token was passed in.")
+            raise ValueError(
+                "Using an alphabet with eos token, but no eos token was passed in."
+            )
         self.eos_idx = eos_idx
         self.regression = nn.Linear(in_features, 1, bias)
         self.activation = nn.Sigmoid()

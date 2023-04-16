@@ -19,7 +19,6 @@ import subprocess
 from typing import Sequence
 
 from absl import logging
-
 from fastfold.data.tools import utils
 
 
@@ -28,8 +27,8 @@ def _to_a3m(sequences: Sequence[str]) -> str:
     names = ["sequence %d" % i for i in range(1, len(sequences) + 1)]
     a3m = []
     for sequence, name in zip(sequences, names):
-        a3m.append(u">" + name + u"\n")
-        a3m.append(sequence + u"\n")
+        a3m.append(">" + name + "\n")
+        a3m.append(sequence + "\n")
     return "".join(a3m)
 
 

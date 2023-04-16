@@ -35,16 +35,17 @@ def flatten_graph(node_embeddings, edge_embeddings, edge_index):
 
     edge_mask = torch.any(edge_index != -1, dim=1)
     # Re-number the nodes by adding batch_idx * N to each batch
-    edge_index = edge_index + (torch.arange(batch_size, device=edge_index.device) *
-            N).unsqueeze(-1).unsqueeze(-1)
+    edge_index = edge_index + (
+        torch.arange(batch_size, device=edge_index.device) * N
+    ).unsqueeze(-1).unsqueeze(-1)
     edge_index = edge_index.permute(1, 0, 2).flatten(1, 2)
     edge_mask = edge_mask.flatten()
-    edge_index = edge_index[:, edge_mask] 
+    edge_index = edge_index[:, edge_mask]
     edge_embeddings = (
         edge_embeddings[0][edge_mask, :],
-        edge_embeddings[1][edge_mask, :]
+        edge_embeddings[1][edge_mask, :],
     )
-    return node_embeddings, edge_embeddings, edge_index 
+    return node_embeddings, edge_embeddings, edge_index
 
 
 def unflatten_graph(node_embeddings, batch_size):
@@ -64,5 +65,3 @@ def unflatten_graph(node_embeddings, batch_size):
     x_s = x_s.reshape(batch_size, -1, x_s.shape[1])
     x_v = x_v.reshape(batch_size, -1, x_v.shape[1], x_v.shape[2])
     return (x_s, x_v)
-
-

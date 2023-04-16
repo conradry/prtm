@@ -14,29 +14,25 @@
 # limitations under the License.
 
 import math
+from typing import Any, Dict, Optional, Tuple, Union
 
+import fastfold.common.residue_constants as rc
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Any, Dict, Optional, Tuple, Union
-
 from fastfold.common import protein
-import fastfold.common.residue_constants as rc
 from fastfold.utils.geometry.rigid_matrix_vector import Rigid3Array
 from fastfold.utils.geometry.rotation_matrix import Rot3Array
-from fastfold.utils.rigid_utils import Rotation, Rigid
-from fastfold.utils.tensor_utils import (
-    batched_gather,
-    one_hot,
-    tree_map,
-    tensor_tree_map,
-)
+from fastfold.utils.rigid_utils import Rigid, Rotation
+from fastfold.utils.tensor_utils import (batched_gather, one_hot,
+                                         tensor_tree_map, tree_map)
+
 
 def dgram_from_positions(
-    pos: torch.Tensor, 
-    min_bin: float = 3.25, 
-    max_bin: float = 50.75, 
-    no_bins: float = 39, 
+    pos: torch.Tensor,
+    min_bin: float = 3.25,
+    max_bin: float = 50.75,
+    no_bins: float = 39,
     inf: float = 1e8,
 ) -> torch.Tensor:
     dgram = torch.sum(
@@ -47,6 +43,7 @@ def dgram_from_positions(
     dgram = ((dgram > lower).type(dgram.dtype) * (dgram < upper)).type(dgram.dtype)
 
     return dgram
+
 
 def pseudo_beta_fn(
     aatype, all_atom_positions: torch.Tensor, all_atom_masks: torch.Tensor
@@ -112,8 +109,8 @@ def build_template_pair_feat(
     use_unit_vector: bool = False,
     eps: float = 1e-20,
     inf: float = 1e8,
-    chunk=None
-):  
+    chunk=None,
+):
     if chunk and 1 <= chunk <= 4:
         for k, v in batch.items():
             batch[k] = v.cpu()
@@ -134,12 +131,14 @@ def build_template_pair_feat(
 
     n_res = batch["template_aatype"].shape[-1]
     to_concat.append(
-        aatype_one_hot[..., None, :, :].expand(
-            *aatype_one_hot.shape[:-2], n_res, -1, -1
-        ).to(dgram.dtype)
+        aatype_one_hot[..., None, :, :]
+        .expand(*aatype_one_hot.shape[:-2], n_res, -1, -1)
+        .to(dgram.dtype)
     )
     to_concat.append(
-        aatype_one_hot[..., None, :].expand(*aatype_one_hot.shape[:-2], -1, n_res, -1).to(dgram.dtype)
+        aatype_one_hot[..., None, :]
+        .expand(*aatype_one_hot.shape[:-2], -1, n_res, -1)
+        .to(dgram.dtype)
     )
 
     n, ca, c = [rc.atom_order[a] for a in ["N", "CA", "C"]]

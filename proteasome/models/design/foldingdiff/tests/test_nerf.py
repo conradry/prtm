@@ -9,10 +9,8 @@ import unittest
 import numpy as np
 import torch
 from biotite.structure import dihedral
-
-from foldingdiff import nerf
 from foldingdiff import angles_and_coords as ac
-from foldingdiff import tmalign
+from foldingdiff import nerf, tmalign
 
 
 class TestDihedralPlacement(unittest.TestCase):

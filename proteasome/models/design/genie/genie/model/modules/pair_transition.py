@@ -1,7 +1,7 @@
 # Adapted from OpenFold
 # Copyright 2021 AlQuraishi Laboratory
 # Copyright 2021 DeepMind Technologies Limited
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,23 +16,23 @@
 
 import torch
 import torch.nn as nn
-
 from genie.model.modules.primitives import Linear
 from genie.utils.tensor_utils import chunk_layer
 
 
 class PairTransition(nn.Module):
     """
-        Implements Algorithm 15.
+    Implements Algorithm 15.
     """
+
     def __init__(self, c_z, n, chunk_size=4):
         """
-            Args:
-                c_z:
-                    Pair transition channel dimension
-                n:
-                    Factor by which c_z is multiplied to obtain hidden channel 
-                    dimension
+        Args:
+            c_z:
+                Pair transition channel dimension
+            n:
+                Factor by which c_z is multiplied to obtain hidden channel
+                dimension
         """
         super(PairTransition, self).__init__()
 
@@ -57,14 +57,14 @@ class PairTransition(nn.Module):
 
     def forward(self, z, mask=None):
         """
-            Args:
-                z:
-                    [*, N_res, N_res, C_z] pair embedding
-            Returns:
-                [*, N_res, N_res, C_z] pair embedding update
+        Args:
+            z:
+                [*, N_res, N_res, C_z] pair embedding
+        Returns:
+            [*, N_res, N_res, C_z] pair embedding update
         """
         # DISCREPANCY: DeepMind forgets to apply the mask in this module.
-        if(mask is None):
+        if mask is None:
             mask = z.new_ones(z.shape[:-1], requires_grad=False)
 
         # [*, N_res, N_res, 1]
@@ -74,12 +74,12 @@ class PairTransition(nn.Module):
         z = self.layer_norm(z)
 
         inp = {"z": z, "mask": mask}
-        if(not self.training and self.chunk_size is not None):
+        if not self.training and self.chunk_size is not None:
             z = chunk_layer(
                 self._transition,
                 inp,
                 chunk_size=self.chunk_size,
-                no_batch_dims=len(z.shape[:-2]), 
+                no_batch_dims=len(z.shape[:-2]),
             )
         else:
             z = self._transition(**inp)

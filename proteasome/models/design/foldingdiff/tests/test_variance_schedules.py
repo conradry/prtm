@@ -5,7 +5,6 @@ Tests for variance schedules
 import unittest
 
 import torch
-
 from foldingdiff import beta_schedules
 
 

@@ -12,22 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
-from openfold.model.template import (
-    TemplatePointwiseAttention,
-    TemplatePairStack,
-)
-from openfold.utils.tensor_utils import tree_map
+
+import numpy as np
 import tests.compare_utils as compare_utils
+import torch
+from openfold.model.template import (TemplatePairStack,
+                                     TemplatePointwiseAttention)
+from openfold.utils.tensor_utils import tree_map
 from tests.config import consts
 from tests.data_utils import random_template_feats
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestTemplatePointwiseAttention(unittest.TestCase):
@@ -41,9 +40,7 @@ class TestTemplatePointwiseAttention(unittest.TestCase):
         n_res = consts.n_res
         inf = 1e7
 
-        tpa = TemplatePointwiseAttention(
-            c_t, c_z, c, no_heads, inf=inf
-        )
+        tpa = TemplatePointwiseAttention(c_t, c_z, c, no_heads, inf=inf)
 
         t = torch.rand((batch_size, n_seq, n_res, n_res, c_t))
         z = torch.rand((batch_size, n_res, n_res, c_z))
@@ -111,9 +108,9 @@ class TestTemplatePairStack(unittest.TestCase):
         n_res = consts.n_res
 
         pair_act = np.random.rand(n_res, n_res, consts.c_t).astype(np.float32)
-        pair_mask = np.random.randint(
-            low=0, high=2, size=(n_res, n_res)
-        ).astype(np.float32)
+        pair_mask = np.random.randint(low=0, high=2, size=(n_res, n_res)).astype(
+            np.float32
+        )
 
         params = compare_utils.fetch_alphafold_module_weights(
             "alphafold/alphafold_iteration/evoformer/template_embedding/"
@@ -182,7 +179,7 @@ class Template(unittest.TestCase):
             torch.as_tensor(pair_act).cuda(),
             torch.as_tensor(pair_mask).cuda(),
             templ_dim=0,
-            inplace_safe=False
+            inplace_safe=False,
         )
         out_repro = out_repro["template_pair_embedding"]
         out_repro = out_repro.cpu()

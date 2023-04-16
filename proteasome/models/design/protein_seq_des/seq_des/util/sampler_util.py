@@ -1,11 +1,9 @@
-import torch
-import numpy as np
-
-import seq_des.util.data as data
-import seq_des.util.canonicalize as canonicalize
-import seq_des.util.voxelize as voxelize
 import common.atoms
-
+import numpy as np
+import seq_des.util.canonicalize as canonicalize
+import seq_des.util.data as data
+import seq_des.util.voxelize as voxelize
+import torch
 import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 
@@ -28,7 +26,12 @@ def get_CB_distance(x, x_data):
         else:
             A.append(x[idx_CA])
     A = np.array(A)[:, 0, :3]
-    D = np.sqrt(np.sum((A[:, None].repeat(len(A), axis=1) - A[None].repeat(len(A), axis=0)) ** 2, -1))
+    D = np.sqrt(
+        np.sum(
+            (A[:, None].repeat(len(A), axis=1) - A[None].repeat(len(A), axis=0)) ** 2,
+            -1,
+        )
+    )
     return D
 
 
@@ -58,9 +61,21 @@ def get_energy_from_logits(logits, res_idx, mask=None, baseline=0):
 
 
 def get_conv_feat(
-    curr_models, atom_coords, atom_data, residue_bb_index_list, res_data, res_label, chis, bb_only=0, return_chi=0, use_cuda=1
-):  
-    atom_coords_canonicalized, atom_data_canonicalized = canonicalize.batch_canonicalize_coords(
+    curr_models,
+    atom_coords,
+    atom_data,
+    residue_bb_index_list,
+    res_data,
+    res_label,
+    chis,
+    bb_only=0,
+    return_chi=0,
+    use_cuda=1,
+):
+    (
+        atom_coords_canonicalized,
+        atom_data_canonicalized,
+    ) = canonicalize.batch_canonicalize_coords(
         atom_coords, atom_data, residue_bb_index_list, bb_only=bb_only
     )
 
@@ -68,7 +83,9 @@ def get_conv_feat(
     y = res_label
     x_data = atom_data_canonicalized
 
-    voxels = voxelize.voxelize(x, x_data, n=20, c=len(common.atoms.atoms), dist=10, bb_only=bb_only)
+    voxels = voxelize.voxelize(
+        x, x_data, n=20, c=len(common.atoms.atoms), dist=10, bb_only=bb_only
+    )
     voxels = torch.FloatTensor(voxels)
     bs_i = voxels.size()[0]
     if use_cuda:
@@ -87,10 +104,18 @@ def get_conv_feat(
     chi_4 = chi_angles_binned[..., 3]
 
     # get chi onehot vectors -- NOTE can make this faster by precomputing, saving zero tensors
-    chi_1_onehot = make_onehot(bs_i, len(data.CHI_BINS), chi_1[:, None], use_cuda=use_cuda)
-    chi_2_onehot = make_onehot(bs_i, len(data.CHI_BINS), chi_2[:, None], use_cuda=use_cuda)
-    chi_3_onehot = make_onehot(bs_i, len(data.CHI_BINS), chi_3[:, None], use_cuda=use_cuda)
-    chi_4_onehot = make_onehot(bs_i, len(data.CHI_BINS), chi_4[:, None], use_cuda=use_cuda)
+    chi_1_onehot = make_onehot(
+        bs_i, len(data.CHI_BINS), chi_1[:, None], use_cuda=use_cuda
+    )
+    chi_2_onehot = make_onehot(
+        bs_i, len(data.CHI_BINS), chi_2[:, None], use_cuda=use_cuda
+    )
+    chi_3_onehot = make_onehot(
+        bs_i, len(data.CHI_BINS), chi_3[:, None], use_cuda=use_cuda
+    )
+    chi_4_onehot = make_onehot(
+        bs_i, len(data.CHI_BINS), chi_4[:, None], use_cuda=use_cuda
+    )
 
     y = torch.LongTensor(y)
     y_onehot = make_onehot(bs_i, 20, y[:, None], use_cuda=use_cuda)
@@ -107,8 +132,19 @@ def get_conv_feat(
 
     with torch.no_grad():
         for model in curr_models:
-            feat, res_pred_logits, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred = model.get_feat(
-                voxels, y_onehot, chi_1_onehot[:, 1:], chi_2_onehot[:, 1:], chi_3_onehot[:, 1:]
+            (
+                feat,
+                res_pred_logits,
+                chi_1_pred,
+                chi_2_pred,
+                chi_3_pred,
+                chi_4_pred,
+            ) = model.get_feat(
+                voxels,
+                y_onehot,
+                chi_1_onehot[:, 1:],
+                chi_2_onehot[:, 1:],
+                chi_3_onehot[:, 1:],
             )
             logits_out.append(res_pred_logits[None])
             chi_feat_out.append(feat[None])
@@ -149,7 +185,7 @@ def get_conv_feat(
         chi_4,
         chi_angles,
         chi_mask,
-    )  
+    )
 
 
 def get_energy_from_feat(
@@ -197,41 +233,109 @@ def get_energy_from_feat(
     chi_3[chi_3 < 0] = 0
     chi_4[chi_4 < 0] = 0
 
-    log_p_per_res_chi_1, log_p_per_res_chi_1_mean = get_energy_from_logits(chi_1_logits, chi_1, mask=chi_1_mask, baseline=1.3183412514892)
-    log_p_per_res_chi_2, log_p_per_res_chi_2_mean = get_energy_from_logits(chi_2_logits, chi_2, mask=chi_2_mask, baseline=1.5970909799808386)
-    log_p_per_res_chi_3, log_p_per_res_chi_3_mean = get_energy_from_logits(chi_3_logits, chi_3, mask=chi_3_mask, baseline=2.231545756901711)
-    log_p_per_res_chi_4, log_p_per_res_chi_4_mean = get_energy_from_logits(chi_4_logits, chi_4, mask=chi_4_mask, baseline=2.084356748355477)
+    log_p_per_res_chi_1, log_p_per_res_chi_1_mean = get_energy_from_logits(
+        chi_1_logits, chi_1, mask=chi_1_mask, baseline=1.3183412514892
+    )
+    log_p_per_res_chi_2, log_p_per_res_chi_2_mean = get_energy_from_logits(
+        chi_2_logits, chi_2, mask=chi_2_mask, baseline=1.5970909799808386
+    )
+    log_p_per_res_chi_3, log_p_per_res_chi_3_mean = get_energy_from_logits(
+        chi_3_logits, chi_3, mask=chi_3_mask, baseline=2.231545756901711
+    )
+    log_p_per_res_chi_4, log_p_per_res_chi_4_mean = get_energy_from_logits(
+        chi_4_logits, chi_4, mask=chi_4_mask, baseline=2.084356748355477
+    )
 
     if return_log_ps:
-        return log_p_mean, log_p_per_res_chi_1_mean, log_p_per_res_chi_2_mean, log_p_per_res_chi_3_mean, log_p_per_res_chi_4_mean
+        return (
+            log_p_mean,
+            log_p_per_res_chi_1_mean,
+            log_p_per_res_chi_2_mean,
+            log_p_per_res_chi_3_mean,
+            log_p_per_res_chi_4_mean,
+        )
 
     if include_rotamer_probs:
         # get per residue log probs (autoregressive)
-        log_p_per_res = log_p_per_res + log_p_per_res_chi_1 + log_p_per_res_chi_2 + log_p_per_res_chi_3 + log_p_per_res_chi_4
+        log_p_per_res = (
+            log_p_per_res
+            + log_p_per_res_chi_1
+            + log_p_per_res_chi_2
+            + log_p_per_res_chi_3
+            + log_p_per_res_chi_4
+        )
         # optimize mean log prob across residues
         log_p_mean = log_p_per_res.mean()
 
     return log_p_per_res, log_p_mean
 
 
-def get_energy(models, pose=None, pdb=None, chain="A", bb_only=0, return_chi=0, use_cuda=1, log_path="./", include_rotamer_probs=0):
+def get_energy(
+    models,
+    pose=None,
+    pdb=None,
+    chain="A",
+    bb_only=0,
+    return_chi=0,
+    use_cuda=1,
+    log_path="./",
+    include_rotamer_probs=0,
+):
     if pdb is not None:
-        atom_coords, atom_data, residue_bb_index_list, res_data, res_label, chis = data.get_pdb_data(
-            pdb[pdb.rfind("/") + 1 : -4], data_dir=pdb[: pdb.rfind("/")], skip_download=1, assembly=0
+        (
+            atom_coords,
+            atom_data,
+            residue_bb_index_list,
+            res_data,
+            res_label,
+            chis,
+        ) = data.get_pdb_data(
+            pdb[pdb.rfind("/") + 1 : -4],
+            data_dir=pdb[: pdb.rfind("/")],
+            skip_download=1,
+            assembly=0,
         )
     else:
         assert pose is not None, "need to specify pose to calc energy"
         pose.dump_pdb(log_path + "/" + "curr.pdb")
-        atom_coords, atom_data, residue_bb_index_list, res_data, res_label, chis = data.get_pdb_data(
-            "curr", data_dir=log_path, skip_download=1, assembly=0
-        )
+        (
+            atom_coords,
+            atom_data,
+            residue_bb_index_list,
+            res_data,
+            res_label,
+            chis,
+        ) = data.get_pdb_data("curr", data_dir=log_path, skip_download=1, assembly=0)
 
     # get residue and rotamer logits
-    logits, chi_feat, y, chi_1_logits, chi_2_logits, chi_3_logits, chi_4_logits, chi_1, chi_2, chi_3, chi_4, chi_angles, chi_mask = get_conv_feat(
-        models, atom_coords, atom_data, residue_bb_index_list, res_data, res_label, chis, bb_only=bb_only, return_chi=return_chi, use_cuda=use_cuda
+    (
+        logits,
+        chi_feat,
+        y,
+        chi_1_logits,
+        chi_2_logits,
+        chi_3_logits,
+        chi_4_logits,
+        chi_1,
+        chi_2,
+        chi_3,
+        chi_4,
+        chi_angles,
+        chi_mask,
+    ) = get_conv_feat(
+        models,
+        atom_coords,
+        atom_data,
+        residue_bb_index_list,
+        res_data,
+        res_label,
+        chis,
+        bb_only=bb_only,
+        return_chi=return_chi,
+        use_cuda=use_cuda,
     )
 
-    # get model negative log probs (model energy) 
+    # get model negative log probs (model energy)
     log_p_per_res, log_p_mean = get_energy_from_feat(
         models,
         logits,
@@ -252,7 +356,16 @@ def get_energy(models, pose=None, pdb=None, chain="A", bb_only=0, return_chi=0, 
     )
 
     if return_chi:
-        return res_label, log_p_per_res, log_p_mean, logits, chi_feat, chi_angles, chi_mask, [chi_1, chi_2, chi_3, chi_4]
+        return (
+            res_label,
+            log_p_per_res,
+            log_p_mean,
+            logits,
+            chi_feat,
+            chi_angles,
+            chi_mask,
+            [chi_1, chi_2, chi_3, chi_4],
+        )
     return res_label, log_p_per_res, log_p_mean, logits, chi_feat, chi_angles, chi_mask
 
 
@@ -300,7 +413,9 @@ def get_chi_4_logits(curr_models, chi_feat, chi_1_onehot, chi_2_onehot, chi_3_on
     chi_4_pred_out = []
     with torch.no_grad():
         for model in curr_models:
-            chi_4_pred = model.get_chi_4(chi_feat, chi_1_onehot, chi_2_onehot, chi_3_onehot)
+            chi_4_pred = model.get_chi_4(
+                chi_feat, chi_1_onehot, chi_2_onehot, chi_3_onehot
+            )
             chi_4_pred_out.append(chi_4_pred[None])
         chi_4_pred_out = torch.cat(chi_4_pred_out, 0).mean(0)
     return chi_4_pred_out
@@ -310,11 +425,15 @@ def sample_chi(chi_logits, use_cuda=True):
     # sample chi bin from predicted distribution
     chi_dist = Categorical(logits=chi_logits)
     chi_idx = chi_dist.sample().cpu().data.numpy()
-    chi = torch.LongTensor(chi_idx) 
+    chi = torch.LongTensor(chi_idx)
     # get one-hot encoding of sampled bin for autoregressive unroll
-    chi_onehot = make_onehot(chi_logits.size()[0], len(data.CHI_BINS) - 1, chi[:, None], use_cuda=use_cuda)
+    chi_onehot = make_onehot(
+        chi_logits.size()[0], len(data.CHI_BINS) - 1, chi[:, None], use_cuda=use_cuda
+    )
     # sample chi angle (real) uniformly within bin
-    chi_real = np.random.uniform(low=data.CHI_BINS[chi_idx], high=data.CHI_BINS[chi_idx + 1])
+    chi_real = np.random.uniform(
+        low=data.CHI_BINS[chi_idx], high=data.CHI_BINS[chi_idx + 1]
+    )
     return chi, chi_real, chi_onehot
 
 
@@ -335,7 +454,9 @@ def get_symm_chi(chi_pred_out, symm_idx_ptr, use_cuda=True, debug=False):
 
     chi_onehot_out = []
     for i, ptr in enumerate(symm_idx_ptr):
-        chi_onehot_out.append(torch.cat([chi_onehot[i][None] for j in range(len(ptr))], 0))
+        chi_onehot_out.append(
+            torch.cat([chi_onehot[i][None] for j in range(len(ptr))], 0)
+        )
     chi_onehot = torch.cat(chi_onehot_out, 0)
     return chi_real, chi_onehot
 
@@ -346,7 +467,9 @@ def color_nodes(graph, nodes):
     # Consider nodes in descending degree
     for node in nodes:  # sorted(graph, key=lambda x: len(graph[x]), reverse=True):
         neighbor_colors = set(color_map.get(neigh) for neigh in graph[node])
-        color_map[node] = next(color for color in range(len(graph)) if color not in neighbor_colors)
+        color_map[node] = next(
+            color for color in range(len(graph)) if color not in neighbor_colors
+        )
     return color_map
 
 

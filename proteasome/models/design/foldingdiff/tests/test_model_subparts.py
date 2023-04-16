@@ -5,7 +5,6 @@ tests for model subparts
 import unittest
 
 import torch
-
 from foldingdiff import modelling
 
 

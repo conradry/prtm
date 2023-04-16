@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
-from openfold.model.embedders import (
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateAngleEmbedder,
-    TemplatePairEmbedder,
-)
+
+import numpy as np
+import torch
+from openfold.model.embedders import (InputEmbedder, RecyclingEmbedder,
+                                      TemplateAngleEmbedder,
+                                      TemplatePairEmbedder)
 
 
 class TestInputEmbedder(unittest.TestCase):

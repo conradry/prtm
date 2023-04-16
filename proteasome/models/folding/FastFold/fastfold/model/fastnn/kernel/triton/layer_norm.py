@@ -1,5 +1,4 @@
 import torch
-
 import triton
 import triton.language as tl
 
@@ -26,15 +25,19 @@ def _layer_norm_fwd_fused(
     _mean = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
     for off in range(0, N, BLOCK_SIZE):
         cols = off + tl.arange(0, BLOCK_SIZE)
-        a = tl.load(A + cols, mask=cols < N, other=0.,).to(tl.float32)
+        a = tl.load(
+            A + cols,
+            mask=cols < N,
+            other=0.0,
+        ).to(tl.float32)
         _mean += a
     mean = tl.sum(_mean, axis=0) / N
     # compute variance
     _var = tl.zeros([BLOCK_SIZE], dtype=tl.float32)
     for off in range(0, N, BLOCK_SIZE):
         cols = off + tl.arange(0, BLOCK_SIZE)
-        a = tl.load(A + cols, mask=cols < N, other=0.).to(tl.float32)
-        a = tl.where(cols < N, a - mean, 0.)
+        a = tl.load(A + cols, mask=cols < N, other=0.0).to(tl.float32)
+        a = tl.where(cols < N, a - mean, 0.0)
         _var += a * a
     var = tl.sum(_var, axis=0) / N
     rstd = 1 / tl.sqrt(var + eps)
@@ -47,7 +50,7 @@ def _layer_norm_fwd_fused(
         mask = cols < N
         weight = tl.load(Weight + cols, mask=mask)
         bias = tl.load(Bias + cols, mask=mask)
-        a = tl.load(A + cols, mask=mask, other=0.).to(tl.float32)
+        a = tl.load(A + cols, mask=mask, other=0.0).to(tl.float32)
         a_hat = (a - mean) * rstd
         out = a_hat * weight + bias
         # # write-back
@@ -91,7 +94,7 @@ def _layer_norm_bwd_dx_fused(
         _mean1 += a_hat * wdout
         _mean2 += wdout
     mean1 = tl.sum(_mean1, axis=0) / NumCols
-    mean2 = 0.
+    mean2 = 0.0
     mean2 = tl.sum(_mean2, axis=0) / NumCols
     for off in range(0, NumCols, BLOCK_SIZE_N):
         cols = off + tl.arange(0, BLOCK_SIZE_N)
@@ -130,10 +133,10 @@ def _layer_norm_bwd_dwdb(
             rows = i + j * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
             mask = (rows[:, None] < M) & (cols[None, :] < N)
             offs = rows[:, None] * N + cols[None, :]
-            a = tl.load(A + offs, mask=mask, other=0.).to(tl.float32)
-            dout = tl.load(DOut + offs, mask=mask, other=0.).to(tl.float32)
-            mean = tl.load(Mean + rows, mask=rows < M, other=0.)
-            rstd = tl.load(Var + rows, mask=rows < M, other=0.)
+            a = tl.load(A + offs, mask=mask, other=0.0).to(tl.float32)
+            dout = tl.load(DOut + offs, mask=mask, other=0.0).to(tl.float32)
+            mean = tl.load(Mean + rows, mask=rows < M, other=0.0)
+            rstd = tl.load(Var + rows, mask=rows < M, other=0.0)
             a_hat = (a - mean[:, None]) * rstd[:, None]
             dw += dout * a_hat
             db += dout
@@ -144,7 +147,6 @@ def _layer_norm_bwd_dwdb(
 
 
 class LayerNormTritonFunc(torch.autograd.Function):
-
     def forward(ctx, a_raw, normalized_shape, weight, bias, eps):
         # allocate output
         a = a_raw.contiguous()
@@ -198,8 +200,12 @@ class LayerNormTritonFunc(torch.autograd.Function):
         # also compute partial sums for DW and DB
         x_arg = a.reshape(-1, a.shape[-1])
         M, N = x_arg.shape
-        dweight = torch.empty((weight.shape[0],), dtype=weight.dtype, device=weight.device)
-        dbias = torch.empty((weight.shape[0],), dtype=weight.dtype, device=weight.device)
+        dweight = torch.empty(
+            (weight.shape[0],), dtype=weight.dtype, device=weight.device
+        )
+        dbias = torch.empty(
+            (weight.shape[0],), dtype=weight.dtype, device=weight.device
+        )
         _layer_norm_bwd_dx_fused[(M,)](
             da,
             dout,
@@ -228,15 +234,17 @@ class LayerNormTritonFunc(torch.autograd.Function):
             BLOCK_SIZE_M = 256
             num_warps = 8
         grid = lambda meta: [triton.cdiv(N, meta["BLOCK_SIZE_N"])]
-        _layer_norm_bwd_dwdb[grid](a,
-                                   dout,
-                                   mean,
-                                   var,
-                                   dweight,
-                                   dbias,
-                                   M,
-                                   N,
-                                   BLOCK_SIZE_M=BLOCK_SIZE_M,
-                                   BLOCK_SIZE_N=BLOCK_SIZE_N,
-                                   num_warps=num_warps)
+        _layer_norm_bwd_dwdb[grid](
+            a,
+            dout,
+            mean,
+            var,
+            dweight,
+            dbias,
+            M,
+            N,
+            BLOCK_SIZE_M=BLOCK_SIZE_M,
+            BLOCK_SIZE_N=BLOCK_SIZE_N,
+            num_warps=num_warps,
+        )
         return (da, None, dweight, dbias, None)

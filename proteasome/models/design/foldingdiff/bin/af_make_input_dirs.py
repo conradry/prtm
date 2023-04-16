@@ -3,10 +3,10 @@ Script to make the inputs for alphafold to run on sherlock
 
 Copy fasta files and rename them to a3m files (this skips MSA)
 """
+import argparse
+import logging
 import os
 import shutil
-import logging
-import argparse
 from pathlib import Path
 
 import numpy as np

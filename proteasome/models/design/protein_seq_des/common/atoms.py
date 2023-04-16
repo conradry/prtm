@@ -2,7 +2,9 @@ import string
 
 letters = string.ascii_uppercase
 
-rename_chains = {i: letters[i] for i in range(26)}  # NOTE -- expect errors if you have more than 26 structures
+rename_chains = {
+    i: letters[i] for i in range(26)
+}  # NOTE -- expect errors if you have more than 26 structures
 skip_res_list = [
     "HOH",
     "GOL",
@@ -261,11 +263,73 @@ label_res_single_dict = {
     18: "G",
     19: "C",
 }
-# resfile commands where values are amino acids allowed by that command 
+# resfile commands where values are amino acids allowed by that command
 resfile_commands = {
-    "ALLAA": {'H', 'K', 'R', 'D', 'E', 'S', 'T', 'N', 'Q', 'A', 'V', 'L', 'I', 'M', 'F', 'Y', 'W', 'P', 'G', 'C'},
-    "ALLAAwc": {'H', 'K', 'R', 'D', 'E', 'S', 'T', 'N', 'Q', 'A', 'V', 'L', 'I', 'M', 'F', 'Y', 'W', 'P', 'G', 'C'},
-    "ALLAAxc": {'H', 'K', 'R', 'D', 'E', 'S', 'T', 'N', 'Q', 'A', 'V', 'L', 'I', 'M', 'F', 'Y', 'W', 'P', 'G'},
-    "POLAR": {'E', 'H', 'K', 'N', 'R', 'Q', 'D', 'S', 'T'},
-    "APOLAR": {'P', 'M', 'Y', 'V', 'F', 'L', 'I', 'A', 'C', 'W', 'G'},
+    "ALLAA": {
+        "H",
+        "K",
+        "R",
+        "D",
+        "E",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "A",
+        "V",
+        "L",
+        "I",
+        "M",
+        "F",
+        "Y",
+        "W",
+        "P",
+        "G",
+        "C",
+    },
+    "ALLAAwc": {
+        "H",
+        "K",
+        "R",
+        "D",
+        "E",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "A",
+        "V",
+        "L",
+        "I",
+        "M",
+        "F",
+        "Y",
+        "W",
+        "P",
+        "G",
+        "C",
+    },
+    "ALLAAxc": {
+        "H",
+        "K",
+        "R",
+        "D",
+        "E",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "A",
+        "V",
+        "L",
+        "I",
+        "M",
+        "F",
+        "Y",
+        "W",
+        "P",
+        "G",
+    },
+    "POLAR": {"E", "H", "K", "N", "R", "Q", "D", "S", "T"},
+    "APOLAR": {"P", "M", "Y", "V", "F", "L", "I", "A", "C", "W", "G"},
 }

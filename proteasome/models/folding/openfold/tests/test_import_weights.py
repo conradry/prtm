@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
 
+import numpy as np
+import torch
 from openfold.config import model_config
 from openfold.model.model import AlphaFold
 from openfold.utils.import_weights import import_jax_weights_
@@ -41,9 +41,7 @@ class TestImportWeights(unittest.TestCase):
             # Normal linear weight
             (
                 torch.as_tensor(
-                    data[
-                        prefix + "structure_module/initial_projection//weights"
-                    ]
+                    data[prefix + "structure_module/initial_projection//weights"]
                 ).transpose(-1, -2),
                 model.structure_module.linear_in.weight,
             ),

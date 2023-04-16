@@ -3,17 +3,17 @@ Short script to parallelize omegafold across GPUs to speed up runtime.
 https://github.com/HeliXonProtein/OmegaFold
 """
 
-import os
-import logging
 import argparse
-import subprocess
-import shutil
+import logging
 import multiprocessing as mp
+import os
+import shutil
+import subprocess
 from typing import *
 
-import torch
 import numpy as np
-from biotite.sequence import ProteinSequence, AlphabetError
+import torch
+from biotite.sequence import AlphabetError, ProteinSequence
 
 
 def read_fasta(fname: str, check_valid: bool = True) -> Dict[str, str]:

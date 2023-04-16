@@ -12,40 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import partial
 import math
-from typing import Optional, List
-
-import torch
-import torch.nn as nn
-
-from fastfold.model.nn.primitives import Linear, LayerNorm, Attention
-from fastfold.model.nn.dropout import (
-    DropoutRowwise,
-    DropoutColumnwise,
-)
-from fastfold.model.nn.pair_transition import PairTransition
-from fastfold.model.nn.triangular_attention import (
-    TriangleAttentionStartingNode,
-    TriangleAttentionEndingNode,
-)
-from fastfold.model.nn.triangular_multiplicative_update import (
-    TriangleMultiplicationOutgoing,
-    TriangleMultiplicationIncoming,
-)
-from fastfold.utils.checkpointing import checkpoint_blocks
-from fastfold.utils.tensor_utils import (
-    chunk_layer,
-    permute_final_dims,
-    flatten_final_dims,
-)
+from functools import partial
+from typing import List, Optional
 
 import fastfold.habana as habana
+import torch
+import torch.nn as nn
+from fastfold.model.nn.dropout import DropoutColumnwise, DropoutRowwise
+from fastfold.model.nn.pair_transition import PairTransition
+from fastfold.model.nn.primitives import Attention, LayerNorm, Linear
+from fastfold.model.nn.triangular_attention import (
+    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+from fastfold.model.nn.triangular_multiplicative_update import (
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
+from fastfold.utils.checkpointing import checkpoint_blocks
+from fastfold.utils.tensor_utils import (chunk_layer, flatten_final_dims,
+                                         permute_final_dims)
+
 
 class TemplatePointwiseAttention(nn.Module):
     """
     Implements Algorithm 17.
     """
+
     def __init__(self, c_t, c_z, c_hidden, no_heads, inf, **kwargs):
         """
         Args:
@@ -73,7 +63,8 @@ class TemplatePointwiseAttention(nn.Module):
             gating=False,
         )
 
-    def _chunk(self,
+    def _chunk(
+        self,
         z: torch.Tensor,
         t: torch.Tensor,
         biases: List[torch.Tensor],
@@ -91,12 +82,12 @@ class TemplatePointwiseAttention(nn.Module):
             no_batch_dims=len(z.shape[:-2]),
         )
 
-
-    def forward(self, 
-        t: torch.Tensor, 
-        z: torch.Tensor, 
+    def forward(
+        self,
+        t: torch.Tensor,
+        z: torch.Tensor,
         template_mask: Optional[torch.Tensor] = None,
-        chunk_size: Optional[int] = None
+        chunk_size: Optional[int] = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -146,7 +137,7 @@ class TemplatePairStackBlock(nn.Module):
         pair_transition_n: int,
         dropout_rate: float,
         inf: float,
-        is_multimer: bool=False,
+        is_multimer: bool = False,
         **kwargs,
     ):
         super(TemplatePairStackBlock, self).__init__()
@@ -190,48 +181,31 @@ class TemplatePairStackBlock(nn.Module):
             self.pair_transition_n,
         )
 
-    def forward(self, 
-        z: torch.Tensor, 
-        mask: torch.Tensor, 
-        chunk_size: Optional[int] = None, 
-        _mask_trans: bool = True
+    def forward(
+        self,
+        z: torch.Tensor,
+        mask: torch.Tensor,
+        chunk_size: Optional[int] = None,
+        _mask_trans: bool = True,
     ):
-        single_templates = [
-            t.unsqueeze(-4) for t in torch.unbind(z, dim=-4)
-        ]
-        single_templates_masks = [
-            m.unsqueeze(-3) for m in torch.unbind(mask, dim=-3)
-        ]
+        single_templates = [t.unsqueeze(-4) for t in torch.unbind(z, dim=-4)]
+        single_templates_masks = [m.unsqueeze(-3) for m in torch.unbind(mask, dim=-3)]
         if not self.is_multimer:
             for i in range(len(single_templates)):
                 single = single_templates[i]
                 single_mask = single_templates_masks[i]
-                
+
                 single = single + self.dropout_row(
-                    self.tri_att_start(
-                        single,
-                        chunk_size=chunk_size,
-                        mask=single_mask
-                    )
+                    self.tri_att_start(single, chunk_size=chunk_size, mask=single_mask)
                 )
                 single = single + self.dropout_col(
-                    self.tri_att_end(
-                        single,
-                        chunk_size=chunk_size,
-                        mask=single_mask
-                    )
+                    self.tri_att_end(single, chunk_size=chunk_size, mask=single_mask)
                 )
                 single = single + self.dropout_row(
-                    self.tri_mul_out(
-                        single,
-                        mask=single_mask
-                    )
+                    self.tri_mul_out(single, mask=single_mask)
                 )
                 single = single + self.dropout_row(
-                    self.tri_mul_in(
-                        single,
-                        mask=single_mask
-                    )
+                    self.tri_mul_in(single, mask=single_mask)
                 )
                 single = single + self.pair_transition(
                     single,
@@ -273,6 +247,7 @@ class TemplatePairStack(nn.Module):
     """
     Implements Algorithm 16.
     """
+
     def __init__(
         self,
         c_t,
@@ -339,12 +314,12 @@ class TemplatePairStack(nn.Module):
         Returns:
             [*, N_templ, N_res, N_res, C_t] template embedding update
         """
-        if(mask.shape[-3] == 1):
+        if mask.shape[-3] == 1:
             expand_idx = list(mask.shape)
             expand_idx[-3] = t.shape[-4]
             mask = mask.expand(*expand_idx)
 
-        t, = checkpoint_blocks(
+        (t,) = checkpoint_blocks(
             blocks=[
                 partial(
                     b,

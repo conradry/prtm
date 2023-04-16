@@ -3,159 +3,184 @@
 # Mu Gao and Davi Nakajima An
 # Georgia Institute of Technology
 #
+import json
+import logging
 import os
-import sys
 import pickle
 import re
-import json
+import sys
 import time
-import logging
 
-from absl import app
-from absl import flags
+from absl import app, flags
 from tqdm import tqdm
 
-parent_dir = os.path.dirname( os.path.dirname(os.path.realpath(__file__)) )
-af_dir = os.path.join(parent_dir, 'src')
+parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+af_dir = os.path.join(parent_dir, "src")
 sys.path.append(af_dir)
 
+import alphafold.data.complex as af2c
+import numpy as np
+from alphafold.common import confidence
+from alphafold.data.complex import (initialize_template_feats,
+                                    make_complex_features)
+from alphafold.model import config
 from run_af2c_mod import FLAGS, get_asymid2chain_name
 
-from alphafold.data.complex import make_complex_features
-from alphafold.model import config
-from alphafold.common import confidence
-from alphafold.data.complex import initialize_template_feats
-
-import alphafold.data.complex as af2c
-
-import numpy as np
 # Internal import (7716).
 
-flags.DEFINE_string('model_str', 'model_', 'Only relax a model with a specified '
-                    'string, e.g., ranked_top1. The default will process all model_* pdb files')
-flags.DEFINE_float('interface_dist_thres', 4.5, 'The distance threshold in Angstrom for interface residues. '
-                    'If a heavy atom of residue i in chain A is less than this distance from '
-                    'another heavy atom of residue j in chain B, residues i j are interface residues.'
-                    'This is only used to calculate the confidence metrics such as the interface score.', 
-                    lower_bound=3.5)
+flags.DEFINE_string(
+    "model_str",
+    "model_",
+    "Only relax a model with a specified "
+    "string, e.g., ranked_top1. The default will process all model_* pdb files",
+)
+flags.DEFINE_float(
+    "interface_dist_thres",
+    4.5,
+    "The distance threshold in Angstrom for interface residues. "
+    "If a heavy atom of residue i in chain A is less than this distance from "
+    "another heavy atom of residue j in chain B, residues i j are interface residues."
+    "This is only used to calculate the confidence metrics such as the interface score.",
+    lower_bound=3.5,
+)
+
 
 def get_asym_id(target, flags):
-  """Defines the sequence of preprocessing steps to get the asym_id feature
+    """Defines the sequence of preprocessing steps to get the asym_id feature
 
-  Args:
-    target: dictionary with the items:
-        name: name of the multimer,
-        split: information about each monomer composing the multimer,
-        full: a string denoting all stoichiometry and domains of all monomers
-          composing the multimer to be modeled,
-    flags: variable containing inference configuration
+    Args:
+      target: dictionary with the items:
+          name: name of the multimer,
+          split: information about each monomer composing the multimer,
+          full: a string denoting all stoichiometry and domains of all monomers
+            composing the multimer to be modeled,
+      flags: variable containing inference configuration
 
-  Returns:
-    asym_id
-  """
-  monomers = af2c.load_monomer_feature(target, flags)
+    Returns:
+      asym_id
+    """
+    monomers = af2c.load_monomer_feature(target, flags)
 
-  if flags.msa_pairing is not None:
-    for i in range(len(monomers)):
-      if 'deletion_matrix' in monomers[i]['feature_dict']:
-        monomers[i]['feature_dict']['deletion_matrix_int'] = monomers[i]['feature_dict']['deletion_matrix']
-  curr_input = {'monomers': monomers, 'target': target, 'flags': flags}
+    if flags.msa_pairing is not None:
+        for i in range(len(monomers)):
+            if "deletion_matrix" in monomers[i]["feature_dict"]:
+                monomers[i]["feature_dict"]["deletion_matrix_int"] = monomers[i][
+                    "feature_dict"
+                ]["deletion_matrix"]
+    curr_input = {"monomers": monomers, "target": target, "flags": flags}
 
-  curr_input = af2c.targeted_domain_cropping_mono(curr_input)
-  curr_input = af2c.add_asym_id_monomer_ptm(curr_input)
-  asym_id = curr_input['asym_id_mono_ptm']
+    curr_input = af2c.targeted_domain_cropping_mono(curr_input)
+    curr_input = af2c.add_asym_id_monomer_ptm(curr_input)
+    asym_id = curr_input["asym_id_mono_ptm"]
 
-  return asym_id
+    return asym_id
+
 
 def main(argv):
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
+    if len(argv) > 1:
+        raise app.UsageError("Too many command-line arguments.")
 
-  # read list of target files to update with pITM metrics
-  target_lst = af2c.read_af2c_target_file( FLAGS.target_lst_path )
+    # read list of target files to update with pITM metrics
+    target_lst = af2c.read_af2c_target_file(FLAGS.target_lst_path)
 
-  for target in target_lst:
-    # if complex features were not saved, rebuild them
-    full_name = target['full']
+    for target in target_lst:
+        # if complex features were not saved, rebuild them
+        full_name = target["full"]
 
-    idx2chain_name = get_asymid2chain_name(target)
+        idx2chain_name = get_asymid2chain_name(target)
 
-    target_name  = target['name']
-    target_name = re.sub(":", "_x", target_name)
-    target_name = re.sub("/", "+", target_name)
-    target_dir = os.path.join(FLAGS.output_dir, target_name)
-    if not FLAGS.write_complex_features:
-      # feature_dict = af2c.make_complex_features(target, FLAGS)[0]
-      asym_id = get_asym_id(target, FLAGS)
-    else:
-      feat_path = os.path.join(target_name, 'features_comp.pkl')
-      try:
-        feature_dict = np.load(open(feat_path, 'rb'))
-      except FileNotFoundError:
-        print('Did not find feature_comp.pkl file. ',
-            'To rebuild complex features, run without ',
-            '--write_complex_features flag.')
-      asym_id = feature_dict['asym_id']
+        target_name = target["name"]
+        target_name = re.sub(":", "_x", target_name)
+        target_name = re.sub("/", "+", target_name)
+        target_dir = os.path.join(FLAGS.output_dir, target_name)
+        if not FLAGS.write_complex_features:
+            # feature_dict = af2c.make_complex_features(target, FLAGS)[0]
+            asym_id = get_asym_id(target, FLAGS)
+        else:
+            feat_path = os.path.join(target_name, "features_comp.pkl")
+            try:
+                feature_dict = np.load(open(feat_path, "rb"))
+            except FileNotFoundError:
+                print(
+                    "Did not find feature_comp.pkl file. ",
+                    "To rebuild complex features, run without ",
+                    "--write_complex_features flag.",
+                )
+            asym_id = feature_dict["asym_id"]
 
-    for pkl_file in os.listdir(target_dir):
-      # find all pickle files
-      if not pkl_file.endswith(".pkl"):
-          continue
+        for pkl_file in os.listdir(target_dir):
+            # find all pickle files
+            if not pkl_file.endswith(".pkl"):
+                continue
 
-      if FLAGS.model_str in pkl_file:
-        t_0 = time.time()
-        model_name = os.path.basename( pkl_file ).split(".")[0]
-        model_config = config.model_config(pkl_file[:7])
-        breaks = np.linspace(
-          0., model_config.model.heads.predicted_aligned_error.max_error_bin,
-          model_config.model.heads.predicted_aligned_error.num_bins - 1)
-        pkl_path = os.path.join(target_dir, pkl_file)
-        try:
-            result = pickle.load(open(pkl_path, "rb"))
-        except (EOFError,IOError) as error:
-            print(f"Warning: {target_name} {error} encountered, check the pickle file")
-            continue
+            if FLAGS.model_str in pkl_file:
+                t_0 = time.time()
+                model_name = os.path.basename(pkl_file).split(".")[0]
+                model_config = config.model_config(pkl_file[:7])
+                breaks = np.linspace(
+                    0.0,
+                    model_config.model.heads.predicted_aligned_error.max_error_bin,
+                    model_config.model.heads.predicted_aligned_error.num_bins - 1,
+                )
+                pkl_path = os.path.join(target_dir, pkl_file)
+                try:
+                    result = pickle.load(open(pkl_path, "rb"))
+                except (EOFError, IOError) as error:
+                    print(
+                        f"Warning: {target_name} {error} encountered, check the pickle file"
+                    )
+                    continue
 
-        super_asym_id, superid2chainids = confidence.join_superchains_asym_id(asym_id, target['asym_id_list'])
+                super_asym_id, superid2chainids = confidence.join_superchains_asym_id(
+                    asym_id, target["asym_id_list"]
+                )
 
-        res = confidence.interface_score(
-          result['aligned_confidence_probs'],
-          breaks,
-          result['structure_module']['final_atom_positions'],
-          result['structure_module']['final_atom_mask'],
-          super_asym_id,
-          distance_threshold=FLAGS.interface_dist_thres,
-          is_probs=True)
+                res = confidence.interface_score(
+                    result["aligned_confidence_probs"],
+                    breaks,
+                    result["structure_module"]["final_atom_positions"],
+                    result["structure_module"]["final_atom_mask"],
+                    super_asym_id,
+                    distance_threshold=FLAGS.interface_dist_thres,
+                    is_probs=True,
+                )
 
-        ptm = result['ptm'].tolist()
-        pitm = result['pitm']['score'].tolist()
-        iptm = result['iptm+ptm'].tolist()
+                ptm = result["ptm"].tolist()
+                pitm = result["pitm"]["score"].tolist()
+                iptm = result["iptm+ptm"].tolist()
 
-        inter_sc = res['score'].tolist()
-        inter_residues = res['num_residues'].tolist()
-        inter_contacts = res['num_contacts'].tolist()
+                inter_sc = res["score"].tolist()
+                inter_residues = res["num_residues"].tolist()
+                inter_contacts = res["num_contacts"].tolist()
 
-        print(f"Info: {target_name} (chains: {full_name}) {model_name}  iptm+ptm = {iptm:.4f}, ",
-            f"piTM-score = {pitm:.4f}, iRes = {inter_residues:<4d}, iCnt = {inter_contacts:<4.0f}, interface-score = {inter_sc:.4f}",)
+                print(
+                    f"Info: {target_name} (chains: {full_name}) {model_name}  iptm+ptm = {iptm:.4f}, ",
+                    f"piTM-score = {pitm:.4f}, iRes = {inter_residues:<4d}, iCnt = {inter_contacts:<4.0f}, interface-score = {inter_sc:.4f}",
+                )
 
-        if FLAGS.do_cluster_analysis:
-          clus_res = confidence.cluster_analysis(
-            super_asym_id,
-            result['structure_module']['final_atom_positions'],
-            result['structure_module']['final_atom_mask'],
-            edge_contacts_thres=FLAGS.cluster_edge_thres,
-            superid2chainids=superid2chainids,
-          )
-          cluster_identities = []
-          for cluster in clus_res['clusters']:
-            cluster_identities.append([idx2chain_name[c] for c in cluster])
+                if FLAGS.do_cluster_analysis:
+                    clus_res = confidence.cluster_analysis(
+                        super_asym_id,
+                        result["structure_module"]["final_atom_positions"],
+                        result["structure_module"]["final_atom_mask"],
+                        edge_contacts_thres=FLAGS.cluster_edge_thres,
+                        superid2chainids=superid2chainids,
+                    )
+                    cluster_identities = []
+                    for cluster in clus_res["clusters"]:
+                        cluster_identities.append([idx2chain_name[c] for c in cluster])
 
-          print(f"Info: num_clusters = {clus_res['num_clusters']}, cluster_sizes = {clus_res['cluster_size']}, ",
-              f"clusters = {cluster_identities}\n")
-          
-        logging.info('Interface score calculation time spent: %.1f seconds', time.time() - t_0)
+                    print(
+                        f"Info: num_clusters = {clus_res['num_clusters']}, cluster_sizes = {clus_res['cluster_size']}, ",
+                        f"clusters = {cluster_identities}\n",
+                    )
 
-        '''
+                logging.info(
+                    "Interface score calculation time spent: %.1f seconds",
+                    time.time() - t_0,
+                )
+
+                """
         fields   = model_name.split('_')
         date     = fields[-2]
         randseed = fields[-1]
@@ -182,13 +207,16 @@ def main(argv):
           stats['interface score'][model_name] = round(inter_sc, 4)
           with open(json_path, 'w') as f:
             f.write(json.dumps(stats, sort_keys=True, indent=4))
-        '''
+        """
 
-if __name__ == '__main__':
-  flags.mark_flags_as_required([
-      'target_lst_path',
-      'output_dir',
-      'feature_dir',
-  ])
 
-  app.run(main)
+if __name__ == "__main__":
+    flags.mark_flags_as_required(
+        [
+            "target_lst_path",
+            "output_dir",
+            "feature_dir",
+        ]
+    )
+
+    app.run(main)

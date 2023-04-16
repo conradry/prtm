@@ -9,14 +9,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..modules import (
-    TransformerLayer,
-    LearnedPositionalEmbedding,
-    SinusoidalPositionalEmbedding,
-    RobertaLMHead,
-    ESM1bLayerNorm,
-    ContactPredictionHead,
-)
+from ..modules import (ContactPredictionHead, ESM1bLayerNorm,
+                       LearnedPositionalEmbedding, RobertaLMHead,
+                       SinusoidalPositionalEmbedding, TransformerLayer)
 
 
 class ProteinBertModel(nn.Module):
@@ -26,7 +21,11 @@ class ProteinBertModel(nn.Module):
             "--num_layers", default=36, type=int, metavar="N", help="number of layers"
         )
         parser.add_argument(
-            "--embed_dim", default=1280, type=int, metavar="N", help="embedding dimension"
+            "--embed_dim",
+            default=1280,
+            type=int,
+            metavar="N",
+            help="embedding dimension",
         )
         parser.add_argument(
             "--logit_bias", action="store_true", help="whether to apply bias to logits"
@@ -107,13 +106,19 @@ class ProteinBertModel(nn.Module):
     def _init_submodules_esm1(self):
         self._init_submodules_common()
         self.embed_scale = math.sqrt(self.args.embed_dim)
-        self.embed_positions = SinusoidalPositionalEmbedding(self.args.embed_dim, self.padding_idx)
-        self.embed_out = nn.Parameter(torch.zeros((self.alphabet_size, self.args.embed_dim)))
+        self.embed_positions = SinusoidalPositionalEmbedding(
+            self.args.embed_dim, self.padding_idx
+        )
+        self.embed_out = nn.Parameter(
+            torch.zeros((self.alphabet_size, self.args.embed_dim))
+        )
         self.embed_out_bias = None
         if self.args.final_bias:
             self.embed_out_bias = nn.Parameter(torch.zeros(self.alphabet_size))
 
-    def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
+    def forward(
+        self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False
+    ):
         if return_contacts:
             need_head_weights = True
 
@@ -127,7 +132,9 @@ class ProteinBertModel(nn.Module):
             # x: B x T x C
             mask_ratio_train = 0.15 * 0.8
             src_lengths = (~padding_mask).sum(-1)
-            mask_ratio_observed = (tokens == self.mask_idx).sum(-1).float() / src_lengths
+            mask_ratio_observed = (tokens == self.mask_idx).sum(
+                -1
+            ).float() / src_lengths
             x = x * (1 - mask_ratio_train) / (1 - mask_ratio_observed)[:, None, None]
 
         x = x + self.embed_positions(tokens)
@@ -154,7 +161,9 @@ class ProteinBertModel(nn.Module):
 
         for layer_idx, layer in enumerate(self.layers):
             x, attn = layer(
-                x, self_attn_padding_mask=padding_mask, need_head_weights=need_head_weights
+                x,
+                self_attn_padding_mask=padding_mask,
+                need_head_weights=need_head_weights,
             )
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x.transpose(0, 1)
@@ -183,7 +192,9 @@ class ProteinBertModel(nn.Module):
                 attentions = attentions[..., :-1]
             if padding_mask is not None:
                 attention_mask = 1 - padding_mask.type_as(attentions)
-                attention_mask = attention_mask.unsqueeze(1) * attention_mask.unsqueeze(2)
+                attention_mask = attention_mask.unsqueeze(1) * attention_mask.unsqueeze(
+                    2
+                )
                 attentions = attentions * attention_mask[:, None, None, :, :]
             result["attentions"] = attentions
             if return_contacts:

@@ -1,37 +1,40 @@
+import glob
 import os
+import pickle
+import resource
 import sys
 import time
+
+import common.run_manager
 import numpy as np
+import seq_des.util.canonicalize as canonicalize
+import seq_des.util.data as datasets
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm
-import common.run_manager
-import glob
-import seq_des.util.canonicalize as canonicalize
-import pickle
-import seq_des.util.data as datasets
 from torch.utils import data
-
-
-import resource
+from tqdm import tqdm
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
 """ script to load PDB coords, canonicalize, save """
 
-def main():
 
+def main():
     manager = common.run_manager.RunManager()
 
     manager.parse_args()
     args = manager.args
     log = manager.log
 
-    dataset = datasets.PDB_domain_spitter(txt_file=args.txt, pdb_path=args.pdb_dir, num_return=75, bb_only=1)
+    dataset = datasets.PDB_domain_spitter(
+        txt_file=args.txt, pdb_path=args.pdb_dir, num_return=75, bb_only=1
+    )
 
-    dataloader = data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=args.workers)
+    dataloader = data.DataLoader(
+        dataset, batch_size=1, shuffle=True, num_workers=args.workers
+    )
 
     num_return = args.num_return
     gen = iter(dataloader)
@@ -41,7 +44,6 @@ def main():
     n = 0
 
     for it in tqdm(range(len(dataloader)), desc="loading and saving coords"):
-
         out = gen.next()
         if len(out) == 0 or out is None:
             print("out is none")
@@ -51,12 +53,17 @@ def main():
             coords_out.extend(atom_coords[i][0].cpu().data.numpy())
             data_out.extend(atom_data[i][0].cpu().data.numpy())
             ys.extend(res_label[i][0].cpu().data.numpy())
-            domain_ids.extend([domain_id[i][0]] * res_label[i][0].cpu().data.numpy().shape[0])
+            domain_ids.extend(
+                [domain_id[i][0]] * res_label[i][0].cpu().data.numpy().shape[0]
+            )
             chis_out.extend(chis[i][0].cpu().data.numpy())
 
             assert len(coords_out) == len(ys)
             assert len(coords_out) == len(data_out)
-            assert len(coords_out) == len(domain_ids), (len(coords_out), len(domain_ids))
+            assert len(coords_out) == len(domain_ids), (
+                len(coords_out),
+                len(domain_ids),
+            )
             assert len(coords_out) == len(chis_out)
 
         del atom_coords
@@ -72,7 +79,10 @@ def main():
             np.random.shuffle(idx)
             print(n, len(idx))
 
-            c, d, y, di, ch = map(lambda arr: np.array(arr[: len(idx)])[idx], [coords_out, data_out, ys, domain_ids, chis_out])
+            c, d, y, di, ch = map(
+                lambda arr: np.array(arr[: len(idx)])[idx],
+                [coords_out, data_out, ys, domain_ids, chis_out],
+            )
 
             print("saving", args.save_dir + "/" + "data_%0.4d.pt" % (n))
             torch.save((c, d, y, di, ch), args.save_dir + "/" + "data_%0.4d.pt" % (n))
@@ -80,7 +90,10 @@ def main():
             print("Current num examples", (n) * cs + len(coords_out))
 
             n += 1
-            coords_out, data_out, ys, domain_ids, chis_out = map(lambda arr: arr[len(idx) :], [coords_out, data_out, ys, domain_ids, chis_out])
+            coords_out, data_out, ys, domain_ids, chis_out = map(
+                lambda arr: arr[len(idx) :],
+                [coords_out, data_out, ys, domain_ids, chis_out],
+            )
 
 
 if __name__ == "__main__":

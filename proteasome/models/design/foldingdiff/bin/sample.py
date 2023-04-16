@@ -1,34 +1,29 @@
 """
 Script to sample from a trained diffusion model
 """
-import multiprocessing
-import os, sys
 import argparse
-import logging
 import json
+import logging
+import multiprocessing
+import os
+import sys
 from pathlib import Path
 from typing import *
 
+import mpl_scatter_density
 import numpy as np
 import pandas as pd
-import mpl_scatter_density
-from matplotlib import pyplot as plt
+import torch
+from annot_secondary_structures import make_ss_cooccurrence_plot
 from astropy.visualization import LogStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
-
-import torch
+from foldingdiff import modelling, plotting, sampling, utils
+from foldingdiff.angles_and_coords import create_new_chain_nerf
+from foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
 from huggingface_hub import snapshot_download
-
+from matplotlib import pyplot as plt
 # Import data loading code from main training script
 from train import get_train_valid_test_sets
-from annot_secondary_structures import make_ss_cooccurrence_plot
-
-from foldingdiff import modelling
-from foldingdiff import sampling
-from foldingdiff import plotting
-from foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
-from foldingdiff.angles_and_coords import create_new_chain_nerf
-from foldingdiff import utils
 
 # :)
 SEED = int(

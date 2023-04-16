@@ -2,12 +2,10 @@
 Unit tests for sampling code
 """
 import os
-
 import unittest
 
 import numpy as np
 import torch
-
 from foldingdiff import sampling
 
 

@@ -1,21 +1,32 @@
 # DMPfold2 Neural Network definition - D.T.Jones 2020
 
+from math import asin, cos, log, pi, sin, sqrt
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint_sequential
-from math import sqrt, log, asin, cos, pi, sin
-
 
 NUM_CHANNELS = 442
 
-class Maxout2d(nn.Module):
 
-    def __init__(self, in_channels, out_channels, pool_size, kernel_size=1, dilation=1, block=0):
+class Maxout2d(nn.Module):
+    def __init__(
+        self, in_channels, out_channels, pool_size, kernel_size=1, dilation=1, block=0
+    ):
         super(Maxout2d, self).__init__()
-        self.in_channels, self.out_channels, self.pool_size = in_channels, out_channels, pool_size
-        self.lin = nn.Conv2d(in_channels=in_channels, out_channels=out_channels * pool_size,
-                             kernel_size=kernel_size, dilation=dilation, padding=dilation*(kernel_size-1)//2)
+        self.in_channels, self.out_channels, self.pool_size = (
+            in_channels,
+            out_channels,
+            pool_size,
+        )
+        self.lin = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels * pool_size,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            padding=dilation * (kernel_size - 1) // 2,
+        )
         self.norm = nn.InstanceNorm2d(out_channels, affine=True)
         if block > 0:
             nn.init.xavier_uniform_(self.lin.weight, gain=1.0 / sqrt(block))
@@ -27,7 +38,7 @@ class Maxout2d(nn.Module):
 
         N, C, H, W = x.size()
 
-        x = x.view(N, C//self.pool_size, self.pool_size, H, W)
+        x = x.view(N, C // self.pool_size, self.pool_size, H, W)
         x = x.max(dim=2)[0]
         x = self.norm(x)
 
@@ -42,7 +53,7 @@ class CSE(nn.Module):
             nn.Linear(width, width // reduction, bias=False),
             nn.ReLU(inplace=True),
             nn.Linear(width // reduction, width, bias=False),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -60,7 +71,6 @@ class SSE(nn.Module):
         self.conv = nn.Conv2d(in_ch, 1, kernel_size=1, stride=1)
 
     def forward(self, x):
-
         y = self.conv(x)
         y = torch.sigmoid(y)
 
@@ -83,16 +93,21 @@ class SCSE(nn.Module):
 
 # ResNet Module
 class ResNet_Block(nn.Module):
-    def __init__(self,width,fsize,dilv,nblock):
+    def __init__(self, width, fsize, dilv, nblock):
         super(ResNet_Block, self).__init__()
         self.dropout1 = nn.Dropout(p=0.2)
         self.dropout2 = nn.Dropout2d(p=0.2)
-        self.layer1 = Maxout2d(in_channels=width, out_channels=width, pool_size=4,
-                               kernel_size=fsize, dilation=dilv, block=nblock)
+        self.layer1 = Maxout2d(
+            in_channels=width,
+            out_channels=width,
+            pool_size=4,
+            kernel_size=fsize,
+            dilation=dilv,
+            block=nblock,
+        )
         self.scSE = SCSE(width, 16)
 
     def forward(self, x):
-
         residual = x
         out = self.dropout1(x)
         out = self.dropout2(out)
@@ -130,7 +145,7 @@ def refine_coords(coords, n_steps):
         forces = k_cov * violate
         accels_cov = forces.unsqueeze(1) * norm_diffs
         accels[:-1] += accels_cov
-        accels[1: ] -= accels_cov
+        accels[1:] -= accels_cov
 
         coords = coords + accels.clamp(min=-100.0, max=100.0) * min_speed
 
@@ -140,24 +155,32 @@ def refine_coords(coords, n_steps):
 # Calculate main chain and Cbeta atom from Calphas, based on code by W. Taylor using the Levitt method
 def calpha_to_main_chain(coords_ca):
     # Place dummy extra Cα atoms on end to get the required vectors
-    vec_can2_can1 = coords_ca[:, :1   , :] - coords_ca[:, 1:2  , :]
-    vec_can2_can3 = coords_ca[:, 2:3  , :] - coords_ca[:, 1:2  , :]
-    vec_cac2_cac1 = coords_ca[:, -1:  , :] - coords_ca[:, -2:-1, :]
+    vec_can2_can1 = coords_ca[:, :1, :] - coords_ca[:, 1:2, :]
+    vec_can2_can3 = coords_ca[:, 2:3, :] - coords_ca[:, 1:2, :]
+    vec_cac2_cac1 = coords_ca[:, -1:, :] - coords_ca[:, -2:-1, :]
     vec_cac2_cac3 = coords_ca[:, -3:-2, :] - coords_ca[:, -2:-1, :]
-    coord_ca_nterm = coords_ca[:, :1 , :] + 3.82 * F.normalize(torch.cross(vec_can2_can1, vec_can2_can3), dim=2)
-    coord_ca_cterm = coords_ca[:, -1:, :] + 3.82 * F.normalize(torch.cross(vec_cac2_cac1, vec_cac2_cac3), dim=2)
+    coord_ca_nterm = coords_ca[:, :1, :] + 3.82 * F.normalize(
+        torch.cross(vec_can2_can1, vec_can2_can3), dim=2
+    )
+    coord_ca_cterm = coords_ca[:, -1:, :] + 3.82 * F.normalize(
+        torch.cross(vec_cac2_cac1, vec_cac2_cac3), dim=2
+    )
     coords_ca_ext = torch.cat((coord_ca_nterm, coords_ca, coord_ca_cterm), dim=1)
 
     vec_ca_can = coords_ca_ext[:, :-2, :] - coords_ca_ext[:, 1:-1, :]
-    vec_ca_cac = coords_ca_ext[:, 2: , :] - coords_ca_ext[:, 1:-1, :]
+    vec_ca_cac = coords_ca_ext[:, 2:, :] - coords_ca_ext[:, 1:-1, :]
     mid_ca_can = (coords_ca_ext[:, 1:, :] + coords_ca_ext[:, :-1, :]) / 2
     cross_vcan_vcac = F.normalize(torch.cross(vec_ca_can, vec_ca_cac, dim=2), dim=2)
     coords_n = mid_ca_can[:, :-1, :] - vec_ca_can / 8 + cross_vcan_vcac / 4
-    #coords_h = mid_ca_can[:, :-1, :] + cross_vcan_vcac * 1.0
+    # coords_h = mid_ca_can[:, :-1, :] + cross_vcan_vcac * 1.0
     coords_c_shift = mid_ca_can[:, :-1, :] + vec_ca_can / 8 - cross_vcan_vcac / 2
     coords_o_shift = mid_ca_can[:, :-1, :] - cross_vcan_vcac * 1.8
     # Add the final C and O
-    coords_c_cterm = mid_ca_can[:, -1:, :] - vec_ca_cac[:, -1:, :] / 8 + cross_vcan_vcac[:, -1:, :] / 2
+    coords_c_cterm = (
+        mid_ca_can[:, -1:, :]
+        - vec_ca_cac[:, -1:, :] / 8
+        + cross_vcan_vcac[:, -1:, :] / 2
+    )
     coords_o_cterm = mid_ca_can[:, -1:, :] + cross_vcan_vcac[:, -1:, :] * 2.0
     coords_c = torch.cat((coords_c_shift[:, 1:, :], coords_c_cterm), dim=1)
     coords_o = torch.cat((coords_o_shift[:, 1:, :], coords_o_cterm), dim=1)
@@ -167,63 +190,86 @@ def calpha_to_main_chain(coords_ca):
     cross_vn_vc = torch.cross(vec_n_ca, vec_c_ca, dim=2)
     vec_ca_cb = vec_n_ca + vec_c_ca
     ang = pi / 2 - asin(1 / sqrt(3))
-    sx = (1.5 * cos(ang) /   vec_ca_cb.norm(dim=2)).unsqueeze(2)
+    sx = (1.5 * cos(ang) / vec_ca_cb.norm(dim=2)).unsqueeze(2)
     sy = (1.5 * sin(ang) / cross_vn_vc.norm(dim=2)).unsqueeze(2)
     coords_cb = coords_ca + sx * vec_ca_cb + sy * cross_vn_vc
 
-    out = torch.cat((coords_n.unsqueeze(2), #coords_h.unsqueeze(2),
-                        coords_ca.unsqueeze(2), coords_c.unsqueeze(2),
-                        coords_o.unsqueeze(2), coords_cb.unsqueeze(2)), dim=2)
+    out = torch.cat(
+        (
+            coords_n.unsqueeze(2),  # coords_h.unsqueeze(2),
+            coords_ca.unsqueeze(2),
+            coords_c.unsqueeze(2),
+            coords_o.unsqueeze(2),
+            coords_cb.unsqueeze(2),
+        ),
+        dim=2,
+    )
     return out.view(coords_ca.size(0), 5 * coords_ca.size(1), 3)
 
 
 # RNNResNet Module
 class GRUResNet(nn.Module):
-    def __init__(self,width,cwidth):
+    def __init__(self, width, cwidth):
         super(GRUResNet, self).__init__()
 
         self.width = width
         self.cwidth = cwidth
 
         self.embed = nn.Embedding.from_pretrained(torch.eye(22), freeze=True)
-        self.vgru = nn.GRU(22, width, batch_first=False, num_layers=2, bidirectional=False)
-        self.hgru = nn.GRU(width, width//2, batch_first=False, num_layers=2, dropout=0.1, bidirectional=True)
+        self.vgru = nn.GRU(
+            22, width, batch_first=False, num_layers=2, bidirectional=False
+        )
+        self.hgru = nn.GRU(
+            width,
+            width // 2,
+            batch_first=False,
+            num_layers=2,
+            dropout=0.1,
+            bidirectional=True,
+        )
 
         layers = []
 
-        layer = Maxout2d(in_channels=NUM_CHANNELS+width+1, out_channels=cwidth, pool_size=3)
+        layer = Maxout2d(
+            in_channels=NUM_CHANNELS + width + 1, out_channels=cwidth, pool_size=3
+        )
 
         layers.append(layer)
 
         nblock = 1
 
         for rep in range(16):
-            for fsize,dilv in [(5,1)]:
+            for fsize, dilv in [(5, 1)]:
                 if fsize > 0:
                     layer = ResNet_Block(cwidth, fsize, dilv, nblock)
                     layers.append(layer)
                     nblock += 1
 
         layer = nn.Conv2d(in_channels=cwidth, out_channels=2, kernel_size=1)
-        
+
         layers.append(layer)
 
         self.resnet = nn.Sequential(*layers)
 
-        self.coord_gru = nn.GRU(width+8, width//2, batch_first=True, num_layers=3, dropout=0.1, bidirectional=True)
+        self.coord_gru = nn.GRU(
+            width + 8,
+            width // 2,
+            batch_first=True,
+            num_layers=3,
+            dropout=0.1,
+            bidirectional=True,
+        )
 
         self.coord_fc = nn.Linear(width, 3, bias=False)
 
-        
     def forward(self, x, x2, nloops=5, refine_steps=0):
-
         nseqs = x.size()[0]
         nres = x.size()[1]
 
         x = self.embed(x)
         x = self.vgru(x)[0]
-        x = self.hgru(x[-1,:,:].unsqueeze(1))[0]
-        mat1d = x.permute(1,2,0)
+        x = self.hgru(x[-1, :, :].unsqueeze(1))[0]
+        mat1d = x.permute(1, 2, 0)
         x = mat1d.unsqueeze(2) * mat1d.unsqueeze(3)
 
         resinp = torch.cat((x, x2), dim=1)
@@ -234,8 +280,8 @@ class GRUResNet(nn.Module):
         else:
             x = self.resnet(resinp)
 
-        dm = x[:,0,:,:]
-        conf = x[:,1,:,:].mean(dim=2)
+        dm = x[:, 0, :, :]
+        conf = x[:, 1, :, :].mean(dim=2)
         best_conf = conf
 
         # Ensure symmetric matrix
@@ -243,12 +289,16 @@ class GRUResNet(nn.Module):
         # Force values to be non-negative
         dm = torch.abs(dm)
         # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
-        M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
+        M = 0.5 * (
+            dm[:, 0:1, :].expand(-1, nres, -1) ** 2
+            + dm[:, :, 0:1].expand(-1, -1, nres) ** 2
+            - dm**2
+        )
         w, v = torch.symeig(M.float(), eigenvectors=True)
-        w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
+        w = torch.clamp(F.relu(w, inplace=False), min=1e-8)
         w = torch.diag_embed(w.sqrt())
         mds_coords = torch.matmul(v, w)[:, :, -8:]
-        coordembed = torch.cat((mat1d.permute(0,2,1), mds_coords), dim=2)
+        coordembed = torch.cat((mat1d.permute(0, 2, 1), mds_coords), dim=2)
 
         gru_out = self.coord_gru(coordembed)[0]
 
@@ -259,17 +309,18 @@ class GRUResNet(nn.Module):
 
         best_coords = ca_coords
 
-        #print(best_conf.sum().item())
+        # print(best_conf.sum().item())
 
         for i in range(nloops):
-
-            #print(ca_coords.size())
+            # print(ca_coords.size())
 
             # Add small amount of noise to seed coordinates
-            #ca_coords = ca_coords + 0.5 * torch.randn_like(ca_coords)
-            #if refine_steps > 0:
+            # ca_coords = ca_coords + 0.5 * torch.randn_like(ca_coords)
+            # if refine_steps > 0:
             #    ca_coords = refine_coords(ca_coords.squeeze(0), refine_steps).unsqueeze(0)
-            dmap = torch.clamp((ca_coords - ca_coords.transpose(0,1)).pow(2).sum(dim=2), min = 1e-8).sqrt()
+            dmap = torch.clamp(
+                (ca_coords - ca_coords.transpose(0, 1)).pow(2).sum(dim=2), min=1e-8
+            ).sqrt()
             resinp = torch.cat((resinp[:, :-1], dmap.unsqueeze(0).unsqueeze(0)), dim=1)
 
             if resinp.requires_grad:
@@ -278,35 +329,41 @@ class GRUResNet(nn.Module):
             else:
                 x = self.resnet(resinp)
 
-            dm = x[:,0,:,:]
-            conf = x[:,1,:,:].mean(dim=2)
+            dm = x[:, 0, :, :]
+            conf = x[:, 1, :, :].mean(dim=2)
 
-            #print(conf.sum().item())
+            # print(conf.sum().item())
 
             # Ensure symmetric matrix
             dm = (dm + dm.transpose(1, 2)) / 2
             # Force values to be non-negative
             dm = torch.abs(dm)
             # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
-            M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
+            M = 0.5 * (
+                dm[:, 0:1, :].expand(-1, nres, -1) ** 2
+                + dm[:, :, 0:1].expand(-1, -1, nres) ** 2
+                - dm**2
+            )
             w, v = torch.symeig(M.float(), eigenvectors=True)
-            w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
+            w = torch.clamp(F.relu(w, inplace=False), min=1e-8)
             w = torch.diag_embed(w.sqrt())
             mds_coords = torch.matmul(v, w)[:, :, -8:]
-            coordembed = torch.cat((mat1d.permute(0,2,1), mds_coords), dim=2)
+            coordembed = torch.cat((mat1d.permute(0, 2, 1), mds_coords), dim=2)
 
             gru_out = self.coord_gru(coordembed)[0]
 
             ca_coords = self.coord_fc(gru_out)
 
             if conf.mean() > best_conf.mean():
-                #if refine_steps > 0:
+                # if refine_steps > 0:
                 #    ca_coords = refine_coords(ca_coords.squeeze(0), refine_steps).unsqueeze(0)
                 best_conf = conf
                 best_coords = ca_coords
 
         if refine_steps > 0:
-            best_coords = refine_coords(best_coords.squeeze(0), refine_steps).unsqueeze(0)
+            best_coords = refine_coords(best_coords.squeeze(0), refine_steps).unsqueeze(
+                0
+            )
 
         coords_out = calpha_to_main_chain(best_coords)
         conf_out = torch.sigmoid(best_conf)

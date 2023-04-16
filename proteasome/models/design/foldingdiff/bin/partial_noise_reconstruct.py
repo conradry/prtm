@@ -2,19 +2,17 @@
 Partially noise the structures and reconstruct them using the trained model
 """
 
-import os
 import argparse
-import logging
-from pathlib import Path
 import json
+import logging
+import os
+from pathlib import Path
 from typing import *
 
 import numpy as np
-
 import torch
+from foldingdiff import datasets, modelling, sampling, utils
 from huggingface_hub import snapshot_download
-
-from foldingdiff import datasets, sampling, utils, modelling
 
 
 def load_dataset(pdb_files: Collection[str], model_dir: Path):
@@ -123,7 +121,9 @@ def main():
     scores_dict = {pdb: score for pdb, score in zip(args.pdb_files, scores)}
     with open(args.output_json, "w") as sink:
         json.dump(
-            {"timesteps": args.timesteps, "model": args.model, "tmscores": scores_dict}, sink, indent=4
+            {"timesteps": args.timesteps, "model": args.model, "tmscores": scores_dict},
+            sink,
+            indent=4,
         )
 
 

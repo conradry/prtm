@@ -11,30 +11,26 @@ pip install biotite
 pip install git+https://github.com/facebookresearch/esm.git
 """
 
+import argparse
+import functools
+import glob
+import logging
 # uses the following notebook as a reference:
 # https://colab.research.google.com/github/facebookresearch/esm/blob/main/examples/inverse_folding/notebook.ipynb
 import os
 import warnings
-import glob
-import functools
-import logging
-import argparse
 from typing import List, Optional
 
-from tqdm.auto import tqdm
-
+import esm
+import esm.inverse_folding
 # Verfies that the environment is set up correctly
 import torch
 import torch_geometric
 import torch_sparse
-from torch_geometric.nn import MessagePassing
-
-import esm
-import esm.inverse_folding
-
-
+from biotite.sequence import AlphabetError, ProteinSequence
 from biotite.structure.io.pdb import PDBFile
-from biotite.sequence import ProteinSequence, AlphabetError
+from torch_geometric.nn import MessagePassing
+from tqdm.auto import tqdm
 
 
 def get_chain_from_pdb(fname: str) -> str:

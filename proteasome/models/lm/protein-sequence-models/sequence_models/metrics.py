@@ -1,5 +1,6 @@
-import torch
 import numpy as np
+import torch
+
 
 class SequenceAccuracy(object):
     """Computes accuracy between two sequences.
@@ -9,12 +10,13 @@ class SequenceAccuracy(object):
         tgt (N, L)
         ignore_index (int): index of token to mask out
     """
+
     def __init__(self, ignore_index=-100):
         self.ignore_index = ignore_index
 
     def __call__(self, pred, tgt):
         n = tgt.shape[0]
-        pred = pred.argmax(dim=-1).view(n,-1)
+        pred = pred.argmax(dim=-1).view(n, -1)
         tgt = tgt.view(n, -1)
         mask = tgt != self.ignore_index
         tgt = tgt[mask]
@@ -57,7 +59,6 @@ class MaskedTopkAccuracy(object):
 
 
 class UngappedAccuracy(MaskedAccuracy):
-
     def __init__(self, gap_index):
         self.gap_index = gap_index
 
@@ -72,22 +73,25 @@ class LPrecision(object):
     * params acquired from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4894841/#FN1
 
     """
-    def __init__(self, k=5, contact_range='medium-long'):
+
+    def __init__(self, k=5, contact_range="medium-long"):
         """
         Args:
             k: L // k number of contacts to check
             contact_range: short, medium or long contacts
         """
-        if contact_range == 'short':
+        if contact_range == "short":
             self.res_range = [6, 12]
-        elif contact_range == 'medium':
+        elif contact_range == "medium":
             self.res_range = [12, 24]
-        elif contact_range == 'long':
+        elif contact_range == "long":
             self.res_range = [24, np.inf]
-        elif contact_range == 'medium-long':
+        elif contact_range == "medium-long":
             self.res_range = [12, np.inf]
         else:
-            raise ValueError("contact_range must be one of 'short', 'medium', 'long', or 'medium-long'.")
+            raise ValueError(
+                "contact_range must be one of 'short', 'medium', 'long', or 'medium-long'."
+            )
         # contact if d < 8 angstroms, or d > exp(-8 ** 2 / 8 ** 2)
         self.contact_threshold = np.exp(-1)
         self.k = k
@@ -106,7 +110,9 @@ class LPrecision(object):
 
         # update the mask
         # get distance based on primary structure
-        pri_dist = torch.abs(torch.arange(el)[None, :].repeat(el, 1) - torch.arange(el).view(-1, 1)).float()
+        pri_dist = torch.abs(
+            torch.arange(el)[None, :].repeat(el, 1) - torch.arange(el).view(-1, 1)
+        ).float()
         # repeat for each sample in batch size
         pri_dist = pri_dist.view(1, el, el).repeat(n, 1, 1)
         dist_mask = (pri_dist > self.res_range[0]) & (pri_dist < self.res_range[1])
@@ -137,4 +143,3 @@ class LPrecision(object):
             n_contacts += t[ids[:n]].sum().item()
         precision = n_contacts / n_predicted
         return precision, n_predicted
-

@@ -18,7 +18,6 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
 from fastfold.model.nn.primitives import Linear
 from fastfold.utils.tensor_utils import chunk_layer
 
@@ -48,7 +47,7 @@ class OuterProductMean(nn.Module):
         self.layer_norm = nn.LayerNorm(c_m)
         self.linear_1 = Linear(c_m, c_hidden)
         self.linear_2 = Linear(c_m, c_hidden)
-        self.linear_out = Linear(c_hidden ** 2, c_z, init="final")
+        self.linear_out = Linear(c_hidden**2, c_z, init="final")
 
     def _opm(self, a, b):
         # [*, N_res, N_res, C, C]
@@ -63,11 +62,7 @@ class OuterProductMean(nn.Module):
         return outer
 
     @torch.jit.ignore
-    def _chunk(self, 
-        a: torch.Tensor, 
-        b: torch.Tensor, 
-        chunk_size: int
-    ) -> torch.Tensor:
+    def _chunk(self, a: torch.Tensor, b: torch.Tensor, chunk_size: int) -> torch.Tensor:
         # Since the "batch dim" in this case is not a true batch dimension
         # (in that the shape of the output depends on it), we need to
         # iterate over it ourselves
@@ -87,10 +82,11 @@ class OuterProductMean(nn.Module):
 
         return outer
 
-    def forward(self, 
-        m: torch.Tensor, 
+    def forward(
+        self,
+        m: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
-        chunk_size: Optional[int] = None
+        chunk_size: Optional[int] = None,
     ) -> torch.Tensor:
         """
         Args:

@@ -29,12 +29,9 @@ https://github.com/deepmind/alphafold/blob/main/alphafold/model/all_atom.py
 from typing import List, Tuple, Union
 
 import torch
+from omegafold.utils.protein_utils import functions as f
+from omegafold.utils.protein_utils import residue_constants as rc
 from torch.nn import functional as F
-
-from omegafold.utils.protein_utils import (
-    functions as f,
-    residue_constants as rc,
-)
 
 # =============================================================================
 # Functions
@@ -44,9 +41,9 @@ from omegafold.utils.protein_utils import (
 # =============================================================================
 _BACKBONE_ROTATE = torch.tensor(
     [
-        [-1, 0., 0.],
-        [0., 1., 0.],
-        [0., 0., -1],
+        [-1, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, -1],
     ]
 )
 
@@ -60,14 +57,14 @@ class AAFrame(object):
     """
 
     def __init__(
-            self,
-            translation: torch.Tensor = None,
-            rotation: torch.Tensor = None,
-            mask: Union[torch.Tensor, torch.Tensor] = None,
-            safe: bool = True,
-            unit: str = "Angstrom",
-            *,
-            expanded: bool = False
+        self,
+        translation: torch.Tensor = None,
+        rotation: torch.Tensor = None,
+        mask: Union[torch.Tensor, torch.Tensor] = None,
+        safe: bool = True,
+        unit: str = "Angstrom",
+        *,
+        expanded: bool = False,
     ) -> None:
         """
         Initialize the transformation
@@ -106,13 +103,13 @@ class AAFrame(object):
         return self._unit
 
     def _assign(
-            self,
-            translation: torch.Tensor,
-            rotation: torch.Tensor,
-            unit: str,
-            mask: torch.Tensor,
-            in_place: bool,
-            orig: str
+        self,
+        translation: torch.Tensor,
+        rotation: torch.Tensor,
+        unit: str,
+        mask: torch.Tensor,
+        in_place: bool,
+        orig: str,
     ) -> "AAFrame":
         """
         Create a new one or in-place assignment
@@ -131,7 +128,13 @@ class AAFrame(object):
 
         """
         if in_place:
-            self._translation, self._rotation, = translation, rotation
+            (
+                self._translation,
+                self._rotation,
+            ) = (
+                translation,
+                rotation,
+            )
             self._unit, self._mask = unit, mask
             return self
         else:
@@ -162,7 +165,7 @@ class AAFrame(object):
             unit=_unit,
             mask=_mask,
             orig=f"To nano from {self}",
-            in_place=in_place
+            in_place=in_place,
         )
 
     def to_angstrom(self, in_place: bool) -> "AAFrame":
@@ -188,7 +191,7 @@ class AAFrame(object):
             unit=_unit,
             mask=_mask,
             orig=f"To nano from {self}",
-            in_place=in_place
+            in_place=in_place,
         )
 
     @property
@@ -234,7 +237,7 @@ class AAFrame(object):
 
         """
         mask = f.bit_wise_not(self.mask[..., None, None].expand_as(value))
-        value = value.masked_fill(mask, 0.)
+        value = value.masked_fill(mask, 0.0)
         value = value.masked_fill(
             mask * torch.eye(3, dtype=torch.bool).to(mask.device), 1
         )
@@ -256,12 +259,12 @@ class AAFrame(object):
 
     @classmethod
     def default_init(
-            cls,
-            *shape,
-            unit: str = "Angstrom",
-            safe: bool = True,
-            device: torch.device = torch.device("cpu"),
-            mask: Union[torch.Tensor, torch.Tensor] = None,
+        cls,
+        *shape,
+        unit: str = "Angstrom",
+        safe: bool = True,
+        device: torch.device = torch.device("cpu"),
+        mask: Union[torch.Tensor, torch.Tensor] = None,
     ) -> "AAFrame":
         """
         partially initialize a bunch of frames, for now only supports one
@@ -280,9 +283,9 @@ class AAFrame(object):
         if mask is not None:
             assert tuple(mask.shape) == shape
         translation = torch.zeros(list(shape) + [3], device=device)
-        rotation = torch.eye(
-            3, dtype=translation.dtype, device=device
-        ) * torch.ones(list(shape) + [1, 1], device=device)
+        rotation = torch.eye(3, dtype=translation.dtype, device=device) * torch.ones(
+            list(shape) + [1, 1], device=device
+        )
         if mask is None:
             mask = torch.ones_like(translation[..., 0], dtype=torch.bool)
 
@@ -292,7 +295,7 @@ class AAFrame(object):
             mask=mask,
             orig=f"partially initialized",
             safe=safe,
-            unit=unit
+            unit=unit,
         )
 
     @classmethod
@@ -330,8 +333,7 @@ class AAFrame(object):
         t = torch.sum(self.translation, dim=dim1, keepdim=keepdim)
         r = torch.sum(self.rotation, dim=dim2, keepdim=keepdim)
         return self._construct_frame(
-            t, r, m, f"Created by {torch.sum} at dim {dim}", safe=False,
-            unit=self.unit
+            t, r, m, f"Created by {torch.sum} at dim {dim}", safe=False, unit=self.unit
         )  # from self
 
     def dim_apply(self, func: callable, dim: int) -> "AAFrame":
@@ -356,13 +358,13 @@ class AAFrame(object):
 
     @classmethod
     def _construct_frame(
-            cls,
-            trans: torch.Tensor,
-            rots: torch.Tensor,
-            mask: Union[torch.Tensor, torch.Tensor],
-            orig: str,
-            safe: bool,
-            unit: str,
+        cls,
+        trans: torch.Tensor,
+        rots: torch.Tensor,
+        mask: Union[torch.Tensor, torch.Tensor],
+        orig: str,
+        safe: bool,
+        unit: str,
     ) -> "AAFrame":
         """
         Construct a frame
@@ -387,9 +389,7 @@ class AAFrame(object):
         return transformation
 
     @classmethod
-    def from_4x4(
-            cls, m: torch.Tensor, mask: torch.Tensor, unit: str
-    ) -> "AAFrame":
+    def from_4x4(cls, m: torch.Tensor, mask: torch.Tensor, unit: str) -> "AAFrame":
         """
         get the frames from 4x4 matrix
 
@@ -405,10 +405,12 @@ class AAFrame(object):
         """
 
         return cls._construct_frame(
-            m[..., 0:3, 3], m[..., 0:3, 0:3],
+            m[..., 0:3, 3],
+            m[..., 0:3, 0:3],
             mask=mask,
             orig=f"from matrix",
-            safe=True, unit=unit
+            safe=True,
+            unit=unit,
         )
 
     def transform(self, pos: torch.Tensor) -> torch.Tensor:
@@ -473,18 +475,16 @@ class AAFrame(object):
         shape1 = self.shape[:batched_dims]
         shape2 = pos.shape[batched_dims:-1]  # the ones to cross
         self_shape2 = self.shape[batched_dims:]
-        out = self.view(
-            *shape1, *[1 for _ in range(len(shape2))], *self_shape2
-        )
+        out = self.view(*shape1, *[1 for _ in range(len(shape2))], *self_shape2)
         return f.batch_matrix_vector(out.rotation, pos) + out.translation
 
     @classmethod
     def from_torsion(
-            cls,
-            unit: str,
-            torsion_angles: torch.Tensor,
-            mask: Union[torch.Tensor, torch.Tensor],
-            translation: torch.Tensor = None,
+        cls,
+        unit: str,
+        torsion_angles: torch.Tensor,
+        mask: Union[torch.Tensor, torch.Tensor],
+        translation: torch.Tensor = None,
     ) -> "AAFrame":
         """
         Create a transformation that rotates around the x-axis
@@ -504,9 +504,11 @@ class AAFrame(object):
         device = torsion_angles.device
         _make_rot_mat = torch.tensor(
             [
-                [0., 0., 0., 0., 0., -1, 0., 1., 0.],  # sin
-                [0., 0., 0., 0., 1., 0., 0., 0., 1.],  # cos
-            ], dtype=torsion_angles.dtype, device=device
+                [0.0, 0.0, 0.0, 0.0, 0.0, -1, 0.0, 1.0, 0.0],  # sin
+                [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],  # cos
+            ],
+            dtype=torsion_angles.dtype,
+            device=device,
         )
         rot_mat = torch.matmul(torsion_angles, _make_rot_mat)
 
@@ -540,7 +542,7 @@ class AAFrame(object):
                 self.mask[..., idx],
                 f"selected from {self} at {idx}",
                 unit=self.unit,
-                safe=False
+                safe=False,
             )
         elif isinstance(idx, torch.Tensor):
             return self._construct_frame(
@@ -549,15 +551,15 @@ class AAFrame(object):
                 self.mask[idx],
                 f"selected from {self} by tensor",
                 unit=self.unit,
-                safe=False
+                safe=False,
             )
         else:
             raise IndexError(f"Type {type(idx)} not supported for indexing")
 
     def __setitem__(
-            self,
-            key: Union[int, torch.Tensor, List[int]],
-            value: Union[torch.Tensor, "AAFrame"]
+        self,
+        key: Union[int, torch.Tensor, List[int]],
+        value: Union[torch.Tensor, "AAFrame"],
     ) -> None:
         if isinstance(value, AAFrame):
             t = value.translation.to(self._translation.dtype)
@@ -591,11 +593,7 @@ class AAFrame(object):
         Returns:
 
         """
-        assert (
-                self._mask.device ==
-                self._translation.device ==
-                self._rotation.device
-        )
+        assert self._mask.device == self._translation.device == self._rotation.device
         return self._mask.device
 
     @property
@@ -633,8 +631,12 @@ class AAFrame(object):
             r = self.rotation
 
         return self._construct_frame(
-            t, r, m, f"Created by multiplication from {self}",
-            safe=False, unit=self.unit
+            t,
+            r,
+            m,
+            f"Created by multiplication from {self}",
+            safe=False,
+            unit=self.unit,
         )
 
     def _combine_transformation(self, other: "AAFrame") -> "AAFrame":
@@ -681,7 +683,7 @@ class AAFrame(object):
             m_out.view(*other.shape),
             f"Combination of {self} and {other}",
             safe=False,
-            unit=self.unit
+            unit=self.unit,
         )
 
     def __repr__(self) -> str:
@@ -706,7 +708,7 @@ class AAFrame(object):
             mask.view(*args),
             f"view from {self}",
             safe=False,
-            unit=self.unit
+            unit=self.unit,
         )
 
     @property
@@ -714,10 +716,10 @@ class AAFrame(object):
         return self.translation.dtype
 
     def expand_w_torsion(
-            self,
-            torsion_angles: torch.Tensor,
-            torsion_angles_mask: torch.Tensor,
-            fasta: torch.Tensor
+        self,
+        torsion_angles: torch.Tensor,
+        torsion_angles_mask: torch.Tensor,
+        fasta: torch.Tensor,
     ) -> "AAFrame":
         r"""
         Compute the global frame
@@ -748,44 +750,35 @@ class AAFrame(object):
         assert self.unit == "Angstrom"
         if torsion_angles.shape[-2] == 5:
             torsion_angles = torch.cat(
-                (
-                    torch.zeros_like(torsion_angles[..., 0:2, :]),
-                    torsion_angles
-                ), dim=-2
+                (torch.zeros_like(torsion_angles[..., 0:2, :]), torsion_angles), dim=-2
             )
             torsion_angles_mask = torch.cat(
-                (
-                    torch.zeros_like(torsion_angles_mask[..., 0:2]),
-                    torsion_angles_mask
-                ), dim=-1
+                (torch.zeros_like(torsion_angles_mask[..., 0:2]), torsion_angles_mask),
+                dim=-1,
             )
 
         # append an identity for backbone2backbone
         shape = list(torsion_angles.shape)
         shape[-2] = 1
-        angle = torch.tensor(
-            [[0, 1]], dtype=self.dtype, device=self.device
-        ).expand(shape)  # (*, 1, 2)
-        angle_mask = torch.tensor(
-            [True], dtype=torch.bool, device=self.device
-        ).expand(shape[:-1])
+        angle = torch.tensor([[0, 1]], dtype=self.dtype, device=self.device).expand(
+            shape
+        )  # (*, 1, 2)
+        angle_mask = torch.tensor([True], dtype=torch.bool, device=self.device).expand(
+            shape[:-1]
+        )
         torsion_angles = torch.cat((angle, torsion_angles), -2)  # (*, 8, 2)
         torsion_angles_mask = torch.cat((angle_mask, torsion_angles_mask), -1)
 
         # prepare the angles
         torsion_angles = f.robust_normalize(torsion_angles)
         rot_x = AAFrame.from_torsion(
-            torsion_angles=torsion_angles,
-            mask=torsion_angles_mask,
-            unit="Angstrom"
+            torsion_angles=torsion_angles, mask=torsion_angles_mask, unit="Angstrom"
         )
 
         # make extra backbone frames
         # This follows the order of ~restypes
         m = rc.restype_aa_default_frame.to(self.device)[fasta]
-        default_frames = AAFrame.from_4x4(
-            m, torsion_angles_mask, unit="Angstrom"
-        )
+        default_frames = AAFrame.from_4x4(m, torsion_angles_mask, unit="Angstrom")
         all_frames = default_frames * rot_x
         # make side chain frames (chain them up along the side chain)
         chi2_frame_to_frame = all_frames[5]
@@ -827,14 +820,13 @@ class AAFrame(object):
             t = self.translation
             r = torch.matmul(self.rotation, rotation)
             return self._construct_frame(
-                t, r, self.mask,
-                f"Rotated from {self}", safe=False, unit=self.unit
+                t, r, self.mask, f"Rotated from {self}", safe=False, unit=self.unit
             )
         else:
             raise NotImplementedError("Not yet implemented")
 
     def expanded_to_pos(
-            self, fasta: torch.Tensor, full: bool = True
+        self, fasta: torch.Tensor, full: bool = True
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the full atom representation
@@ -895,13 +887,10 @@ class AAFrame(object):
         r = self.rotation.transpose(-1, -2)
         t = f.batch_matrix_vector(r, self.translation)
         return self._construct_frame(
-            -t, r, self.mask, f"inversed from {self}",
-            safe=False, unit=self.unit
+            -t, r, self.mask, f"inversed from {self}", safe=False, unit=self.unit
         )
 
-    def position_in_frame(
-            self, pos: torch.Tensor
-    ) -> torch.Tensor:
+    def position_in_frame(self, pos: torch.Tensor) -> torch.Tensor:
         """
         Get the frame-based position of the given global position
 
@@ -924,9 +913,7 @@ class AAFrame(object):
         q_dim = 4 if tensor.shape[-1] == 7 else 3
         quaternion, tx, ty, tz = torch.split(tensor, [q_dim, 1, 1, 1], dim=-1)
         rotation = f.quaternion_to_matrix(quaternion)
-        translation = torch.stack(
-            [tx[..., 0], ty[..., 0], tz[..., 0]], dim=-1
-        )
+        translation = torch.stack([tx[..., 0], ty[..., 0], tz[..., 0]], dim=-1)
 
         return cls._construct_frame(
             trans=translation,
@@ -934,14 +921,12 @@ class AAFrame(object):
             mask=torch.ones_like(translation[..., 0]),
             orig=f"from tensor",
             safe=True,
-            unit=unit
+            unit=unit,
         )
 
 
 def torsion_mask_to_atom14_mask(
-        torsion_mask: torch.Tensor,
-        group_mask: torch.Tensor,
-        fasta: torch.Tensor
+    torsion_mask: torch.Tensor, group_mask: torch.Tensor, fasta: torch.Tensor
 ) -> torch.Tensor:
     """
     expand the mask of torsion angles into atom14 masks

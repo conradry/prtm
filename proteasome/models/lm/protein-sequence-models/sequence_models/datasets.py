@@ -1,33 +1,33 @@
-from typing import Union
-from pathlib import Path
-import lmdb
-import subprocess
-import string
 import json
 import os
-from os import path
 import pickle as pkl
-from scipy.spatial.distance import squareform, pdist, hamming, cdist
+import string
+import subprocess
+from os import path
+from pathlib import Path
+from typing import Union
 
+import lmdb
 import numpy as np
-import torch
-from torch.utils.data import Dataset
 import pandas as pd
-
-from sequence_models.utils import Tokenizer, parse_fasta
-from sequence_models.constants import trR_ALPHABET, DIST_BINS, PHI_BINS, THETA_BINS, OMEGA_BINS, STOP, PAD, \
-    PROTEIN_ALPHABET
+import torch
+from scipy.spatial.distance import cdist, hamming, pdist, squareform
+from sequence_models.constants import (DIST_BINS, OMEGA_BINS, PAD, PHI_BINS,
+                                       PROTEIN_ALPHABET, STOP, THETA_BINS,
+                                       trR_ALPHABET)
 from sequence_models.gnn import bins_to_vals
 from sequence_models.pdb_utils import process_coords
+from sequence_models.utils import Tokenizer, parse_fasta
+from torch.utils.data import Dataset
+
 
 class ListDataset(Dataset):
-
     def __init__(self, data):
         super().__init__()
         self.data = data
 
     def __getitem__(self, item):
-        return (self.data[item], )
+        return (self.data[item],)
 
     def __len__(self):
         return len(self.data)
@@ -41,19 +41,22 @@ class LMDBDataset(Dataset):
             Default: False.
     """
 
-    def __init__(self,
-                 data_file: Union[str, Path],
-                 in_memory: bool = False):
-
+    def __init__(self, data_file: Union[str, Path], in_memory: bool = False):
         data_file = Path(data_file)
         if not data_file.exists():
             raise FileNotFoundError(data_file)
 
-        env = lmdb.open(str(data_file), max_readers=1, readonly=True,
-                        lock=False, readahead=False, meminit=False)
+        env = lmdb.open(
+            str(data_file),
+            max_readers=1,
+            readonly=True,
+            lock=False,
+            readahead=False,
+            meminit=False,
+        )
 
         with env.begin(write=False) as txn:
-            num_examples = pkl.loads(txn.get(b'num_examples'))
+            num_examples = pkl.loads(txn.get(b"num_examples"))
 
         if in_memory:
             cache = [None] * num_examples
@@ -75,24 +78,24 @@ class LMDBDataset(Dataset):
         else:
             with self._env.begin(write=False) as txn:
                 item = pkl.loads(txn.get(str(index).encode()))
-                if 'id' not in item:
-                    item['id'] = str(index)
+                if "id" not in item:
+                    item["id"] = str(index)
                 if self._in_memory:
                     self._cache[index] = item
         return item
 
 
 class TAPEDataset(Dataset):
-
-    def __init__(self,
-                 data_path: Union[str, Path],
-                 data_type: str,
-                 split: str,
-                 sub_type: str = 'distance',
-                 eps: float = 1e-6,
-                 in_memory: bool = False,
-                 max_len=700):
-
+    def __init__(
+        self,
+        data_path: Union[str, Path],
+        data_type: str,
+        split: str,
+        sub_type: str = "distance",
+        eps: float = 1e-6,
+        in_memory: bool = False,
+        max_len=700,
+    ):
         """
         data_path : path to data directory
 
@@ -110,51 +113,66 @@ class TAPEDataset(Dataset):
         self.eps = eps
         self.max_len = max_len
 
-        if data_type == 'fluorescence':
-            if split not in ('train', 'valid', 'test'):
-                raise ValueError(f"Unrecognized split: {split}. "
-                                 f"Must be one of ['train', 'valid', 'test']")
+        if data_type == "fluorescence":
+            if split not in ("train", "valid", "test"):
+                raise ValueError(
+                    f"Unrecognized split: {split}. "
+                    f"Must be one of ['train', 'valid', 'test']"
+                )
 
-            data_file = Path(data_path + f'fluorescence_{split}.lmdb')
-            self.output_label = 'log_fluorescence'
+            data_file = Path(data_path + f"fluorescence_{split}.lmdb")
+            self.output_label = "log_fluorescence"
 
-        if data_type == 'stability':
-            if split not in ('train', 'valid', 'test'):
-                raise ValueError(f"Unrecognized split: {split}. "
-                                 f"Must be one of ['train', 'valid', 'test']")
+        if data_type == "stability":
+            if split not in ("train", "valid", "test"):
+                raise ValueError(
+                    f"Unrecognized split: {split}. "
+                    f"Must be one of ['train', 'valid', 'test']"
+                )
 
-            data_file = Path(data_path + f'stability_{split}.lmdb')
-            self.output_label = 'stability_score'
+            data_file = Path(data_path + f"stability_{split}.lmdb")
+            self.output_label = "stability_score"
 
-        if data_type == 'remote_homology':
-            if split not in ('train', 'valid', 'test_fold_holdout',
-                             'test_family_holdout', 'test_superfamily_holdout'):
-                raise ValueError(f"Unrecognized split: {split}. Must be one of "
-                                 f"['train', 'valid', 'test_fold_holdout', "
-                                 f"'test_family_holdout', 'test_superfamily_holdout']")
+        if data_type == "remote_homology":
+            if split not in (
+                "train",
+                "valid",
+                "test_fold_holdout",
+                "test_family_holdout",
+                "test_superfamily_holdout",
+            ):
+                raise ValueError(
+                    f"Unrecognized split: {split}. Must be one of "
+                    f"['train', 'valid', 'test_fold_holdout', "
+                    f"'test_family_holdout', 'test_superfamily_holdout']"
+                )
 
-            data_file = Path(data_path + f'remote_homology_{split}.lmdb')
-            self.output_label = 'fold_label'
+            data_file = Path(data_path + f"remote_homology_{split}.lmdb")
+            self.output_label = "fold_label"
 
-        if data_type == 'secondary_structure':
-            if split not in ('train', 'valid', 'casp12', 'ts115', 'cb513'):
-                raise ValueError(f"Unrecognized split: {split}. Must be one of "
-                                 f"['train', 'valid', 'casp12', "
-                                 f"'ts115', 'cb513']")
+        if data_type == "secondary_structure":
+            if split not in ("train", "valid", "casp12", "ts115", "cb513"):
+                raise ValueError(
+                    f"Unrecognized split: {split}. Must be one of "
+                    f"['train', 'valid', 'casp12', "
+                    f"'ts115', 'cb513']"
+                )
 
-            data_file = Path(data_path + f'secondary_structure_{split}.lmdb')
-            if self.sub_type == 'ss8':
-                self.output_label = 'ss8'
+            data_file = Path(data_path + f"secondary_structure_{split}.lmdb")
+            if self.sub_type == "ss8":
+                self.output_label = "ss8"
             else:
-                self.output_label = 'ss3'
+                self.output_label = "ss3"
 
-        if data_type == 'contact':
-            if split not in ('train', 'train_unfiltered', 'valid', 'test'):
-                raise ValueError(f"Unrecognized split: {split}. Must be one of "
-                                 f"['train', 'train_unfiltered', 'valid', 'test']")
+        if data_type == "contact":
+            if split not in ("train", "train_unfiltered", "valid", "test"):
+                raise ValueError(
+                    f"Unrecognized split: {split}. Must be one of "
+                    f"['train', 'train_unfiltered', 'valid', 'test']"
+                )
 
-            data_file = Path(data_path + f'proteinnet_{split}.lmdb')
-            self.output_label = 'tertiary'
+            data_file = Path(data_path + f"proteinnet_{split}.lmdb")
+            self.output_label = "tertiary"
 
         self.data = LMDBDataset(data_file, in_memory)
 
@@ -163,37 +181,42 @@ class TAPEDataset(Dataset):
 
     def __getitem__(self, index: int):
         item = self.data[index]
-        primary = item['primary']
+        primary = item["primary"]
         mask = None
 
-        if self.data_type in ['fluorescence', 'stability', ]:
+        if self.data_type in [
+            "fluorescence",
+            "stability",
+        ]:
             output = float(item[self.output_label][0])
 
-        if self.data_type in ['remote_homology']:
+        if self.data_type in ["remote_homology"]:
             output = item[self.output_label]
             diff = max(len(primary) - self.max_len + 1, 1)
             start = np.random.choice(diff)
             end = start + self.max_len
-            primary = primary[start: end]
+            primary = primary[start:end]
 
-        if self.data_type in ['secondary_structure']:
+        if self.data_type in ["secondary_structure"]:
             # pad with -1s because of cls/sep tokens
-            output = torch.Tensor(item[self.output_label], ).to(torch.int8)
+            output = torch.Tensor(
+                item[self.output_label],
+            ).to(torch.int8)
             diff = max(len(primary) - self.max_len + 1, 1)
             start = np.random.choice(diff)
             end = start + self.max_len
-            primary = primary[start: end]
+            primary = primary[start:end]
             output = output[start:end]
 
-        if self.data_type in ['contact']:
+        if self.data_type in ["contact"]:
             # -1 is ignore, 0 in no contact, 1 is contact
-            valid_mask = item['valid_mask']
+            valid_mask = item["valid_mask"]
             distances = squareform(pdist(item[self.output_label]))
             yind, xind = np.indices(distances.shape)
             invalid_mask = ~(valid_mask[:, None] & valid_mask[None, :])
             invalid_mask |= np.abs(yind - xind) < 6
-            if self.sub_type == 'distance':
-                output = torch.tensor(np.exp(-distances ** 2 / 64))
+            if self.sub_type == "distance":
+                output = torch.tensor(np.exp(-(distances**2) / 64))
             else:
                 contact_map = np.less(distances, 8.0).astype(np.int64)
                 contact_map[invalid_mask] = -1
@@ -203,23 +226,22 @@ class TAPEDataset(Dataset):
             diff = max(len(primary) - self.max_len + 1, 1)
             start = np.random.choice(diff)
             end = start + self.max_len
-            primary = primary[start: end]
+            primary = primary[start:end]
             output = output[start:end, start:end]
             mask = mask[start:end, start:end]
         return primary, output, mask
 
 
 class CSVDataset(Dataset):
-
     def __init__(self, fpath=None, df=None, split=None, outputs=[], max_len=np.inf):
         if df is None:
             self.data = pd.read_csv(fpath)
         else:
             self.data = df
         if split is not None:
-            self.data = self.data[self.data['split'] == split]
+            self.data = self.data[self.data["split"] == split]
         self.outputs = outputs
-        self.data = self.data[['sequence'] + self.outputs]
+        self.data = self.data[["sequence"] + self.outputs]
         self.max_len = max_len
 
     def __len__(self):
@@ -227,7 +249,7 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
-        sequence = row['sequence']
+        sequence = row["sequence"]
         if len(sequence) > self.max_len:
             start = np.random.choice(len(sequence) - self.max_len)
             stop = start + self.max_len
@@ -236,7 +258,6 @@ class CSVDataset(Dataset):
 
 
 class FlatDataset(Dataset):
-
     def __init__(self, fpath, offsets, cols=[1]):
         self.fpath = fpath
         self.offsets = offsets
@@ -246,20 +267,19 @@ class FlatDataset(Dataset):
         return len(self.offsets)
 
     def __getitem__(self, idx):
-        with open(self.fpath, 'r') as f:
+        with open(self.fpath, "r") as f:
             f.seek(self.offsets[idx])
             line = f.readline()[:-1]  # strip the \n
-            line = line.split(',')
+            line = line.split(",")
             return [line[i] for i in self.cols]
 
 
 class FFDataset(Dataset):
-
     def __init__(self, stem, max_len=np.inf, tr_only=True):
-        self.index = stem + 'ffindex'
-        self.data = stem + 'ffdata'
-        result = subprocess.run(['wc', '-l', self.index], stdout=subprocess.PIPE)
-        self.length = int(result.stdout.decode('utf-8').split(' ')[0])
+        self.index = stem + "ffindex"
+        self.data = stem + "ffdata"
+        result = subprocess.run(["wc", "-l", self.index], stdout=subprocess.PIPE)
+        self.length = int(result.stdout.decode("utf-8").split(" ")[0])
         self.tokenizer = Tokenizer(trR_ALPHABET)
         self.table = str.maketrans(dict.fromkeys(string.ascii_lowercase))
         self.max_len = max_len
@@ -269,21 +289,23 @@ class FFDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx):
-        result = subprocess.run(['ffindex_get', self.data, self.index, '-n', str(idx + 1)],
-                                stdout=subprocess.PIPE)
-        a3m = result.stdout.decode('utf-8')
+        result = subprocess.run(
+            ["ffindex_get", self.data, self.index, "-n", str(idx + 1)],
+            stdout=subprocess.PIPE,
+        )
+        a3m = result.stdout.decode("utf-8")
         seqs = []
-        for line in a3m.split('\n'):
+        for line in a3m.split("\n"):
             # skip labels
             if len(line) == 0:
                 continue
-            if line[0] == '#':
+            if line[0] == "#":
                 continue
-            if line[0] != '>':
+            if line[0] != ">":
                 # remove lowercase letters and right whitespaces
                 s = line.rstrip().translate(self.table)
                 if self.tr_only:
-                    s = ''.join([a if a in trR_ALPHABET else '-' for a in s])
+                    s = "".join([a if a in trR_ALPHABET else "-" for a in s])
                 if len(s) > self.max_len:
                     return torch.tensor([])
                 seqs.append(s)
@@ -321,16 +343,25 @@ class UniRefDataset(Dataset):
     - 'lengths_and_offsets.npz': byte offsets for the 'consensus.fasta' and sequence lengths
     """
 
-    def __init__(self, data_dir: str, split: str, structure=False, pdb=False, coords=False, bins=False,
-                 p_drop=0.0, max_len=2048):
+    def __init__(
+        self,
+        data_dir: str,
+        split: str,
+        structure=False,
+        pdb=False,
+        coords=False,
+        bins=False,
+        p_drop=0.0,
+        max_len=2048,
+    ):
         self.data_dir = data_dir
         self.split = split
         self.structure = structure
         self.coords = coords
-        with open(data_dir + 'splits.json', 'r') as f:
+        with open(data_dir + "splits.json", "r") as f:
             self.indices = json.load(f)[self.split]
-        metadata = np.load(self.data_dir + 'lengths_and_offsets.npz')
-        self.offsets = metadata['seq_offsets']
+        metadata = np.load(self.data_dir + "lengths_and_offsets.npz")
+        self.offsets = metadata["seq_offsets"]
         self.pdb = pdb
         self.bins = bins
         if self.pdb or self.bins:
@@ -338,7 +369,7 @@ class UniRefDataset(Dataset):
         else:
             self.n_digits = 8
         if self.coords:
-            with open(data_dir + 'coords.pkl', 'rb') as f:
+            with open(data_dir + "coords.pkl", "rb") as f:
                 self.structures = pkl.load(f)
         self.p_drop = p_drop
         self.max_len = max_len
@@ -349,7 +380,7 @@ class UniRefDataset(Dataset):
     def __getitem__(self, idx):
         idx = self.indices[idx]
         offset = self.offsets[idx]
-        with open(self.data_dir + 'consensus.fasta') as f:
+        with open(self.data_dir + "consensus.fasta") as f:
             f.seek(offset)
             consensus = f.readline()[:-1]
         if len(consensus) - self.max_len > 0:
@@ -366,7 +397,9 @@ class UniRefDataset(Dataset):
             theta = torch.tensor(theta).float()
             phi = torch.tensor(phi).float()
         elif self.structure:
-            sname = 'structures/{num:{fill}{width}}.npz'.format(num=idx, fill='0', width=self.n_digits)
+            sname = "structures/{num:{fill}{width}}.npz".format(
+                num=idx, fill="0", width=self.n_digits
+            )
             fname = self.data_dir + sname
             if path.isfile(fname):
                 structure = np.load(fname)
@@ -376,10 +409,10 @@ class UniRefDataset(Dataset):
                 if np.random.random() < self.p_drop:
                     structure = None
                 elif self.pdb:
-                    dist = torch.tensor(structure['dist']).float()
-                    omega = torch.tensor(structure['omega']).float()
-                    theta = torch.tensor(structure['theta']).float()
-                    phi = torch.tensor(structure['phi']).float()
+                    dist = torch.tensor(structure["dist"]).float()
+                    omega = torch.tensor(structure["omega"]).float()
+                    theta = torch.tensor(structure["theta"]).float()
+                    phi = torch.tensor(structure["phi"]).float()
                     if self.bins:
                         dist, omega, theta, phi = trr_bin(dist, omega, theta, phi)
                 else:
@@ -398,7 +431,15 @@ class UniRefDataset(Dataset):
 
 
 class TRRDataset(Dataset):
-    def __init__(self, data_dir, dataset, return_msa=True, bin=True, untokenize=False, max_len=2048):
+    def __init__(
+        self,
+        data_dir,
+        dataset,
+        return_msa=True,
+        bin=True,
+        untokenize=False,
+        max_len=2048,
+    ):
         """
         Args:
             data_dir: str,
@@ -412,7 +453,7 @@ class TRRDataset(Dataset):
             tokenizer:
                 Use this to untokenize sequence if desired
         """
-        filenames = data_dir + dataset + 'list.txt'
+        filenames = data_dir + dataset + "list.txt"
         self.filenames = np.loadtxt(filenames, dtype=str)
         self.data_dir = data_dir
         self.return_msa = return_msa
@@ -427,13 +468,13 @@ class TRRDataset(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, idx):
-        filename = self.data_dir + 'npz/' + self.filenames[idx] + '.npz'
+        filename = self.data_dir + "npz/" + self.filenames[idx] + ".npz"
         data = np.load(filename)
         if self.return_msa:
-            s = torch.tensor(data['msa'])
+            s = torch.tensor(data["msa"])
             ell = s.shape[1]
         else:
-            s = data['msa'][0]
+            s = data["msa"][0]
             if self.tokenizer is not None:
                 s = self.tokenizer.untokenize(s)
             ell = len(s)
@@ -443,10 +484,10 @@ class TRRDataset(Dataset):
         else:
             start = 0
             stop = ell
-        dist = data['dist6d']
-        omega = data['omega6d']
-        theta = data['theta6d']
-        phi = data['phi6d']
+        dist = data["dist6d"]
+        omega = data["omega6d"]
+        theta = data["theta6d"]
+        phi = data["phi6d"]
         if self.return_msa:
             s = s[:, start:stop]
         else:
@@ -471,8 +512,19 @@ class TRRDataset(Dataset):
 class MSAGapDataset(Dataset):
     """Build dataset for trRosetta data: gap-prob and lm/mlm"""
 
-    def __init__(self, data_dir, dataset, task, pdb=False, y=None, msa=None,
-                 random_seq=False, npz_dir=None, reweight=True, mask_endgaps=False):
+    def __init__(
+        self,
+        data_dir,
+        dataset,
+        task,
+        pdb=False,
+        y=None,
+        msa=None,
+        random_seq=False,
+        npz_dir=None,
+        reweight=True,
+        mask_endgaps=False,
+    ):
         """
         Args:
             data_dir: str,
@@ -497,7 +549,7 @@ class MSAGapDataset(Dataset):
             pdb_dir: str,
                 if you have a specified pdb directory
         """
-        filename = data_dir + dataset + 'list.txt'
+        filename = data_dir + dataset + "list.txt"
         pdb_ids = np.loadtxt(filename, dtype=str)
 
         # choose to use specific msa or y instead of the prebuilt ones
@@ -509,9 +561,9 @@ class MSAGapDataset(Dataset):
         if npz_dir:
             self.npz_dir = npz_dir
         else:
-            self.npz_dir = data_dir + 'structure/'
+            self.npz_dir = data_dir + "structure/"
         all_npzs = os.listdir(self.npz_dir)
-        selected_npzs = [i for i in pdb_ids if i + '.npz' in all_npzs]
+        selected_npzs = [i for i in pdb_ids if i + ".npz" in all_npzs]
         self.filenames = selected_npzs  # ids of samples to include
 
         # X options
@@ -528,16 +580,16 @@ class MSAGapDataset(Dataset):
 
     def __getitem__(self, idx):
         filename = self.filenames[idx]
-        data = np.load(self.npz_dir + filename + '.npz')
+        data = np.load(self.npz_dir + filename + ".npz")
 
         # grab sequence info
         if self.msa_path is not None:
             msa_data = np.load(self.msa_path + filename + ".npz")
-            msa = msa_data['msa']
-            weights = msa_data['weights']
+            msa = msa_data["msa"]
+            weights = msa_data["weights"]
         else:
-            msa = data['msa']
-            weights = data['weights']
+            msa = data["msa"]
+            weights = data["weights"]
         anchor_seq = msa[0]
         if self.random_seq:
             flag = True
@@ -551,9 +603,9 @@ class MSAGapDataset(Dataset):
 
         # choose y type
         if self.y_path is not None:
-            y_data = np.load(self.y_path + filename + 'npz')
-            y = y_data['y']
-            y_mask = y_data['y_mask']
+            y_data = np.load(self.y_path + filename + "npz")
+            y = y_data["y"]
+            y_mask = y_data["y_mask"]
         elif self.task == "gap-prob":
             if self.reweight:  # downsampling
                 y = ((msa == 20) * weights.T).sum(0) / msa.shape[0]
@@ -567,10 +619,10 @@ class MSAGapDataset(Dataset):
             y_mask = None
         # choose X type
         if self.pdb:  # use structure for X
-            dist = torch.FloatTensor(data['dist'])
-            omega = torch.FloatTensor(data['omega'])
-            theta = torch.FloatTensor(data['theta'])
-            phi = torch.FloatTensor(data['phi'])
+            dist = torch.FloatTensor(data["dist"])
+            omega = torch.FloatTensor(data["omega"])
+            theta = torch.FloatTensor(data["theta"])
+            phi = torch.FloatTensor(data["phi"])
             base_seq = torch.LongTensor(base_seq)
             anchor_seq = torch.LongTensor(anchor_seq)
             return base_seq, anchor_seq, dist, omega, theta, phi, y, y_mask
@@ -588,12 +640,16 @@ class MSAGapDataset(Dataset):
                 seq_mask = torch.BoolTensor(seq_mask)
                 return x[seq_mask], y[seq_mask]
             else:
-                raise ValueError("""Warning - input type and output type are not compatible, 
-                    pdb=False can only be used with task gap-prob""")
+                raise ValueError(
+                    """Warning - input type and output type are not compatible, 
+                    pdb=False can only be used with task gap-prob"""
+                )
 
     def _get_lm_y(self, msa):
         if self.mask_endgaps:
-            y = torch.LongTensor(msa[np.random.choice(msa.shape[0])])  # get random seq from msa
+            y = torch.LongTensor(
+                msa[np.random.choice(msa.shape[0])]
+            )  # get random seq from msa
             y_mask = []
             for i in range(len(y)):
                 if y[i] != 20:
@@ -606,7 +662,9 @@ class MSAGapDataset(Dataset):
                     break
             return y, torch.BoolTensor(y_mask)
         else:
-            y = torch.LongTensor(msa[np.random.choice(msa.shape[0])])  # get random seq from msa
+            y = torch.LongTensor(
+                msa[np.random.choice(msa.shape[0])]
+            )  # get random seq from msa
             y_mask = None
             return y, y_mask
 
@@ -635,8 +693,8 @@ class TRRMSADataset(Dataset):
 
         # MSAs should be in the order of npz_dir
         all_files = os.listdir(self.data_dir)
-        if 'trrosetta_lengths.npz' in all_files:
-            all_files.remove('trrosetta_lengths.npz')
+        if "trrosetta_lengths.npz" in all_files:
+            all_files.remove("trrosetta_lengths.npz")
         all_files = sorted(all_files)
         self.filenames = all_files  # IDs of samples to include
 
@@ -657,7 +715,7 @@ class TRRMSADataset(Dataset):
         data = np.load(self.data_dir + filename)
 
         # Grab sequence info
-        msa = data['msa']
+        msa = data["msa"]
 
         msa_seq_len = len(msa[0])
         if msa_seq_len > self.max_seq_len:
@@ -667,24 +725,35 @@ class TRRMSADataset(Dataset):
             slice_start = 0
             seq_len = msa_seq_len
 
-        sliced_msa = msa[:, slice_start: slice_start + self.max_seq_len]
+        sliced_msa = msa[:, slice_start : slice_start + self.max_seq_len]
         anchor_seq = sliced_msa[0]  # This is the query sequence in MSA
 
-        sliced_msa = [list(seq) for seq in sliced_msa if (list(set(seq)) != [self.tokenizer.alphabet.index('-')])]
+        sliced_msa = [
+            list(seq)
+            for seq in sliced_msa
+            if (list(set(seq)) != [self.tokenizer.alphabet.index("-")])
+        ]
         sliced_msa = np.asarray(sliced_msa)
         msa_num_seqs = len(sliced_msa)
 
         # If fewer sequences in MSA than self.n_sequences, create sequences padded with PAD token based on 'random' or
         # 'MaxHamming' selection strategy
         if msa_num_seqs < self.n_sequences:
-            output = np.full(shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id)
+            output = np.full(
+                shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id
+            )
             output[:msa_num_seqs] = sliced_msa
         elif msa_num_seqs > self.n_sequences:
-            if self.selection_type == 'random':
-                random_idx = np.random.choice(msa_num_seqs - 1, size=self.n_sequences - 1, replace=False) + 1
+            if self.selection_type == "random":
+                random_idx = (
+                    np.random.choice(
+                        msa_num_seqs - 1, size=self.n_sequences - 1, replace=False
+                    )
+                    + 1
+                )
                 anchor_seq = np.expand_dims(anchor_seq, axis=0)
                 output = np.concatenate((anchor_seq, sliced_msa[random_idx]), axis=0)
-            elif self.selection_type == 'non-random':
+            elif self.selection_type == "non-random":
                 output = sliced_msa[:64]
             elif self.selection_type == "MaxHamming":
                 output = [list(anchor_seq)]
@@ -699,10 +768,12 @@ class TRRMSADataset(Dataset):
                 distance_matrix = np.ones((self.n_sequences - 2, m))
 
                 for i in range(self.n_sequences - 2):
-                    curr_dist = cdist(random_seq, msa_subset, metric='hamming')
-                    curr_dist = np.expand_dims(np.array(curr_dist), axis=0)  # shape is now (1,msa_num_seqs)
+                    curr_dist = cdist(random_seq, msa_subset, metric="hamming")
+                    curr_dist = np.expand_dims(
+                        np.array(curr_dist), axis=0
+                    )  # shape is now (1,msa_num_seqs)
                     distance_matrix[i] = curr_dist
-                    col_min = np.min(distance_matrix, axis=0) # (1,num_choices)
+                    col_min = np.min(distance_matrix, axis=0)  # (1,num_choices)
                     max_ind = np.argmax(col_min)
                     random_ind = max_ind
                     random_seq = msa_subset[random_ind]
@@ -713,7 +784,7 @@ class TRRMSADataset(Dataset):
         else:
             output = sliced_msa
 
-        output = [''.join(seq) for seq in self.alpha[output]]
+        output = ["".join(seq) for seq in self.alpha[output]]
         return output
 
 
@@ -740,10 +811,10 @@ class A3MMSADataset(Dataset):
             raise FileNotFoundError(data_dir)
 
         all_files = os.listdir(self.data_dir)
-        if 'openfold_lengths.npz' in all_files:
-            all_files.remove('openfold_lengths.npz')
-        if 'trrosetta_test_lengths.npz' in all_files:
-            all_files.remove('trrosetta_test_lengths.npz')
+        if "openfold_lengths.npz" in all_files:
+            all_files.remove("openfold_lengths.npz")
+        if "trrosetta_test_lengths.npz" in all_files:
+            all_files.remove("trrosetta_test_lengths.npz")
         all_files = sorted(all_files)
         self.filenames = all_files  # IDs of samples to include
 
@@ -759,17 +830,26 @@ class A3MMSADataset(Dataset):
 
     def __getitem__(self, idx):  # TODO: add error checking?
         filename = self.filenames[idx]
-        if path.exists(self.data_dir + filename + '/a3m/uniclust30.a3m'):
-            parsed_msa = parse_fasta(self.data_dir + filename + '/a3m/uniclust30.a3m')
-        elif path.exists(self.data_dir + filename + '/a3m/bfd_uniclust_hits.a3m'):
-            parsed_msa = parse_fasta(self.data_dir + filename + '/a3m/bfd_uniclust_hits.a3m')
+        if path.exists(self.data_dir + filename + "/a3m/uniclust30.a3m"):
+            parsed_msa = parse_fasta(self.data_dir + filename + "/a3m/uniclust30.a3m")
+        elif path.exists(self.data_dir + filename + "/a3m/bfd_uniclust_hits.a3m"):
+            parsed_msa = parse_fasta(
+                self.data_dir + filename + "/a3m/bfd_uniclust_hits.a3m"
+            )
         else:
             parsed_msa = parse_fasta(self.data_dir + filename)
             # print(filename)
             # raise ValueError("file does not exist")
 
-        aligned_msa = [[char for char in seq if (char.isupper() or char == '-') and not char == '.'] for seq in parsed_msa]
-        aligned_msa = [''.join(seq) for seq in aligned_msa]
+        aligned_msa = [
+            [
+                char
+                for char in seq
+                if (char.isupper() or char == "-") and not char == "."
+            ]
+            for seq in parsed_msa
+        ]
+        aligned_msa = ["".join(seq) for seq in aligned_msa]
 
         # with open('/home/t-nthakkar/msa_' + str(idx) + '.txt', 'a') as f:
         #     for seq in aligned_msa:
@@ -788,25 +868,38 @@ class A3MMSADataset(Dataset):
             slice_start = 0
             seq_len = msa_seq_len
 
-        sliced_msa = tokenized_msa[:, slice_start: slice_start + self.max_seq_len]
+        sliced_msa = tokenized_msa[:, slice_start : slice_start + self.max_seq_len]
         anchor_seq = sliced_msa[0]  # This is the query sequence in MSA
 
         # gap_str = '-' * msa_seq_len
         # parsed_msa = [seq.upper() for seq in parsed_msa if seq != gap_str]
 
-        sliced_msa = [seq for seq in sliced_msa if (list(set(seq)) != [self.tokenizer.alphabet.index('-')])]
+        sliced_msa = [
+            seq
+            for seq in sliced_msa
+            if (list(set(seq)) != [self.tokenizer.alphabet.index("-")])
+        ]
         msa_num_seqs = len(sliced_msa)
 
         # If fewer sequences in MSA than self.n_sequences, create sequences padded with PAD token based on 'random' or
         # 'MaxHamming' selection strategy
         if msa_num_seqs < self.n_sequences:
-            output = np.full(shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id)
+            output = np.full(
+                shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id
+            )
             output[:msa_num_seqs] = sliced_msa
         elif msa_num_seqs > self.n_sequences:
-            if self.selection_type == 'random':
-                random_idx = np.random.choice(msa_num_seqs - 1, size=self.n_sequences - 1, replace=False) + 1
+            if self.selection_type == "random":
+                random_idx = (
+                    np.random.choice(
+                        msa_num_seqs - 1, size=self.n_sequences - 1, replace=False
+                    )
+                    + 1
+                )
                 anchor_seq = np.expand_dims(anchor_seq, axis=0)
-                output = np.concatenate((anchor_seq, np.array(sliced_msa)[random_idx.astype(int)]), axis=0)
+                output = np.concatenate(
+                    (anchor_seq, np.array(sliced_msa)[random_idx.astype(int)]), axis=0
+                )
             elif self.selection_type == "MaxHamming":
                 output = [list(anchor_seq)]
                 msa_subset = sliced_msa[1:]
@@ -820,8 +913,10 @@ class A3MMSADataset(Dataset):
                 distance_matrix = np.ones((self.n_sequences - 2, m))
 
                 for i in range(self.n_sequences - 2):
-                    curr_dist = cdist(random_seq, msa_subset, metric='hamming')
-                    curr_dist = np.expand_dims(np.array(curr_dist), axis=0)  # shape is now (1,msa_num_seqs)
+                    curr_dist = cdist(random_seq, msa_subset, metric="hamming")
+                    curr_dist = np.expand_dims(
+                        np.array(curr_dist), axis=0
+                    )  # shape is now (1,msa_num_seqs)
                     distance_matrix[i] = curr_dist
                     col_min = np.min(distance_matrix, axis=0)  # (1,num_choices)
                     max_ind = np.argmax(col_min)
@@ -834,7 +929,7 @@ class A3MMSADataset(Dataset):
         else:
             output = sliced_msa
 
-        output = [''.join(seq) for seq in self.alpha[output]]
+        output = ["".join(seq) for seq in self.alpha[output]]
         return output
 
 
@@ -876,8 +971,15 @@ class A2MZeroShotDataset(Dataset):
         print(filename)
         parsed_msa = parse_fasta(self.data_dir + filename)
 
-        aligned_msa = [[char for char in seq if (char.isupper() or char == '-') and not char == '.'] for seq in parsed_msa]
-        aligned_msa = [''.join(seq) for seq in aligned_msa]
+        aligned_msa = [
+            [
+                char
+                for char in seq
+                if (char.isupper() or char == "-") and not char == "."
+            ]
+            for seq in parsed_msa
+        ]
+        aligned_msa = ["".join(seq) for seq in aligned_msa]
 
         tokenized_msa = [self.tokenizer.tokenize(seq) for seq in aligned_msa]
         tokenized_msa = np.array([l.tolist() for l in tokenized_msa])
@@ -899,17 +1001,28 @@ class A2MZeroShotDataset(Dataset):
         # gap_str = '-' * msa_seq_len
         # parsed_msa = [seq.upper() for seq in parsed_msa if seq != gap_str]
 
-        sliced_msa = [seq for seq in sliced_msa if (list(set(seq)) != [self.tokenizer.alphabet.index('-')])]
+        sliced_msa = [
+            seq
+            for seq in sliced_msa
+            if (list(set(seq)) != [self.tokenizer.alphabet.index("-")])
+        ]
         msa_num_seqs = len(sliced_msa)
 
         # If fewer sequences in MSA than self.n_sequences, create sequences padded with PAD token based on 'random' or
         # 'MaxHamming' selection strategy
         if msa_num_seqs < self.n_sequences:
-            output = np.full(shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id)
+            output = np.full(
+                shape=(self.n_sequences, seq_len), fill_value=self.tokenizer.pad_id
+            )
             output[:msa_num_seqs] = sliced_msa
         elif msa_num_seqs > self.n_sequences:
-            if self.selection_type == 'random':
-                random_idx = np.random.choice(msa_num_seqs - 1, size=self.n_sequences - 1, replace=False) + 1
+            if self.selection_type == "random":
+                random_idx = (
+                    np.random.choice(
+                        msa_num_seqs - 1, size=self.n_sequences - 1, replace=False
+                    )
+                    + 1
+                )
                 anchor_seq = np.expand_dims(anchor_seq, axis=0)
                 output = np.concatenate((anchor_seq, sliced_msa[random_idx]), axis=0)
             elif self.selection_type == "MaxHamming":
@@ -925,8 +1038,10 @@ class A2MZeroShotDataset(Dataset):
                 distance_matrix = np.ones((self.n_sequences - 2, m))
 
                 for i in range(self.n_sequences - 2):
-                    curr_dist = cdist(random_seq, msa_subset, metric='hamming')
-                    curr_dist = np.expand_dims(np.array(curr_dist), axis=0)  # shape is now (1,msa_num_seqs)
+                    curr_dist = cdist(random_seq, msa_subset, metric="hamming")
+                    curr_dist = np.expand_dims(
+                        np.array(curr_dist), axis=0
+                    )  # shape is now (1,msa_num_seqs)
                     distance_matrix[i] = curr_dist
                     col_min = np.min(distance_matrix, axis=0)  # (1,num_choices)
                     max_ind = np.argmax(col_min)
@@ -939,5 +1054,5 @@ class A2MZeroShotDataset(Dataset):
         else:
             output = sliced_msa
 
-        output = [''.join(seq) for seq in self.alpha[output]]
+        output = ["".join(seq) for seq in self.alpha[output]]
         return output

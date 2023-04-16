@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from esm.modules import SinusoidalPositionalEmbedding
 from torch import Tensor
 
-from esm.modules import SinusoidalPositionalEmbedding
 from .transformer_layer import TransformerDecoderLayer
 
 
@@ -68,10 +68,7 @@ class TransformerDecoder(nn.Module):
 
         self.layers = nn.ModuleList([])
         self.layers.extend(
-            [
-                self.build_decoder_layer(args)
-                for _ in range(args.decoder_layers)
-            ]
+            [self.build_decoder_layer(args) for _ in range(args.decoder_layers)]
         )
         self.num_layers = len(self.layers)
         self.layer_norm = nn.LayerNorm(embed_dim)
@@ -83,7 +80,7 @@ class TransformerDecoder(nn.Module):
             args.decoder_embed_dim, len(dictionary), bias=False
         )
         nn.init.normal_(
-            self.output_projection.weight, mean=0, std=args.decoder_embed_dim ** -0.5
+            self.output_projection.weight, mean=0, std=args.decoder_embed_dim**-0.5
         )
 
     def build_decoder_layer(self, args):
@@ -122,7 +119,7 @@ class TransformerDecoder(nn.Module):
 
         if not features_only:
             x = self.output_layer(x)
-        x = x.transpose(1, 2) # B x T x C -> B x C x T
+        x = x.transpose(1, 2)  # B x T x C -> B x C x T
         return x, extra
 
     def extract_features(
@@ -155,9 +152,7 @@ class TransformerDecoder(nn.Module):
             padding_mask = encoder_out["encoder_padding_mask"][0]
 
         # embed positions
-        positions = self.embed_positions(
-            prev_output_tokens
-        )
+        positions = self.embed_positions(prev_output_tokens)
 
         if incremental_state is not None:
             prev_output_tokens = prev_output_tokens[:, -1:]

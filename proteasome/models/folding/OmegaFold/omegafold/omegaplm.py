@@ -25,9 +25,8 @@ import math
 import typing
 
 import torch
-from torch import nn
-
 from omegafold import embedders, modules, utils
+from torch import nn
 
 
 # =============================================================================
@@ -47,39 +46,34 @@ def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:
     Returns:
 
     """
-    return num_res.clamp(min=4e-5).log() / (math.log(512) * attn_dim ** 0.5)
+    return num_res.clamp(min=4e-5).log() / (math.log(512) * attn_dim**0.5)
 
 
 # =============================================================================
 # Classes
 # =============================================================================
 class GatedAttentionUnit(modules.OFModule):
-    """
-
-    """
+    """ """
 
     def __init__(self, cfg: argparse.Namespace):
         super(GatedAttentionUnit, self).__init__(cfg)
         self.cfg = cfg
         self.gva_proj = nn.Sequential(
-            nn.Linear(cfg.node, cfg.proj_dim * 2 + cfg.attn_dim),
-            nn.SiLU()
+            nn.Linear(cfg.node, cfg.proj_dim * 2 + cfg.attn_dim), nn.SiLU()
         )
         self.multi_headed_scaling = modules.MultiHeadedScaling(
-            cfg.attn_dim,
-            num_heads=2,
-            on_out_ready=lambda x: self.rope(x, x.ndim - 3)
+            cfg.attn_dim, num_heads=2, on_out_ready=lambda x: self.rope(x, x.ndim - 3)
         )
         self.rope = embedders.RoPE(cfg.attn_dim)
         self.relpos = embedders.RelPosEmbedder(cfg.num_relpos, embedding_dim=1)
         self.output_proj = nn.Linear(cfg.proj_dim, cfg.node)
 
     def forward(
-            self,
-            node: torch.Tensor,
-            scaling: torch.Tensor,
-            bias: torch.Tensor,
-            fwd_cfg: typing.Optional[argparse.Namespace]
+        self,
+        node: torch.Tensor,
+        scaling: torch.Tensor,
+        bias: torch.Tensor,
+        fwd_cfg: typing.Optional[argparse.Namespace],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
         The forward method of this class
@@ -108,7 +102,7 @@ class GatedAttentionUnit(modules.OFModule):
             bias=bias + self.relpos(base.shape[-2])[..., 0],
             subbatch_size=fwd_cfg.subbatch_size,
             return_edge=True,
-            edge_reduction='sum',
+            edge_reduction="sum",
             edge_reduction_dim=-3,
         )
 
@@ -133,11 +127,11 @@ class OmegaPLMLayer(modules.OFModule):
         self.gau = GatedAttentionUnit(cfg)
 
     def forward(
-            self,
-            node: torch.Tensor,
-            qk_scaling: torch.Tensor,
-            bias: torch.Tensor,
-            fwd_cfg: typing.Optional[argparse.Namespace]
+        self,
+        node: torch.Tensor,
+        qk_scaling: torch.Tensor,
+        bias: torch.Tensor,
+        fwd_cfg: typing.Optional[argparse.Namespace],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method for pre-layernorm
 
@@ -176,16 +170,14 @@ class OmegaPLM(modules.OFModule):
         self.input_embedding = nn.Embedding(
             cfg.alphabet_size, cfg.node, padding_idx=cfg.padding_idx
         )
-        self.layers = nn.ModuleList(
-            [OmegaPLMLayer(cfg) for _ in range(cfg.edge)]
-        )
+        self.layers = nn.ModuleList([OmegaPLMLayer(cfg) for _ in range(cfg.edge)])
         self.output_norm = nn.LayerNorm(cfg.node)
 
     def forward(
-            self,
-            tokens: torch.Tensor,
-            mask: torch.Tensor,
-            fwd_cfg: typing.Optional[argparse.Namespace]
+        self,
+        tokens: torch.Tensor,
+        mask: torch.Tensor,
+        fwd_cfg: typing.Optional[argparse.Namespace],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 
@@ -206,21 +198,23 @@ class OmegaPLM(modules.OFModule):
         node = self.input_embedding(tokens)
         node *= self._get_finetuning_scale(mask, tokens)
         edges = torch.empty(
-            len(self.layers), mask.shape[-1], mask.shape[-1],
-            dtype=node.dtype, device=node.device
+            len(self.layers),
+            mask.shape[-1],
+            mask.shape[-1],
+            dtype=node.dtype,
+            device=node.device,
         )
         for i, layer in enumerate(self.layers):
             node, edges[i] = layer(node, qk_scaling, bias, fwd_cfg)
         node = self.output_norm(node)
 
         # Taking the average
-        edges /= (mask.any(-1).sum() + 1e-5)
+        edges /= mask.any(-1).sum() + 1e-5
 
         return node, edges
 
-
     def _get_finetuning_scale(
-            self, mask: torch.Tensor, tokens: torch.Tensor
+        self, mask: torch.Tensor, tokens: torch.Tensor
     ) -> torch.Tensor:
         """Token dropout scaling
 
@@ -236,9 +230,9 @@ class OmegaPLM(modules.OFModule):
         src_lengths = mask.sum(-1)
         mask_ratio_observed = tokens.eq(21).sum(-1).float() / src_lengths
         mask_ratio_observed = torch.where(
-            mask_ratio_observed == 1.,
+            mask_ratio_observed == 1.0,
             torch.full_like(mask_ratio_observed, 0.99),
-            mask_ratio_observed
+            mask_ratio_observed,
         )
         return un_masked_ratio_train / (1 - mask_ratio_observed)[:, None, None]
 
@@ -246,5 +240,5 @@ class OmegaPLM(modules.OFModule):
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

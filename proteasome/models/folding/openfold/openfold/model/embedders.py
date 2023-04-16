@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional, Tuple
+
 import torch
 import torch.nn as nn
-from typing import Tuple, Optional
-
-from openfold.model.primitives import Linear, LayerNorm
+from openfold.model.primitives import LayerNorm, Linear
 from openfold.utils.tensor_utils import add, one_hot
 
 
@@ -81,7 +81,7 @@ class InputEmbedder(nn.Module):
         d = ri[..., None] - ri[..., None, :]
         boundaries = torch.arange(
             start=-self.relpos_k, end=self.relpos_k + 1, device=d.device
-        ) 
+        )
         reshaped_bins = boundaries.view(((1,) * len(d.shape)) + (len(boundaries),))
         d = d[..., None] - reshaped_bins
         d = torch.abs(d)
@@ -118,14 +118,8 @@ class InputEmbedder(nn.Module):
 
         # [*, N_res, N_res, c_z]
         pair_emb = self.relpos(ri.type(tf_emb_i.dtype))
-        pair_emb = add(pair_emb, 
-            tf_emb_i[..., None, :], 
-            inplace=inplace_safe
-        )
-        pair_emb = add(pair_emb, 
-            tf_emb_j[..., None, :, :], 
-            inplace=inplace_safe
-        )
+        pair_emb = add(pair_emb, tf_emb_i[..., None, :], inplace=inplace_safe)
+        pair_emb = add(pair_emb, tf_emb_j[..., None, :, :], inplace=inplace_safe)
 
         # [*, N_clust, N_res, c_m]
         n_clust = msa.shape[-3]
@@ -145,6 +139,7 @@ class RecyclingEmbedder(nn.Module):
 
     Implements Algorithm 32.
     """
+
     def __init__(
         self,
         c_m: int,
@@ -204,13 +199,13 @@ class RecyclingEmbedder(nn.Module):
         """
         # [*, N, C_m]
         m_update = self.layer_norm_m(m)
-        if(inplace_safe):
+        if inplace_safe:
             m.copy_(m_update)
             m_update = m
 
         # [*, N, N, C_z]
         z_update = self.layer_norm_z(z)
-        if(inplace_safe):
+        if inplace_safe:
             z.copy_(z_update)
             z_update = z
 
@@ -223,7 +218,7 @@ class RecyclingEmbedder(nn.Module):
             device=x.device,
             requires_grad=False,
         )
-        squared_bins = bins ** 2
+        squared_bins = bins**2
         upper = torch.cat(
             [squared_bins[1:], squared_bins.new_tensor([self.inf])], dim=-1
         )
@@ -334,6 +329,7 @@ class ExtraMSAEmbedder(nn.Module):
 
     Implements Algorithm 2, line 15
     """
+
     def __init__(
         self,
         c_in: int,

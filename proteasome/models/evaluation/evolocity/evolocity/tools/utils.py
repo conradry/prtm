@@ -1,10 +1,11 @@
 import errno
+import os
+import warnings
+
 import matplotlib.pyplot as pl
 import numpy as np
-import os
 import pandas as pd
 from scipy.sparse import csr_matrix, issparse
-import warnings
 
 warnings.simplefilter("ignore")
 
@@ -250,8 +251,9 @@ def extract_int_from_str(array):
 
 def strings_to_categoricals(adata):
     """Transform string annotations to categoricals."""
-    from pandas.api.types import is_string_dtype, is_integer_dtype, is_bool_dtype
     from pandas import Categorical
+    from pandas.api.types import (is_bool_dtype, is_integer_dtype,
+                                  is_string_dtype)
 
     def is_valid_dtype(values):
         return (
@@ -329,9 +331,8 @@ def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
         adata.uns[f"{key_added}_colors"] = new_colors
 
 
-
 def make_unique_list(key, allow_array=False):
-    from pandas import unique, Index
+    from pandas import Index, unique
 
     if isinstance(key, Index):
         key = key.tolist()
@@ -445,7 +446,7 @@ def vcorrcoef(X, y, mode="pearsons", axis=-1):
     Xm = np.array(X - (np.nanmean(X, -1)[:, None] if X.ndim > 1 else np.nanmean(X, -1)))
     ym = np.array(y - (np.nanmean(y, -1)[:, None] if y.ndim > 1 else np.nanmean(y, -1)))
     corr = np.nansum(Xm * ym, -1) / np.sqrt(
-        np.nansum(Xm ** 2, -1) * np.nansum(ym ** 2, -1)
+        np.nansum(Xm**2, -1) * np.nansum(ym**2, -1)
     )
     return corr
 

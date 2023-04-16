@@ -1,9 +1,10 @@
 from ..preprocessing import get_model
 
+
 def velocity_model(
     adata,
-    model_name='esm1b',
-    mkey='model',
+    model_name="esm1b",
+    mkey="model",
     copy=False,
 ):
     adata = adata.copy() if copy else adata

@@ -13,10 +13,11 @@
 # limitations under the License.
 
 
+from functools import partialmethod
+from typing import List, Union
+
 import torch
 import torch.nn as nn
-from functools import partialmethod
-from typing import Union, List
 
 
 class Dropout(nn.Module):

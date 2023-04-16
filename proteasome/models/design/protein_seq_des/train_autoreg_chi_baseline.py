@@ -1,24 +1,24 @@
+import glob
 import os
+import pickle
+import subprocess as sp
 import sys
 import time
+
+import common.atoms
+import common.run_manager
 import numpy as np
+import seq_des.models as models
+import seq_des.util.acc_util as acc_util
+import seq_des.util.canonicalize as canonicalize
+import seq_des.util.data as datasets
+import seq_des.util.voxelize as voxelize
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from tqdm import tqdm
-import common.run_manager
-import seq_des.models as models
-import seq_des.util.voxelize as voxelize
-import glob
-import seq_des.util.canonicalize as canonicalize
-import pickle
-import seq_des.util.data as datasets
-from torch.utils import data
-import common.atoms
-import seq_des.util.acc_util as acc_util
-import subprocess as sp
-import time
 import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils import data
+from tqdm import tqdm
 
 """ script to train 3D CNN on local residue-centered environments -- BB only -- with autoregressive rotamer chi angle prediction"""
 
@@ -28,14 +28,40 @@ c = len(common.atoms.atoms)
 
 
 def test(
-    model, gen, dataloader, criterion, chi_1_criterion, chi_2_criterion, chi_3_criterion, chi_4_criterion, max_it=1e6, desc="test", batch_size=64, n_iters=500, k=3, use_cuda=True,
+    model,
+    gen,
+    dataloader,
+    criterion,
+    chi_1_criterion,
+    chi_2_criterion,
+    chi_3_criterion,
+    chi_4_criterion,
+    max_it=1e6,
+    desc="test",
+    batch_size=64,
+    n_iters=500,
+    k=3,
+    use_cuda=True,
 ):
     n_iters = min(max_it, n_iters)
     model = model.eval()
     gen = iter(dataloader)
-    (losses, avg_acc, avg_top_k_acc, avg_coarse_acc, avg_polar_acc, avg_chi_1_acc, avg_chi_2_acc, avg_chi_3_acc, avg_chi_4_acc, avg_chi_1_loss, avg_chi_2_loss, avg_chi_3_loss, avg_chi_4_loss,) = ([] for i in range(13))
+    (
+        losses,
+        avg_acc,
+        avg_top_k_acc,
+        avg_coarse_acc,
+        avg_polar_acc,
+        avg_chi_1_acc,
+        avg_chi_2_acc,
+        avg_chi_3_acc,
+        avg_chi_4_acc,
+        avg_chi_1_loss,
+        avg_chi_2_loss,
+        avg_chi_3_loss,
+        avg_chi_4_loss,
+    ) = ([] for i in range(13))
     with torch.no_grad():
-
         for i in tqdm(range(n_iters), desc=desc):
             try:
                 out = gen.next()
@@ -43,16 +69,69 @@ def test(
                 gen = iter(dataloader)
                 out = gen.next()
 
-            out = step(model, out, criterion, chi_1_criterion, chi_2_criterion, chi_3_criterion, chi_4_criterion, use_cuda=use_cuda)
+            out = step(
+                model,
+                out,
+                criterion,
+                chi_1_criterion,
+                chi_2_criterion,
+                chi_3_criterion,
+                chi_4_criterion,
+                use_cuda=use_cuda,
+            )
 
             if out is None:
                 continue
-            (loss, chi_1_loss, chi_2_loss, chi_3_loss, chi_4_loss, out, y, acc, top_k_acc, coarse_acc, polar_acc, chi_1_acc, chi_2_acc, chi_3_acc, chi_4_acc,) = out
+            (
+                loss,
+                chi_1_loss,
+                chi_2_loss,
+                chi_3_loss,
+                chi_4_loss,
+                out,
+                y,
+                acc,
+                top_k_acc,
+                coarse_acc,
+                polar_acc,
+                chi_1_acc,
+                chi_2_acc,
+                chi_3_acc,
+                chi_4_acc,
+            ) = out
 
             # append losses, accs to lists
             for x, y in zip(
-                [losses, avg_acc, avg_top_k_acc, avg_coarse_acc, avg_polar_acc, avg_chi_1_acc, avg_chi_2_acc, avg_chi_3_acc, avg_chi_4_acc, avg_chi_1_loss, avg_chi_2_loss, avg_chi_3_loss, avg_chi_4_loss,],
-                [loss.item(), acc, top_k_acc, coarse_acc, polar_acc, chi_1_acc, chi_2_acc, chi_3_acc, chi_4_acc, chi_1_loss.item(), chi_2_loss.item(), chi_3_loss.item(), chi_4_loss.item(),],
+                [
+                    losses,
+                    avg_acc,
+                    avg_top_k_acc,
+                    avg_coarse_acc,
+                    avg_polar_acc,
+                    avg_chi_1_acc,
+                    avg_chi_2_acc,
+                    avg_chi_3_acc,
+                    avg_chi_4_acc,
+                    avg_chi_1_loss,
+                    avg_chi_2_loss,
+                    avg_chi_3_loss,
+                    avg_chi_4_loss,
+                ],
+                [
+                    loss.item(),
+                    acc,
+                    top_k_acc,
+                    coarse_acc,
+                    polar_acc,
+                    chi_1_acc,
+                    chi_2_acc,
+                    chi_3_acc,
+                    chi_4_acc,
+                    chi_1_loss.item(),
+                    chi_2_loss.item(),
+                    chi_3_loss.item(),
+                    chi_4_loss.item(),
+                ],
             ):
                 x.append(y)
 
@@ -75,7 +154,16 @@ def test(
             )
 
         print(
-            "\nloss", np.mean(losses), "acc", np.mean(avg_acc), "top3", np.mean(avg_top_k_acc), "coarse", np.mean(avg_coarse_acc), "polar", np.mean(avg_polar_acc),
+            "\nloss",
+            np.mean(losses),
+            "acc",
+            np.mean(avg_acc),
+            "top3",
+            np.mean(avg_top_k_acc),
+            "coarse",
+            np.mean(avg_coarse_acc),
+            "polar",
+            np.mean(avg_polar_acc),
         )
 
     return (
@@ -96,13 +184,33 @@ def test(
     )
 
 
-def step(model, out, criterion, chi_1_criterion, chi_2_criterion, chi_3_criterion, chi_4_criterion, k=3, use_cuda=True):
-
-    (bs_idx, x_atom, x_bb, x_b, y_b, z_b, x_res_type, y, chi_angles_real, chi_angles,) = out
+def step(
+    model,
+    out,
+    criterion,
+    chi_1_criterion,
+    chi_2_criterion,
+    chi_3_criterion,
+    chi_4_criterion,
+    k=3,
+    use_cuda=True,
+):
+    (
+        bs_idx,
+        x_atom,
+        x_bb,
+        x_b,
+        y_b,
+        z_b,
+        x_res_type,
+        y,
+        chi_angles_real,
+        chi_angles,
+    ) = out
 
     bs = len(bs_idx)
     output_atom = torch.zeros((bs, c + 1, n + 2, n + 2, n + 2))
-    output_atom[bs_idx, x_atom, x_b, y_b, z_b] = 1 
+    output_atom[bs_idx, x_atom, x_b, y_b, z_b] = 1
 
     if use_cuda:
         output_atom = output_atom.cuda()
@@ -137,9 +245,36 @@ def step(model, out, criterion, chi_1_criterion, chi_2_criterion, chi_3_criterio
     chi_3_onehot.scatter_(1, chi_3[:, None], 1)
 
     if use_cuda:
-        (X, y, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot, chi_1, chi_2, chi_3, chi_4,) = map(lambda x: x.cuda(), [X, y, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot, chi_1, chi_2, chi_3, chi_4,],)
+        (
+            X,
+            y,
+            y_onehot,
+            chi_1_onehot,
+            chi_2_onehot,
+            chi_3_onehot,
+            chi_1,
+            chi_2,
+            chi_3,
+            chi_4,
+        ) = map(
+            lambda x: x.cuda(),
+            [
+                X,
+                y,
+                y_onehot,
+                chi_1_onehot,
+                chi_2_onehot,
+                chi_3_onehot,
+                chi_1,
+                chi_2,
+                chi_3,
+                chi_4,
+            ],
+        )
 
-    out, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred = model(X, y_onehot, chi_1_onehot[:, 1:], chi_2_onehot[:, 1:], chi_3_onehot[:, 1:])
+    out, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred = model(
+        X, y_onehot, chi_1_onehot[:, 1:], chi_2_onehot[:, 1:], chi_3_onehot[:, 1:]
+    )
     # loss
     loss = criterion(out, y)
     chi_1_loss = chi_1_criterion(chi_1_pred, chi_1 - 1)
@@ -186,7 +321,6 @@ def step_iter(gen, dataloader):
 
 
 def main():
-
     manager = common.run_manager.RunManager()
 
     manager.parse_args()
@@ -196,7 +330,9 @@ def main():
     use_cuda = torch.cuda.is_available() and args.cuda
 
     # set up model
-    model = models.seqPred(nic=len(common.atoms.atoms), nf=args.nf, momentum=args.momentum)
+    model = models.seqPred(
+        nic=len(common.atoms.atoms), nf=args.nf, momentum=args.momentum
+    )
     model.apply(models.init_ortho_weights)
     if use_cuda:
         model.cuda()
@@ -213,7 +349,9 @@ def main():
         model.load_state_dict(torch.load(args.model))
         print("loaded pretrained model")
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(args.beta1, 0.999), weight_decay=args.reg)
+    optimizer = optim.Adam(
+        model.parameters(), lr=args.lr, betas=(args.beta1, 0.999), weight_decay=args.reg
+    )
 
     if args.optimizer != "":
         # load pretrained optimizer
@@ -234,14 +372,34 @@ def main():
         chi_3_criterion.cuda()
         chi_4_criterion.cuda()
 
-    train_dataset = datasets.PDB_data_spitter(data_dir=args.data_dir + "/train_s95_chi_bb")
-    train_dataset.len = 8145448  # NOTE -- need to update this if underlying data changes
+    train_dataset = datasets.PDB_data_spitter(
+        data_dir=args.data_dir + "/train_s95_chi_bb"
+    )
+    train_dataset.len = (
+        8145448  # NOTE -- need to update this if underlying data changes
+    )
 
-    test_dataset = datasets.PDB_data_spitter(data_dir=args.data_dir + "/test_s95_chi_bb")
+    test_dataset = datasets.PDB_data_spitter(
+        data_dir=args.data_dir + "/test_s95_chi_bb"
+    )
     test_dataset.len = 574267  # NOTE -- need to update this if underlying data changes
 
-    train_dataloader = data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.workers, pin_memory=True, collate_fn=datasets.collate_wrapper,)
-    test_dataloader = data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.workers, pin_memory=True, collate_fn=datasets.collate_wrapper,)
+    train_dataloader = data.DataLoader(
+        train_dataset,
+        batch_size=args.batchSize,
+        shuffle=False,
+        num_workers=args.workers,
+        pin_memory=True,
+        collate_fn=datasets.collate_wrapper,
+    )
+    test_dataloader = data.DataLoader(
+        test_dataset,
+        batch_size=args.batchSize,
+        shuffle=False,
+        num_workers=args.workers,
+        pin_memory=True,
+        collate_fn=datasets.collate_wrapper,
+    )
 
     # training params
     validation_frequency = args.validation_frequency
@@ -260,13 +418,28 @@ def main():
     chi_3_onehot = torch.FloatTensor(bs, len(datasets.CHI_BINS))
 
     if use_cuda:
-        output_atom, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot = map(lambda x: x.cuda(), [output_atom, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot])
+        output_atom, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot = map(
+            lambda x: x.cuda(),
+            [output_atom, y_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot],
+        )
 
     for epoch in range(args.epochs):
-        for it in tqdm(range(len(train_dataloader)), desc="training epoch %0.2d" % epoch):
-
+        for it in tqdm(
+            range(len(train_dataloader)), desc="training epoch %0.2d" % epoch
+        ):
             gen, out = step_iter(gen, train_dataloader)
-            (bs_idx, x_atom, x_bb, x_b, y_b, z_b, x_res_type, y, chi_angles_real, chi_angles,) = out
+            (
+                bs_idx,
+                x_atom,
+                x_bb,
+                x_b,
+                y_b,
+                z_b,
+                x_res_type,
+                y,
+                chi_angles_real,
+                chi_angles,
+            ) = out
             bs_i = len(bs_idx)
             output_atom.zero_()
             output_atom[bs_idx, x_atom, x_b, y_b, z_b] = 1  # atom type
@@ -281,7 +454,9 @@ def main():
             chi_4 = chi_angles[:, 3]
 
             if use_cuda:
-                y, y_onehot, chi_1, chi_2, chi_3, chi_4 = map(lambda x: x.cuda(), [y, y_onehot, chi_1, chi_2, chi_3, chi_4])
+                y, y_onehot, chi_1, chi_2, chi_3, chi_4 = map(
+                    lambda x: x.cuda(), [y, y_onehot, chi_1, chi_2, chi_3, chi_4]
+                )
 
             if bs_i < bs:
                 y = F.pad(y, (0, bs - bs_i))
@@ -301,7 +476,13 @@ def main():
             chi_3_onehot.zero_()
             chi_3_onehot.scatter_(1, chi_3[:, None], 1)
 
-            out, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred = model(X[:bs_i], y_onehot[:bs_i], chi_1_onehot[:bs_i, 1:], chi_2_onehot[:bs_i, 1:], chi_3_onehot[:bs_i, 1:])
+            out, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred = model(
+                X[:bs_i],
+                y_onehot[:bs_i],
+                chi_1_onehot[:bs_i, 1:],
+                chi_2_onehot[:bs_i, 1:],
+                chi_3_onehot[:bs_i, 1:],
+            )
             res_loss = criterion(out, y[:bs_i])
             chi_1_loss = chi_1_criterion(chi_1_pred, chi_1[:bs_i] - 1)
             chi_2_loss = chi_2_criterion(chi_2_pred, chi_2[:bs_i] - 1)
@@ -315,8 +496,12 @@ def main():
             # acc
             train_acc, _ = acc_util.get_acc(out, y[:bs_i], cm=None)
             train_top_k_acc = acc_util.get_top_k_acc(out, y[:bs_i], k=3)
-            train_coarse_acc, _ = acc_util.get_acc(out, y[:bs_i], label_dict=acc_util.label_coarse)
-            train_polar_acc, _ = acc_util.get_acc(out, y[:bs_i], label_dict=acc_util.label_polar)
+            train_coarse_acc, _ = acc_util.get_acc(
+                out, y[:bs_i], label_dict=acc_util.label_coarse
+            )
+            train_polar_acc, _ = acc_util.get_acc(
+                out, y[:bs_i], label_dict=acc_util.label_polar
+            )
 
             chi_1_acc, _ = acc_util.get_acc(chi_1_pred, chi_1[:bs_i] - 1, ignore_idx=-1)
             chi_2_acc, _ = acc_util.get_acc(chi_2_pred, chi_2[:bs_i] - 1, ignore_idx=-1)
@@ -327,45 +512,101 @@ def main():
             map(
                 lambda x: log.log_scalar("seq_chi_pred/%s" % x[0], x[1]),
                 zip(
-                    ["res_loss", "chi_1_loss", "chi_2_loss", "chi_3_loss", "chi_4_loss", "train_acc", "chi_1_acc", "chi_2_acc", "chi_3_acc", "chi_4_acc", "train_top3_acc", "train_coarse_acc", "train_polar_acc",],
-                    [res_loss.item(), chi_1_loss.item(), chi_2_loss.item(), chi_3_loss.item(), chi_4_loss.item(), train_acc, chi_1_acc, chi_2_acc, chi_3_acc, chi_4_acc, train_top_k_acc, train_coarse_acc, train_polar_acc,],
+                    [
+                        "res_loss",
+                        "chi_1_loss",
+                        "chi_2_loss",
+                        "chi_3_loss",
+                        "chi_4_loss",
+                        "train_acc",
+                        "chi_1_acc",
+                        "chi_2_acc",
+                        "chi_3_acc",
+                        "chi_4_acc",
+                        "train_top3_acc",
+                        "train_coarse_acc",
+                        "train_polar_acc",
+                    ],
+                    [
+                        res_loss.item(),
+                        chi_1_loss.item(),
+                        chi_2_loss.item(),
+                        chi_3_loss.item(),
+                        chi_4_loss.item(),
+                        train_acc,
+                        chi_1_acc,
+                        chi_2_acc,
+                        chi_3_acc,
+                        chi_4_acc,
+                        train_top_k_acc,
+                        train_coarse_acc,
+                        train_polar_acc,
+                    ],
                 ),
             )
 
             if it % validation_frequency == 0 or it == len(train_dataloader) - 1:
-
                 if it > 0:
                     if torch.cuda.device_count() > 1 and args.cuda:
                         torch.save(
-                            model.module.state_dict(), log.log_path + "/seq_chi_pred_baseline_curr_weights.pt",
+                            model.module.state_dict(),
+                            log.log_path + "/seq_chi_pred_baseline_curr_weights.pt",
                         )
                     else:
                         torch.save(
-                            model.state_dict(), log.log_path + "/seq_chi_pred_baseline_curr_weights.pt",
+                            model.state_dict(),
+                            log.log_path + "/seq_chi_pred_baseline_curr_weights.pt",
                         )
                     torch.save(
-                        optimizer.state_dict(), log.log_path + "/seq_chi_pred_baseline_curr_optimizer.pt",
+                        optimizer.state_dict(),
+                        log.log_path + "/seq_chi_pred_baseline_curr_optimizer.pt",
                     )
 
                 # NOTE -- saving models for each validation step
-                if it > 0 and (it % save_frequency == 0 or it == len(train_dataloader) - 1):
+                if it > 0 and (
+                    it % save_frequency == 0 or it == len(train_dataloader) - 1
+                ):
                     if torch.cuda.device_count() > 1 and args.cuda:
                         torch.save(
-                            model.module.state_dict(), log.log_path + "/seq_chi_pred_baseline_epoch_%0.3d_%s_weights.pt" % (epoch, it),
+                            model.module.state_dict(),
+                            log.log_path
+                            + "/seq_chi_pred_baseline_epoch_%0.3d_%s_weights.pt"
+                            % (epoch, it),
                         )
                     else:
                         torch.save(
-                            model.state_dict(), log.log_path + "/seq_chi_pred_baseline_epoch_%0.3d_%s_weights.pt" % (epoch, it),
+                            model.state_dict(),
+                            log.log_path
+                            + "/seq_chi_pred_baseline_epoch_%0.3d_%s_weights.pt"
+                            % (epoch, it),
                         )
 
                     torch.save(
-                        optimizer.state_dict(), log.log_path + "/seq_chi_pred_baseline_epoch_%0.3d_%s_optimizer.pt" % (epoch, it),
+                        optimizer.state_dict(),
+                        log.log_path
+                        + "/seq_chi_pred_baseline_epoch_%0.3d_%s_optimizer.pt"
+                        % (epoch, it),
                     )
 
                 ##NOTE -- turning back on model.eval()
                 model.eval()
                 # eval on the test set
-                (test_gen, curr_test_loss, test_chi_1_loss, test_chi_2_loss, test_chi_3_loss, test_chi_4_loss, curr_test_acc, curr_test_top_k_acc, coarse_acc, polar_acc, chi_1_acc, chi_2_acc, chi_3_acc, chi_4_acc,) = test(
+                (
+                    test_gen,
+                    curr_test_loss,
+                    test_chi_1_loss,
+                    test_chi_2_loss,
+                    test_chi_3_loss,
+                    test_chi_4_loss,
+                    curr_test_acc,
+                    curr_test_top_k_acc,
+                    coarse_acc,
+                    polar_acc,
+                    chi_1_acc,
+                    chi_2_acc,
+                    chi_3_acc,
+                    chi_4_acc,
+                ) = test(
                     model,
                     test_gen,
                     test_dataloader,

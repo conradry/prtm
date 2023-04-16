@@ -1,12 +1,11 @@
 import os
-import unittest
 import tempfile
+import unittest
 
 import numpy as np
 import torch
-from transformers import BertConfig
-
 from foldingdiff import modelling
+from transformers import BertConfig
 
 ATOL, RTOL = 1e-6, 1e-3
 
@@ -202,12 +201,12 @@ class TestTransformerBaseLoadingSaving(unittest.TestCase):
     Test the loading and saving and re-loading of transformer models without
     pytorch lightning
     """
+
     def setUp(self) -> None:
         self.orig_model_dir = os.path.join(
             os.path.dirname(__file__), "mini_model_for_testing", "results"
         )
         assert os.path.isdir(self.orig_model_dir)
-    
 
     def test_saving_and_loading(self):
         """Test that we can load, save, and reload model"""
@@ -220,7 +219,7 @@ class TestTransformerBaseLoadingSaving(unittest.TestCase):
         # https://discuss.pytorch.org/t/check-if-models-have-same-weights/4351
         for p1, p2 in zip(orig_model.parameters(), new_model.parameters()):
             self.assertAlmostEqual(p1.data.ne(p2.data).sum(), 0)
-        
+
     def test_against_pl(self):
         """
         Test that loading with or without pl lightning produces the same results

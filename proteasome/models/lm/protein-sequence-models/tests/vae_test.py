@@ -1,24 +1,20 @@
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
-
-from sequence_models.losses import VAELoss, SequenceCrossEntropyLoss
-from sequence_models.vae import FCDecoder, FCEncoder, VAE, Conductor
+from sequence_models.losses import SequenceCrossEntropyLoss, VAELoss
+from sequence_models.vae import VAE, Conductor, FCDecoder, FCEncoder
 
 if torch.cuda.is_available():
-    device = torch.device('cuda')
+    device = torch.device("cuda")
 else:
-    device = torch.device('cpu')
+    device = torch.device("cpu")
 
 N = 2
 L = 5
 D = 3
 
-src = [
-    [0, 1, 2, 0, 1],
-    [0, 1, 1, 1, 0]
-]
+src = [[0, 1, 2, 0, 1], [0, 1, 1, 1, 0]]
 src = torch.LongTensor(src)
 
 n_hidden = np.random.choice(np.arange(3, 10))
@@ -76,19 +72,21 @@ def test_loss():
     r_loss_func = SequenceCrossEntropyLoss()
     vae = VAE(encoder, decoder)
     p, mu, logvar = vae(src)
-    r_loss = r_loss_func(p, src, reduction='none')
-    kl_loss = -0.5 * (1 + logvar - mu ** 2 - logvar.exp())
+    r_loss = r_loss_func(p, src, reduction="none")
+    kl_loss = -0.5 * (1 + logvar - mu**2 - logvar.exp())
     beta = torch.rand(1)
 
     # Without classweights or sample_weights
     vloss = VAELoss(class_weights=None)
     # With reduction
     loss, r, k = vloss(p, src, mu, logvar, beta=beta)
-    assert torch.allclose(r_loss.sum(dim=1).mean(dim=0) + beta * kl_loss.sum(dim=1).mean(dim=0), loss)
+    assert torch.allclose(
+        r_loss.sum(dim=1).mean(dim=0) + beta * kl_loss.sum(dim=1).mean(dim=0), loss
+    )
     assert torch.allclose(r, r_loss.sum(dim=1).mean())
     assert torch.allclose(k, kl_loss.sum(dim=1).mean())
     # Without reduction
-    loss, r, k = vloss(p, src, mu, logvar, beta=beta, reduction='none')
+    loss, r, k = vloss(p, src, mu, logvar, beta=beta, reduction="none")
     assert torch.allclose(r_loss.sum(dim=1) + beta * kl_loss.sum(dim=1), loss)
     assert torch.allclose(r, r_loss.sum(dim=1))
     assert torch.allclose(k, kl_loss.sum(dim=1))
@@ -97,7 +95,7 @@ def test_loss():
     cw = torch.rand(3)
     sw = torch.rand((N, 1))
     r_loss_func = SequenceCrossEntropyLoss(weight=cw)
-    r_loss = r_loss_func(p, src, reduction='none')
+    r_loss = r_loss_func(p, src, reduction="none")
     r_loss *= sw
     r_loss = r_loss.sum(dim=1) / r_loss_func.class_weights[src].sum()
     kl_loss *= sw
@@ -108,7 +106,9 @@ def test_loss():
     assert torch.allclose(r, r_loss.mean())
     assert torch.allclose(k, kl_loss.sum(dim=1).mean())
     # Without reduction
-    loss, r, k = vloss(p, src, mu, logvar, beta=beta, sample_weights=sw, reduction='none')
+    loss, r, k = vloss(
+        p, src, mu, logvar, beta=beta, sample_weights=sw, reduction="none"
+    )
     assert torch.allclose(r_loss + beta * kl_loss.sum(dim=1), loss)
     assert torch.allclose(r, r_loss)
     assert torch.allclose(k, kl_loss.sum(dim=1))
@@ -125,4 +125,8 @@ def test_conductor():
     assert out.shape == (b, 2 ** (len(n_f) + 2), d_out)
     z = torch.randn(b, dz, 1).to(device)
     out = layer(z)
-    assert out.shape == (b, 2 ** (len(n_f) + 2), d_out,)
+    assert out.shape == (
+        b,
+        2 ** (len(n_f) + 2),
+        d_out,
+    )

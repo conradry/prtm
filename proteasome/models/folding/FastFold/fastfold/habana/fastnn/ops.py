@@ -2,15 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from torch.nn import LayerNorm
-
 from fastfold.habana.distributed import gather, scatter
+from fastfold.habana.fastnn.custom_op import fused_softmax, fused_softmax_bias
+from torch.nn import LayerNorm
 
 from .initializer import glorot_uniform_af
 from .kernel import bias_sigmod_ele
-
-from fastfold.habana.distributed import gather, scatter
-from fastfold.habana.fastnn.custom_op import fused_softmax, fused_softmax_bias
 
 CHUNK_SIZE = None
 DEBUG = False
@@ -27,7 +24,6 @@ def get_chunk_size():
 
 
 class DropoutRowwise(nn.Module):
-
     def __init__(self, p):
         super(DropoutRowwise, self).__init__()
         self.p = p
@@ -40,7 +36,6 @@ class DropoutRowwise(nn.Module):
 
 
 class DropoutColumnwise(nn.Module):
-
     def __init__(self, p):
         super(DropoutColumnwise, self).__init__()
         self.p = p
@@ -53,12 +48,11 @@ class DropoutColumnwise(nn.Module):
 
 
 class Transition(nn.Module):
-
     def __init__(self, d, n=4):
         super(Transition, self).__init__()
         self.norm = LayerNorm(d)
-        self.linear1 = Linear(d, n * d, initializer='relu')
-        self.linear2 = Linear(n * d, d, initializer='zeros')
+        self.linear1 = Linear(d, n * d, initializer="relu")
+        self.linear2 = Linear(n * d, d, initializer="zeros")
 
     def forward(self, src):
         x = self.norm(src)
@@ -67,7 +61,6 @@ class Transition(nn.Module):
 
 
 class OutProductMean(nn.Module):
-
     def __init__(self, n_feat=64, n_feat_out=128, n_feat_proj=32):
         super(OutProductMean, self).__init__()
 
@@ -75,10 +68,9 @@ class OutProductMean(nn.Module):
         self.linear_a = Linear(n_feat, n_feat_proj)
         self.linear_b = Linear(n_feat, n_feat_proj)
 
-        self.o_linear = Linear(n_feat_proj * n_feat_proj,
-                               n_feat_out,
-                               initializer='zero',
-                               use_bias=True)
+        self.o_linear = Linear(
+            n_feat_proj * n_feat_proj, n_feat_out, initializer="zero", use_bias=True
+        )
 
     def forward(self, M, M_mask, Z_raw):
         Z = torch.empty_like(Z_raw)
@@ -93,9 +85,15 @@ class OutProductMean(nn.Module):
         left_act = M_mask_col * left_act
         right_act_all = M_mask * right_act_all
 
-        norm = torch.einsum('...ab,...ad->...bd',
-                            M_mask_col.squeeze(-1).squeeze(0),
-                            M_mask.squeeze(-1).squeeze(0)).unsqueeze(-1).unsqueeze(0)
+        norm = (
+            torch.einsum(
+                "...ab,...ad->...bd",
+                M_mask_col.squeeze(-1).squeeze(0),
+                M_mask.squeeze(-1).squeeze(0),
+            )
+            .unsqueeze(-1)
+            .unsqueeze(0)
+        )
 
         para_dim = left_act.shape[2]
         chunk_size = CHUNK_SIZE
@@ -104,19 +102,27 @@ class OutProductMean(nn.Module):
 
         out = []
         for ax in range(0, para_dim, chunk_size):
-            left_act_part = left_act[:, :, ax:ax + chunk_size, :]
+            left_act_part = left_act[:, :, ax : ax + chunk_size, :]
 
             # O = torch.einsum('sid,sje->ijde', left_act_part.squeeze(0), right_act_all.squeeze(0))
 
             # O = rearrange(O, 'i j d e -> i j (d e)')
             left_shape = left_act_part.shape
             right_shape = right_act_all.shape
-            left_act_part = left_act_part.reshape(left_shape[0], left_shape[1], left_shape[2]*left_shape[3])
-            right_act_all = right_act_all.reshape(right_shape[0], right_shape[1], right_shape[2]*right_shape[3])
+            left_act_part = left_act_part.reshape(
+                left_shape[0], left_shape[1], left_shape[2] * left_shape[3]
+            )
+            right_act_all = right_act_all.reshape(
+                right_shape[0], right_shape[1], right_shape[2] * right_shape[3]
+            )
             # O = torch.einsum('...ab,...ad->...bd', left_act_part.squeeze(0), right_act_all.squeeze(0))
-            O = torch.matmul(left_act_part.squeeze(0).transpose(1, 0), right_act_all.squeeze(0))
-            O = O.reshape(left_shape[2], left_shape[3], right_shape[2], right_shape[3]).transpose(-2, -3)
-            O = O.reshape(O.shape[0], O.shape[1], O.shape[2]*O.shape[3])
+            O = torch.matmul(
+                left_act_part.squeeze(0).transpose(1, 0), right_act_all.squeeze(0)
+            )
+            O = O.reshape(
+                left_shape[2], left_shape[3], right_shape[2], right_shape[3]
+            ).transpose(-2, -3)
+            O = O.reshape(O.shape[0], O.shape[1], O.shape[2] * O.shape[3])
 
             O = O.unsqueeze(0)
 
@@ -124,7 +130,7 @@ class OutProductMean(nn.Module):
 
         Z = torch.cat(out, dim=1)
 
-        Z /= (1e-3 + norm)
+        Z /= 1e-3 + norm
 
         return Z + Z_raw
 
@@ -141,18 +147,18 @@ class Linear(nn.Linear):
         self,
         feature_in: int,
         feature_out: int,
-        initializer: str = 'linear',
+        initializer: str = "linear",
         use_bias: bool = True,
-        bias_init: float = 0.,
+        bias_init: float = 0.0,
     ):
         super(Linear, self).__init__(feature_in, feature_out, bias=use_bias)
 
         self.use_bias = use_bias
-        if initializer == 'linear':
+        if initializer == "linear":
             glorot_uniform_af(self.weight, gain=1.0)
-        elif initializer == 'relu':
+        elif initializer == "relu":
             glorot_uniform_af(self.weight, gain=2.0)
-        elif initializer == 'zeros':
+        elif initializer == "zeros":
             nn.init.zeros_(self.weight)
         if self.use_bias:
             with torch.no_grad():
@@ -173,21 +179,24 @@ class SelfAttention(nn.Module):
         self.gating = gating
         self.last_bias_fuse = last_bias_fuse
 
-        self.scaling = self.c**(-0.5)
+        self.scaling = self.c ** (-0.5)
 
-        self.to_qkv = Linear(qkv_dim, 3 * n_head * c, initializer='linear', use_bias=False)
+        self.to_qkv = Linear(
+            qkv_dim, 3 * n_head * c, initializer="linear", use_bias=False
+        )
         # self.to_q = Linear(qkv_dim, n_head * c, initializer='linear', use_bias=False)
         # self.to_k = Linear(qkv_dim, n_head * c, initializer='linear', use_bias=False)
         # self.to_v = Linear(qkv_dim, n_head * c, initializer='linear', use_bias=False)
 
         if gating:
             self.gating_bias = nn.parameter.Parameter(data=torch.ones((n_head * c,)))
-            self.gating_linear = Linear(qkv_dim, n_head * c, initializer='zero', use_bias=False)
+            self.gating_linear = Linear(
+                qkv_dim, n_head * c, initializer="zero", use_bias=False
+            )
 
-        self.o_linear = Linear(n_head * c,
-                               out_dim,
-                               initializer='zero',
-                               use_bias=(not last_bias_fuse))
+        self.o_linear = Linear(
+            n_head * c, out_dim, initializer="zero", use_bias=(not last_bias_fuse)
+        )
 
     def forward(self, in_data, mask, nonbatched_bias=None):
         """
@@ -203,12 +212,14 @@ class SelfAttention(nn.Module):
 
         output = []
         for ax in range(0, para_dim, chunk_size):
-
-            in_data_part = in_data[:, ax:ax + chunk_size, :, :]
-            mask_part = mask[:, ax:ax + chunk_size, :]
+            in_data_part = in_data[:, ax : ax + chunk_size, :, :]
+            mask_part = mask[:, ax : ax + chunk_size, :]
 
             qkv = self.to_qkv(in_data_part).chunk(3, dim=-1)
-            q, k, v = map(lambda t: rearrange(t, 'b1 b2 n (h d) -> b1 b2 h n d', h=self.n_head), qkv)
+            q, k, v = map(
+                lambda t: rearrange(t, "b1 b2 n (h d) -> b1 b2 h n d", h=self.n_head),
+                qkv,
+            )
 
             # q = self.to_q(in_data_part)
             # k = self.to_k(in_data_part)
@@ -229,16 +240,20 @@ class SelfAttention(nn.Module):
 
             mask00 = (1e9 * (mask_part - 1))[..., :, None, None, :]
             if nonbatched_bias is not None:
-                weights = fused_softmax_bias(logits, mask00, nonbatched_bias.unsqueeze(1), -1)
+                weights = fused_softmax_bias(
+                    logits, mask00, nonbatched_bias.unsqueeze(1), -1
+                )
             else:
                 weights = fused_softmax(logits, mask00, -1)
 
             weighted_avg = torch.matmul(weights, v)
-            weighted_avg = rearrange(weighted_avg, 'b1 b2 h n d -> b1 b2 n (h d)')
+            weighted_avg = rearrange(weighted_avg, "b1 b2 h n d -> b1 b2 n (h d)")
 
             if self.gating:
                 gate_values = self.gating_linear(in_data_part)
-                weighted_avg = bias_sigmod_ele(gate_values, self.gating_bias, weighted_avg)
+                weighted_avg = bias_sigmod_ele(
+                    gate_values, self.gating_bias, weighted_avg
+                )
 
             output.append(self.o_linear(weighted_avg))
 
@@ -259,7 +274,7 @@ class GlobalAttention(nn.Module):
         self.n_head = n_head
         self.out_dim = out_dim
 
-        self.scaling = self.c**(-0.5)
+        self.scaling = self.c ** (-0.5)
 
         self.eps = 1e-10
         self.inf = 1e9
@@ -268,12 +283,13 @@ class GlobalAttention(nn.Module):
         self.to_kv = Linear(qkv_dim, 2 * c, initializer="linear", use_bias=False)
 
         self.gating_bias = nn.parameter.Parameter(data=torch.ones((n_head * c,)))
-        self.gating_linear = Linear(qkv_dim, n_head * c, initializer="zero", use_bias=False)
+        self.gating_linear = Linear(
+            qkv_dim, n_head * c, initializer="zero", use_bias=False
+        )
 
         self.o_linear = Linear(n_head * c, out_dim, initializer="zero")
 
     def forward(self, m, mask):
-
         para_dim = m.shape[1]
         chunk_size = CHUNK_SIZE
         if CHUNK_SIZE == None:
@@ -281,12 +297,12 @@ class GlobalAttention(nn.Module):
 
         output = []
         for ax in range(0, para_dim, chunk_size):
+            m_part = m[:, ax : ax + chunk_size, :, :]
+            mask_part = mask[:, ax : ax + chunk_size, :]
 
-            m_part = m[:, ax:ax + chunk_size, :, :]
-            mask_part = mask[:, ax:ax + chunk_size, :]
-
-            q = torch.sum(m_part * mask_part.unsqueeze(-1),
-                          dim=-2) / (torch.sum(mask_part, dim=-1)[..., None] + self.eps)
+            q = torch.sum(m_part * mask_part.unsqueeze(-1), dim=-2) / (
+                torch.sum(mask_part, dim=-1)[..., None] + self.eps
+            )
 
             q = self.to_q(q)
             q = q.view(q.shape[:-1] + (self.n_head, -1))
@@ -303,8 +319,9 @@ class GlobalAttention(nn.Module):
             weighted_avg = rearrange(weighted_avg, "b1 b2 h d -> b1 b2 (h d)")
 
             gate_values = self.gating_linear(m_part)
-            weighted_avg = bias_sigmod_ele(gate_values, self.gating_bias,
-                                           weighted_avg.unsqueeze(-2))
+            weighted_avg = bias_sigmod_ele(
+                gate_values, self.gating_bias, weighted_avg.unsqueeze(-2)
+            )
 
             output.append(self.o_linear(weighted_avg))
 

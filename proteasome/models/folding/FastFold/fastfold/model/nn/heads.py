@@ -15,13 +15,10 @@
 
 import torch
 import torch.nn as nn
-
-from fastfold.model.nn.primitives import Linear, LayerNorm
-from fastfold.model.hub.loss import (
-    compute_plddt,
-    compute_tm,
-    compute_predicted_aligned_error,
-)
+from fastfold.model.hub.loss import (compute_plddt,
+                                     compute_predicted_aligned_error,
+                                     compute_tm)
+from fastfold.model.nn.primitives import LayerNorm, Linear
 
 
 class AuxiliaryHeads(nn.Module):
@@ -65,19 +62,13 @@ class AuxiliaryHeads(nn.Module):
         masked_msa_logits = self.masked_msa(outputs["msa"])
         aux_out["masked_msa_logits"] = masked_msa_logits
 
-        experimentally_resolved_logits = self.experimentally_resolved(
-            outputs["single"]
-        )
-        aux_out[
-            "experimentally_resolved_logits"
-        ] = experimentally_resolved_logits
+        experimentally_resolved_logits = self.experimentally_resolved(outputs["single"])
+        aux_out["experimentally_resolved_logits"] = experimentally_resolved_logits
 
         if self.config.tm.enabled:
             tm_logits = self.tm(outputs["pair"])
             aux_out["tm_logits"] = tm_logits
-            aux_out["predicted_tm_score"] = compute_tm(
-                tm_logits, **self.config.tm
-            )
+            aux_out["predicted_tm_score"] = compute_tm(tm_logits, **self.config.tm)
             aux_out.update(
                 compute_predicted_aligned_error(
                     tm_logits,

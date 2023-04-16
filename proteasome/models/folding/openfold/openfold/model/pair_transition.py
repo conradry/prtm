@@ -16,8 +16,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
-from openfold.model.primitives import Linear, LayerNorm
+from openfold.model.primitives import LayerNorm, Linear
 from openfold.utils.chunk_utils import chunk_layer
 
 
@@ -48,19 +47,20 @@ class PairTransition(nn.Module):
     def _transition(self, z, mask):
         # [*, N_res, N_res, C_z]
         z = self.layer_norm(z)
-        
+
         # [*, N_res, N_res, C_hidden]
         z = self.linear_1(z)
         z = self.relu(z)
 
         # [*, N_res, N_res, C_z]
-        z = self.linear_2(z) 
+        z = self.linear_2(z)
         z = z * mask
 
         return z
 
     @torch.jit.ignore
-    def _chunk(self,
+    def _chunk(
+        self,
         z: torch.Tensor,
         mask: torch.Tensor,
         chunk_size: int,
@@ -72,8 +72,9 @@ class PairTransition(nn.Module):
             no_batch_dims=len(z.shape[:-2]),
         )
 
-    def forward(self, 
-        z: torch.Tensor, 
+    def forward(
+        self,
+        z: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
         chunk_size: Optional[int] = None,
     ) -> torch.Tensor:

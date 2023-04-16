@@ -1,13 +1,14 @@
-from ..tools.velocity_embedding import velocity_embedding as compute_velocity_embedding
-from ..tools.utils import groups_to_bool
-from .utils import *
-from .scatter import scatter
-from .docs import doc_scatter, doc_params
-
-from matplotlib import rcParams
-from matplotlib.colors import is_color_like
 import matplotlib.pyplot as pl
 import numpy as np
+from matplotlib import rcParams
+from matplotlib.colors import is_color_like
+
+from ..tools.utils import groups_to_bool
+from ..tools.velocity_embedding import \
+    velocity_embedding as compute_velocity_embedding
+from .docs import doc_params, doc_scatter
+from .scatter import scatter
+from .utils import *
 
 
 @doc_params(scatter=doc_scatter)

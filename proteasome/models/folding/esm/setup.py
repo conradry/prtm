@@ -5,7 +5,6 @@
 
 from setuptools import setup
 
-
 with open("esm/version.py") as infile:
     exec(infile.read())
 
@@ -13,7 +12,7 @@ with open("README.md") as f:
     readme = f.read()
 
 extras = {
-    "esmfold": [ # OpenFold does not automatically pip install requirements, so we add them here.
+    "esmfold": [  # OpenFold does not automatically pip install requirements, so we add them here.
         "biopython",
         "deepspeed==0.5.9",
         "dm-tree",
@@ -30,7 +29,7 @@ sources = {
     "esm.model": "esm/model",
     "esm.inverse_folding": "esm/inverse_folding",
     "esm.esmfold.v1": "esm/esmfold/v1",
-    "esm.scripts": "scripts"
+    "esm.scripts": "scripts",
 }
 
 setup(

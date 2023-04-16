@@ -22,13 +22,11 @@ import logging
 import os
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
+import fastfold.common.residue_constants as residue_constants
+import numpy as np
 from Bio import PDB
 from Bio.Data import SCOPData
-import numpy as np
-
 from fastfold.data.errors import MultipleChainsError
-import fastfold.common.residue_constants as residue_constants
-
 
 # Type aliases:
 ChainId = str
@@ -249,12 +247,8 @@ def parse(
                     residue_number=int(atom.author_seq_num),
                     insertion_code=insertion_code,
                 )
-                seq_idx = (
-                    int(atom.mmcif_seq_num) - seq_start_num[atom.mmcif_chain_id]
-                )
-                current = seq_to_structure_mappings.get(
-                    atom.author_chain_id, {}
-                )
+                seq_idx = int(atom.mmcif_seq_num) - seq_start_num[atom.mmcif_chain_id]
+                current = seq_to_structure_mappings.get(atom.author_chain_id, {})
                 current[seq_idx] = ResidueAtPosition(
                     position=position,
                     name=atom.residue_name,
@@ -346,9 +340,7 @@ def _get_header(parsed_info: MmCIFDict) -> PdbHeader:
                 raw_resolution = parsed_info[res_key][0]
                 header["resolution"] = float(raw_resolution)
             except ValueError:
-                logging.info(
-                    "Invalid resolution format: %s", parsed_info[res_key]
-                )
+                logging.info("Invalid resolution format: %s", parsed_info[res_key])
 
     return header
 
@@ -430,9 +422,7 @@ def _is_set(data: str) -> bool:
 
 
 def get_atom_coords(
-    mmcif_object: MmcifObject, 
-    chain_id: str, 
-    _zero_center_positions: bool = True
+    mmcif_object: MmcifObject, chain_id: str, _zero_center_positions: bool = True
 ) -> Tuple[np.ndarray, np.ndarray]:
     # Locate the right chain
     chains = list(mmcif_object.structure.get_chains())

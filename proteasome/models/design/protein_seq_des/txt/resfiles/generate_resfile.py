@@ -21,7 +21,7 @@ sequence = list(sequence)
 
 with open("init_seq_1cc8_gt.txt", "w") as file1:
     for i in range(1, len(sequence) + 1):
-    # command = " ".join([str(i), "TPIKAA", sequence[i], "\n"]
-        file1.write("{} TPIKAA {} \n".format(str(i), sequence[i-1]))
+        # command = " ".join([str(i), "TPIKAA", sequence[i], "\n"]
+        file1.write("{} TPIKAA {} \n".format(str(i), sequence[i - 1]))
 
 # get_sequence("../../../sequenced_results/1bkr_gt_sequenced/init_seq.fasta")

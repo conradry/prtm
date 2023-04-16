@@ -1,10 +1,11 @@
-from .docs import doc_scatter, doc_params
-from .utils import *
-
 from inspect import signature
+
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
+
+from .docs import doc_params, doc_scatter
+from .utils import *
 
 
 @doc_params(scatter=doc_scatter)

@@ -1,10 +1,10 @@
-import os
-from glob import glob
-import logging
 import argparse
+import logging
+import os
 import subprocess
-from pathlib import Path
 import tempfile
+from glob import glob
+from pathlib import Path
 from typing import *
 
 from tqdm.auto import tqdm

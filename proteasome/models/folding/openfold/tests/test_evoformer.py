@@ -12,22 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
-from openfold.model.evoformer import (
-    MSATransition,
-    EvoformerStack,
-    ExtraMSAStack,
-)
-from openfold.utils.tensor_utils import tree_map
+
+import numpy as np
 import tests.compare_utils as compare_utils
+import torch
+from openfold.model.evoformer import (EvoformerStack, ExtraMSAStack,
+                                      MSATransition)
+from openfold.utils.tensor_utils import tree_map
 from tests.config import consts
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestEvoformerStack(unittest.TestCase):
@@ -78,9 +76,7 @@ class TestEvoformerStack(unittest.TestCase):
         shape_m_before = m.shape
         shape_z_before = z.shape
 
-        m, z, s = es(
-            m, z, chunk_size=4, msa_mask=msa_mask, pair_mask=pair_mask
-        )
+        m, z, s = es(m, z, chunk_size=4, msa_mask=msa_mask, pair_mask=pair_mask)
 
         self.assertTrue(m.shape == shape_m_before)
         self.assertTrue(z.shape == shape_z_before)
@@ -260,9 +256,7 @@ class TestMSATransition(unittest.TestCase):
         n_seq = consts.n_seq
 
         msa_act = np.random.rand(n_seq, n_res, consts.c_m).astype(np.float32)
-        msa_mask = np.ones((n_seq, n_res)).astype(
-            np.float32
-        )  # no mask here either
+        msa_mask = np.ones((n_seq, n_res)).astype(np.float32)  # no mask here either
 
         # Fetch pretrained parameters (but only from one block)]
         params = compare_utils.fetch_alphafold_module_weights(
@@ -275,9 +269,10 @@ class TestMSATransition(unittest.TestCase):
         out_gt = torch.as_tensor(np.array(out_gt))
 
         model = compare_utils.get_global_pretrained_openfold()
-        
+
         out_repro = (
-            model.evoformer.blocks[0].core.msa_transition(
+            model.evoformer.blocks[0]
+            .core.msa_transition(
                 torch.as_tensor(msa_act, dtype=torch.float32).cuda(),
                 mask=torch.as_tensor(msa_mask, dtype=torch.float32).cuda(),
             )

@@ -1,8 +1,8 @@
 import numpy as np
 import sklearn.metrics as m
+from numba import njit
 from scipy.stats import pearsonr
 
-from numba import njit
 
 @njit
 def c_index(y_true, y_pred):
@@ -39,7 +39,8 @@ def CORR(y_true, y_pred):
 
 def SD(y_true, y_pred):
     from sklearn.linear_model import LinearRegression
-    y_pred = y_pred.reshape((-1,1))
-    lr = LinearRegression().fit(y_pred,y_true)
+
+    y_pred = y_pred.reshape((-1, 1))
+    lr = LinearRegression().fit(y_pred, y_true)
     y_ = lr.predict(y_pred)
     return np.sqrt(np.square(y_true - y_).sum() / (len(y_pred) - 1))

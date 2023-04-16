@@ -1,10 +1,11 @@
 # part of code modified from https://github.com/NVIDIA/apex
-from .cuda_native.layer_norm import FusedLayerNormAffineFunction
 import logging
 import numbers
 
 import torch
 from torch.nn.parameter import Parameter
+
+from .cuda_native.layer_norm import FusedLayerNormAffineFunction
 
 _triton_available = True
 if _triton_available:
@@ -17,7 +18,6 @@ if _triton_available:
 
 
 class FusedLayerNorm(torch.nn.Module):
-
     def __init__(self, normalized_shape, eps=1e-5):
         super(FusedLayerNorm, self).__init__()
 
@@ -40,21 +40,29 @@ class FusedLayerNorm(torch.nn.Module):
             chunk_size = min(4000 * 4000 // input.shape[-3], (input.shape[-3] + 1) // 2)
             if len(input.shape) == 3:
                 for i in range(input.shape[-3]):
-                    out[i:i + chunk_size] = self.kernel_forward(input[i:i + chunk_size])
+                    out[i : i + chunk_size] = self.kernel_forward(
+                        input[i : i + chunk_size]
+                    )
             elif len(input.shape) == 4:
                 for j in range(input.shape[-4]):
                     for i in range(0, input.shape[-3], chunk_size):
-                        out[j, i:i + chunk_size] = self.kernel_forward(input[j, i:i + chunk_size])
+                        out[j, i : i + chunk_size] = self.kernel_forward(
+                            input[j, i : i + chunk_size]
+                        )
             else:
-                raise RuntimeError("Shape" + input.shape + "not implemented for layernorm yet!")
+                raise RuntimeError(
+                    "Shape" + input.shape + "not implemented for layernorm yet!"
+                )
             return out
         else:
             return self.kernel_forward(input)
 
     def kernel_forward(self, input):
         if _triton_available:
-            return LayerNormTritonFunc.apply(input, self.normalized_shape, self.weight, self.bias,
-                                             self.eps)
+            return LayerNormTritonFunc.apply(
+                input, self.normalized_shape, self.weight, self.bias, self.eps
+            )
         else:
-            return FusedLayerNormAffineFunction.apply(input, self.weight, self.bias,
-                                                      self.normalized_shape, self.eps)
+            return FusedLayerNormAffineFunction.apply(
+                input, self.weight, self.bias, self.normalized_shape, self.eps
+            )

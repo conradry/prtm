@@ -45,7 +45,7 @@ def get_norm(x: torch.Tensor) -> torch.Tensor:
 
 
 def robust_normalize(
-        x: torch.Tensor, dim: int = -1, p: typing.Union[int, str] = 2
+    x: torch.Tensor, dim: int = -1, p: typing.Union[int, str] = 2
 ) -> torch.Tensor:
     """
     Normalization with a constant small term on the denominator
@@ -98,9 +98,7 @@ def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
     return o.reshape(quaternions.shape[:-1] + (3, 3))
 
 
-def batch_matrix_vector(
-        matrix: torch.Tensor, vector: torch.Tensor
-) -> torch.Tensor:
+def batch_matrix_vector(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
     """
     Perform batched matrix vector product on the last dimension
 
@@ -117,9 +115,7 @@ def batch_matrix_vector(
     return torch.einsum("...cd, ...d -> ...c", matrix, vector)
 
 
-def create_pseudo_beta(
-        atom_pos: torch.Tensor, atom_mask: torch.Tensor
-) -> torch.Tensor:
+def create_pseudo_beta(atom_pos: torch.Tensor, atom_mask: torch.Tensor) -> torch.Tensor:
     """
 
     Args:
@@ -133,14 +129,11 @@ def create_pseudo_beta(
 
     """
     if not (atom_mask.shape[-1] == atom_pos.shape[-2] == 14):
-        raise ValueError(
-            f"Only supports atom 14"
-        )
+        raise ValueError(f"Only supports atom 14")
     pseudo_beta = torch.where(
-        atom_mask[..., 4:5].expand(
-            list(atom_mask.shape[:-1]) + [3]
-        ).bool(),
-        atom_pos[..., 4, :], atom_pos[..., 1, :]
+        atom_mask[..., 4:5].expand(list(atom_mask.shape[:-1]) + [3]).bool(),
+        atom_pos[..., 4, :],
+        atom_pos[..., 1, :],
     )
     return pseudo_beta
 

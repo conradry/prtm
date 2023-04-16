@@ -1,6 +1,7 @@
-import os, sys
-import numpy as np
+import os
+import sys
 
+import numpy as np
 from sequence_models import pdb_utils
 
 ex_dir = os.path.join(

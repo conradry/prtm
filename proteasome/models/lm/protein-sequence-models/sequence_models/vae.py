@@ -1,39 +1,60 @@
 from typing import List
 
-import torch.nn as nn
+import mlflow
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from apex import amp
-import mlflow
-from torch import nn as nn
-
-from sequence_models.losses import VAELoss
 from sequence_models.layers import FCStack
+from sequence_models.losses import VAELoss
 from sequence_models.metrics import UngappedAccuracy
+from torch import nn as nn
 
 
 class VAETrainer(object):
-    """ Trainer for VAEs."""
-    def __init__(self, vae, device, pad_idx, class_weights=None, lr=1e-4, beta=1.0, opt_level='O2', optim_kwargs={},
-                 early_stopping=True, patience=10, improve_threshold=0.001, save_freq=100, scheduler=None,
-                 scheduler_args=[], scheduler_kwargs={}, scheduler_time='epoch', kl_anneal=-1):
+    """Trainer for VAEs."""
+
+    def __init__(
+        self,
+        vae,
+        device,
+        pad_idx,
+        class_weights=None,
+        lr=1e-4,
+        beta=1.0,
+        opt_level="O2",
+        optim_kwargs={},
+        early_stopping=True,
+        patience=10,
+        improve_threshold=0.001,
+        save_freq=100,
+        scheduler=None,
+        scheduler_args=[],
+        scheduler_kwargs={},
+        scheduler_time="epoch",
+        kl_anneal=-1,
+    ):
         self.vae = vae.to(device)
         self.device = device
         self.beta = beta
         self.anneal_epochs = kl_anneal
         # Store an optimizer
         self.optimizer = optim.Adam(vae.parameters(), lr=lr, **optim_kwargs)
-        if opt_level != 'O0':
-            self.vae, self.optimizer = amp.initialize(self.vae, self.optimizer, opt_level=opt_level)
+        if opt_level != "O0":
+            self.vae, self.optimizer = amp.initialize(
+                self.vae, self.optimizer, opt_level=opt_level
+            )
         self.opt_level = opt_level
         # Store the loss
         self.loss_func = VAELoss(class_weights=class_weights)
         self.accu_func = UngappedAccuracy(pad_idx)
         if scheduler is None:
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, 1, gamma=1.0)
-            self.scheduler_time = 'epoch'
+            self.scheduler_time = "epoch"
         else:
-            self.scheduler = scheduler(self.optimizer, *scheduler_args, **scheduler_kwargs)
+            self.scheduler = scheduler(
+                self.optimizer, *scheduler_args, **scheduler_kwargs
+            )
             self.scheduler_time = scheduler_time
         self.early_stopping = early_stopping
         self.patience = patience
@@ -42,7 +63,7 @@ class VAETrainer(object):
         self.current_epoch = 0
 
     def step(self, src, tgt, train=True, weights=None):
-        """Do a forward pass. Do a backward pass if train=True. """
+        """Do a forward pass. Do a backward pass if train=True."""
         if train:
             self.vae = self.vae.train()
             self.optimizer.zero_grad()
@@ -61,18 +82,20 @@ class VAETrainer(object):
             beta = self.beta
         else:
             beta = self.beta * min(self.current_epoch / self.anneal_epochs, 1.0)
-        loss, r_loss, kl_loss = self.loss_func(p, tgt, z_mu, z_log_var, beta=beta, sample_weights=weights)
+        loss, r_loss, kl_loss = self.loss_func(
+            p, tgt, z_mu, z_log_var, beta=beta, sample_weights=weights
+        )
         accu = self.accu_func(p, tgt)
         return loss, r_loss, kl_loss, accu
 
     def _backward(self, loss):
-        if self.opt_level != 'O0':
+        if self.opt_level != "O0":
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
             loss.backward()
         self.optimizer.step()
-        if self.scheduler_time == 'batch':
+        if self.scheduler_time == "batch":
             self.scheduler.step()
 
     def epoch(self, loader, train):
@@ -94,7 +117,9 @@ class VAETrainer(object):
                     weights = batch[1]
                 else:
                     weights = None
-            loss, r_loss, kl_loss, accu = self.step(src, tgt, train=train, weights=weights)
+            loss, r_loss, kl_loss, accu = self.step(
+                src, tgt, train=train, weights=weights
+            )
             losses += loss
             r_losses += r_loss
             kl_losses += kl_loss
@@ -104,11 +129,11 @@ class VAETrainer(object):
             mean_kl = kl_losses / (i + 1)
             mean_accu = accus / (i + 1)
             if train:
-                print('\rTraining ', end='')
+                print("\rTraining ", end="")
             else:
-                print('\rValidating ', end='')
+                print("\rValidating ", end="")
             print(
-                'Epoch %d of %d Batch %d of %d loss = %.4f r = %.4f kld = %.4f accu = %.4f'
+                "Epoch %d of %d Batch %d of %d loss = %.4f r = %.4f kld = %.4f accu = %.4f"
                 % (
                     self.current_epoch + 1,
                     self.total_epochs,
@@ -117,9 +142,9 @@ class VAETrainer(object):
                     mean_loss,
                     mean_r,
                     mean_kl,
-                    mean_accu
+                    mean_accu,
                 ),
-                  end=''
+                end="",
             )
         print()
         return mean_loss, mean_r, mean_kl, mean_accu
@@ -132,33 +157,39 @@ class VAETrainer(object):
         for epoch in range(epochs):
             self.current_epoch = epoch
             if epoch > 0 and (epoch % self.save_freq == 0) and save_path is not None:
-                torch.save(self.vae.state_dict(), save_path + 'autosave_epoch_{}.pkl'.format(epoch))
-                torch.save(self.optimizer.state_dict(), save_path + 'optim_autosave_epoch_{}.pkl'.format(epoch))
+                torch.save(
+                    self.vae.state_dict(),
+                    save_path + "autosave_epoch_{}.pkl".format(epoch),
+                )
+                torch.save(
+                    self.optimizer.state_dict(),
+                    save_path + "optim_autosave_epoch_{}.pkl".format(epoch),
+                )
             if not done:
                 loss, r_loss, kld, accu = self.epoch(train_loader, True)
                 mlflow.log_metrics(
                     {
-                        'train_loss': loss,
-                        'train_r_loss': r_loss,
-                        'train_kld': kld,
-                        'train_accu': accu
+                        "train_loss": loss,
+                        "train_r_loss": r_loss,
+                        "train_kld": kld,
+                        "train_accu": accu,
                     },
-                    step=self.current_epoch
+                    step=self.current_epoch,
                 )
 
                 if valid_loader is not None:
                     with torch.no_grad():
                         loss, r_loss, kld, accu = self.epoch(valid_loader, False)
-                    if self.scheduler_time == 'epoch':
+                    if self.scheduler_time == "epoch":
                         self.scheduler.step(loss)
                     mlflow.log_metrics(
                         {
-                            'valid_loss': loss,
-                            'valid_r_loss': r_loss,
-                            'valid_kld': kld,
-                            'valid_accu': accu
+                            "valid_loss": loss,
+                            "valid_r_loss": r_loss,
+                            "valid_kld": kld,
+                            "valid_accu": accu,
                         },
-                        step=self.current_epoch
+                        step=self.current_epoch,
                     )
                     if self.early_stopping and self.current_epoch > self.anneal_epochs:
                         improve = loss <= (1 - self.improve_threshold) * best_loss
@@ -169,7 +200,7 @@ class VAETrainer(object):
                             best_loss = loss
                         done = stagnant >= self.patience
             else:
-                print('Stopping early at epoch {}'.format(self.current_epoch))
+                print("Stopping early at epoch {}".format(self.current_epoch))
                 break
         return self.vae, self.loss_func, self.optimizer
 
@@ -189,12 +220,13 @@ class VAE(nn.Module):
         mu (N, d_z)
         log_var (N, d_z)
     """
+
     def __init__(self, encoder: nn.Module, decoder: nn.Module):
         super(VAE, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
         if self.encoder.d_z != self.decoder.d_z:
-            raise ValueError('d_zs do not match!')
+            raise ValueError("d_zs do not match!")
         self.d_z = encoder.d_z
 
     def encode(self, x: torch.tensor):
@@ -215,7 +247,6 @@ class VAE(nn.Module):
 
 
 class RecurrentVAE(VAE):
-
     def forward(self, src):
         mu, log_var = self.encode(src)
         z = self.reparameterize(mu, log_var)
@@ -226,7 +257,7 @@ class RecurrentVAE(VAE):
 
 
 class FCEncoder(nn.Module):
-    """ A simple fully-connected encoder for sequences.
+    """A simple fully-connected encoder for sequences.
 
     Args:
         L (int): Sequence length
@@ -243,7 +274,16 @@ class FCEncoder(nn.Module):
         log_var (N, d_z)
     """
 
-    def __init__(self, L: int, d_in: int, d_h: List[int], d_z: int, padding_idx=None, p=0., norm='bn'):
+    def __init__(
+        self,
+        L: int,
+        d_in: int,
+        d_h: List[int],
+        d_z: int,
+        padding_idx=None,
+        p=0.0,
+        norm="bn",
+    ):
         super(FCEncoder, self).__init__()
         self.L = L
         self.d_in = d_in
@@ -263,7 +303,7 @@ class FCEncoder(nn.Module):
 
 
 class FCDecoder(nn.Module):
-    """ A simple fully-connected decoder for sequences.
+    """A simple fully-connected decoder for sequences.
 
     Args:
         L (int): Sequence length
@@ -278,7 +318,7 @@ class FCDecoder(nn.Module):
         X (N, L, d_in)
     """
 
-    def __init__(self, L: int, d_in: int, d_h: List[int], d_z: int, p=0., norm='bn'):
+    def __init__(self, L: int, d_in: int, d_h: List[int], d_z: int, p=0.0, norm="bn"):
         super(FCDecoder, self).__init__()
         self.L = L
         self.d_in = d_in
@@ -293,7 +333,7 @@ class FCDecoder(nn.Module):
 
 
 class HierarchicalRecurrentDecoder(nn.Module):
-    """ A hierarchical recurrent decoder.
+    """A hierarchical recurrent decoder.
 
     Args:
         ells (list of ints): subsequence lengths
@@ -308,6 +348,7 @@ class HierarchicalRecurrentDecoder(nn.Module):
     Outputs:
         X (N, L, d_in)
     """
+
     def __init__(self, conductor, decoder):
         super().__init__()
         self.conductor = conductor
@@ -331,12 +372,16 @@ class Conductor(nn.Module):
             if len(layers) == 0:
                 layers.append(nn.ConvTranspose1d(nf0, nf1, 4, stride=1, bias=False))
             else:
-                layers.append(nn.ConvTranspose1d(nf0, nf1, 4, stride=2, padding=1, bias=False))
+                layers.append(
+                    nn.ConvTranspose1d(nf0, nf1, 4, stride=2, padding=1, bias=False)
+                )
             layers.append(nn.BatchNorm1d(nf1))
             layers.append(nn.ReLU())
         layers += [
-            nn.ConvTranspose1d(n_features[-1], d_out, 4, stride=2, padding=1, bias=False),
-            nn.Tanh()
+            nn.ConvTranspose1d(
+                n_features[-1], d_out, 4, stride=2, padding=1, bias=False
+            ),
+            nn.Tanh(),
         ]
         self.layers = nn.Sequential(*layers)
 

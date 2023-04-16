@@ -1,21 +1,20 @@
 """
 Utility functions for plotting
 """
-import os, sys
+import os
 import re
+import sys
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 import seaborn as sns
-
+import torch
 from astropy.visualization import LogStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
-
-import torch
+from matplotlib.colors import LogNorm
 from torch.utils.data import Dataset
 
 PLOT_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "plots"))

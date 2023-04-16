@@ -16,7 +16,9 @@ _TENSOR_MODEL_PARALLEL_RANK = None
 
 def ensure_divisibility(numerator, denominator):
     """Ensure that numerator is divisible by the denominator."""
-    assert numerator % denominator == 0, '{} is not divisible by {}'.format(numerator, denominator)
+    assert numerator % denominator == 0, "{} is not divisible by {}".format(
+        numerator, denominator
+    )
 
 
 def set_missing_distributed_environ(key, value):
@@ -28,11 +30,12 @@ def init_dist(tensor_model_parallel_size_=1):
     comm = MPI.COMM_WORLD
     world_size = comm.Get_size()
     rank = comm.Get_rank()
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12340'
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "12340"
 
     import habana_frameworks.torch.distributed.hccl
-    dist.init_process_group(backend='hccl', rank=rank, world_size=world_size)
+
+    dist.init_process_group(backend="hccl", rank=rank, world_size=world_size)
 
     world_size = dist.get_world_size()
     rank = dist.get_rank()
@@ -43,8 +46,7 @@ def init_dist(tensor_model_parallel_size_=1):
 
     # Build the data-parallel groups.
     global _DATA_PARALLEL_GROUP
-    assert _DATA_PARALLEL_GROUP is None, \
-        'data parallel group is already initialized'
+    assert _DATA_PARALLEL_GROUP is None, "data parallel group is already initialized"
     for i in range(tensor_model_parallel_size_):
         ranks = range(i, world_size, tensor_model_parallel_size_)
         group = dist.new_group(ranks)
@@ -52,39 +54,45 @@ def init_dist(tensor_model_parallel_size_=1):
             _DATA_PARALLEL_GROUP = group
 
     global _TENSOR_MODEL_PARALLEL_GROUP
-    assert _TENSOR_MODEL_PARALLEL_GROUP is None, \
-        'tensor model parallel group is already initialized'
+    assert (
+        _TENSOR_MODEL_PARALLEL_GROUP is None
+    ), "tensor model parallel group is already initialized"
     # Build the model-parallel groups.
     for i in range(data_parallel_size_):
-        ranks = range(i * tensor_model_parallel_size_, (i + 1) * tensor_model_parallel_size_)
+        ranks = range(
+            i * tensor_model_parallel_size_, (i + 1) * tensor_model_parallel_size_
+        )
         group = dist.new_group(ranks)
         if rank in ranks:
             _TENSOR_MODEL_PARALLEL_GROUP = group
 
     if dist.get_rank() == 0:
-        print('> initialize tensor model parallel with size {}'.format(tensor_model_parallel_size_))
-        print('> initialize data parallel with size {}'.format(data_parallel_size_))
+        print(
+            "> initialize tensor model parallel with size {}".format(
+                tensor_model_parallel_size_
+            )
+        )
+        print("> initialize data parallel with size {}".format(data_parallel_size_))
 
 
 def dap_is_initialized():
     """Check if model and data parallel groups are initialized."""
-    if _TENSOR_MODEL_PARALLEL_GROUP is None or \
-        _DATA_PARALLEL_GROUP is None:
+    if _TENSOR_MODEL_PARALLEL_GROUP is None or _DATA_PARALLEL_GROUP is None:
         return False
     return True
 
 
 def get_tensor_model_parallel_group():
     """Get the tensor model parallel group the caller rank belongs to."""
-    assert _TENSOR_MODEL_PARALLEL_GROUP is not None, \
-        'intra_layer_model parallel group is not initialized'
+    assert (
+        _TENSOR_MODEL_PARALLEL_GROUP is not None
+    ), "intra_layer_model parallel group is not initialized"
     return _TENSOR_MODEL_PARALLEL_GROUP
 
 
 def get_data_parallel_group():
     """Get the data parallel group the caller rank belongs to."""
-    assert _DATA_PARALLEL_GROUP is not None, \
-        'data parallel group is not initialized'
+    assert _DATA_PARALLEL_GROUP is not None, "data parallel group is not initialized"
     return _DATA_PARALLEL_GROUP
 
 

@@ -2,10 +2,11 @@
 
 """
 
-import os, sys
-import logging
 import argparse
 import glob
+import logging
+import os
+import sys
 from typing import *
 
 import numpy as np

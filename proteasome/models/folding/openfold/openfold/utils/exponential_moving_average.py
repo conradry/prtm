@@ -1,8 +1,8 @@
-from collections import OrderedDict
 import copy
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
-
 from openfold.utils.tensor_utils import tensor_tree_map
 
 

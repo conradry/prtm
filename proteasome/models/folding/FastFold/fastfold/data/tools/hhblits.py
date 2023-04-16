@@ -22,7 +22,6 @@ from typing import Any, Mapping, Optional, Sequence
 
 from fastfold.data.tools import utils
 
-
 _HHBLITS_DEFAULT_P = 20
 _HHBLITS_DEFAULT_Z = 500
 
@@ -83,12 +82,8 @@ class HHBlits:
 
         for database_path in self.databases:
             if not glob.glob(database_path + "_*"):
-                logging.error(
-                    "Could not find HHBlits database %s", database_path
-                )
-                raise ValueError(
-                    f"Could not find HHBlits database {database_path}"
-                )
+                logging.error("Could not find HHBlits database %s", database_path)
+                raise ValueError(f"Could not find HHBlits database {database_path}")
 
         self.n_cpu = n_cpu
         self.n_iter = n_iter

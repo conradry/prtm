@@ -14,28 +14,22 @@
 # limitations under the License.
 
 import math
+from functools import partial
+from typing import Optional, Tuple
+
 import torch
 import torch.nn as nn
-from typing import Tuple, Optional
-from functools import partial
-
-from fastfold.model.nn.primitives import Linear, LayerNorm
-from fastfold.model.nn.dropout import DropoutRowwise, DropoutColumnwise
-from fastfold.model.nn.msa import (
-    MSARowAttentionWithPairBias,
-    MSAColumnAttention,
-    MSAColumnGlobalAttention,
-)
+from fastfold.model.nn.dropout import DropoutColumnwise, DropoutRowwise
+from fastfold.model.nn.msa import (MSAColumnAttention,
+                                   MSAColumnGlobalAttention,
+                                   MSARowAttentionWithPairBias)
 from fastfold.model.nn.outer_product_mean import OuterProductMean
 from fastfold.model.nn.pair_transition import PairTransition
+from fastfold.model.nn.primitives import LayerNorm, Linear
 from fastfold.model.nn.triangular_attention import (
-    TriangleAttentionStartingNode,
-    TriangleAttentionEndingNode,
-)
+    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
 from fastfold.model.nn.triangular_multiplicative_update import (
-    TriangleMultiplicationOutgoing,
-    TriangleMultiplicationIncoming,
-)
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 from fastfold.utils.checkpointing import checkpoint_blocks, get_checkpoint_fn
 from fastfold.utils.tensor_utils import chunk_layer
 
@@ -46,6 +40,7 @@ class MSATransition(nn.Module):
 
     Implements Algorithm 9
     """
+
     def __init__(self, c_m, n):
         """
         Args:
@@ -72,17 +67,18 @@ class MSATransition(nn.Module):
         return m
 
     @torch.jit.ignore
-    def _chunk(self,
+    def _chunk(
+        self,
         m: torch.Tensor,
         mask: torch.Tensor,
         chunk_size: int,
     ) -> torch.Tensor:
-         return chunk_layer(
-             self._transition,
-             {"m": m, "mask": mask},
-             chunk_size=chunk_size,
-             no_batch_dims=len(m.shape[:-2]),
-         )
+        return chunk_layer(
+            self._transition,
+            {"m": m, "mask": mask},
+            chunk_size=chunk_size,
+            no_batch_dims=len(m.shape[:-2]),
+        )
 
     def forward(
         self,
@@ -186,19 +182,15 @@ class EvoformerBlockCore(nn.Module):
         pair_mask: torch.Tensor,
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
-    ) -> Tuple[torch.Tensor, torch.Tensor]: 
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # DeepMind doesn't mask these transitions in the source, so _mask_trans
         # should be disabled to better approximate the exact activations of
         # the original.
         msa_trans_mask = msa_mask if _mask_trans else None
         pair_trans_mask = pair_mask if _mask_trans else None
 
-        m = m + self.msa_transition(
-            m, mask=msa_trans_mask, chunk_size=chunk_size
-        )
-        z = z + self.outer_product_mean(
-            m, mask=msa_mask, chunk_size=chunk_size
-        )
+        m = m + self.msa_transition(m, mask=msa_trans_mask, chunk_size=chunk_size)
+        z = z + self.outer_product_mean(m, mask=msa_mask, chunk_size=chunk_size)
         z = z + self.ps_dropout_row_layer(self.tri_mul_out(z, mask=pair_mask))
         z = z + self.ps_dropout_row_layer(self.tri_mul_in(z, mask=pair_mask))
         z = z + self.ps_dropout_row_layer(
@@ -207,15 +199,14 @@ class EvoformerBlockCore(nn.Module):
         z = z + self.ps_dropout_col_layer(
             self.tri_att_end(z, mask=pair_mask, chunk_size=chunk_size)
         )
-        z = z + self.pair_transition(
-            z, mask=pair_trans_mask, chunk_size=chunk_size
-        )
+        z = z + self.pair_transition(z, mask=pair_trans_mask, chunk_size=chunk_size)
 
         return m, z
 
 
 class EvoformerBlock(nn.Module):
-    def __init__(self,
+    def __init__(
+        self,
         c_m: int,
         c_z: int,
         c_hidden_msa_att: int,
@@ -263,10 +254,11 @@ class EvoformerBlock(nn.Module):
             inf=inf,
             eps=eps,
         )
- 
+
         self.is_multimer = is_multimer
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         msa_mask: torch.Tensor,
@@ -279,11 +271,11 @@ class EvoformerBlock(nn.Module):
         )
         m = m + self.msa_att_col(m, mask=msa_mask, chunk_size=chunk_size)
         m, z = self.core(
-            m, 
-            z, 
-            msa_mask=msa_mask, 
-            pair_mask=pair_mask, 
-            chunk_size=chunk_size, 
+            m,
+            z,
+            msa_mask=msa_mask,
+            pair_mask=pair_mask,
+            chunk_size=chunk_size,
             _mask_trans=_mask_trans,
         )
 
@@ -291,13 +283,15 @@ class EvoformerBlock(nn.Module):
 
 
 class ExtraMSABlock(nn.Module):
-    """ 
-        Almost identical to the standard EvoformerBlock, except in that the
-        ExtraMSABlock uses GlobalAttention for MSA column attention and
-        requires more fine-grained control over checkpointing. Separated from
-        its twin to preserve the TorchScript-ability of the latter.
     """
-    def __init__(self,
+    Almost identical to the standard EvoformerBlock, except in that the
+    ExtraMSABlock uses GlobalAttention for MSA column attention and
+    requires more fine-grained control over checkpointing. Separated from
+    its twin to preserve the TorchScript-ability of the latter.
+    """
+
+    def __init__(
+        self,
         c_m: int,
         c_z: int,
         c_hidden_msa_att: int,
@@ -315,7 +309,7 @@ class ExtraMSABlock(nn.Module):
         is_multimer: bool,
     ):
         super(ExtraMSABlock, self).__init__()
-        
+
         self.ckpt = ckpt
 
         self.msa_att_row = MSARowAttentionWithPairBias(
@@ -351,7 +345,8 @@ class ExtraMSABlock(nn.Module):
         )
         self.is_multimer = is_multimer
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         msa_mask: torch.Tensor,
@@ -361,13 +356,12 @@ class ExtraMSABlock(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         m = m + self.msa_dropout_layer(
             self.msa_att_row(
-                m.clone(), 
-                z=z.clone(), 
-                mask=msa_mask, 
+                m.clone(),
+                z=z.clone(),
+                mask=msa_mask,
                 chunk_size=chunk_size,
                 _chunk_logits=_chunk_logits if torch.is_grad_enabled() else None,
-                _checkpoint_chunks=
-                    self.ckpt if torch.is_grad_enabled() else False,
+                _checkpoint_chunks=self.ckpt if torch.is_grad_enabled() else False,
             )
         )
 
@@ -376,10 +370,10 @@ class ExtraMSABlock(nn.Module):
             m, z = self.core(
                 m, z, msa_mask=msa_mask, pair_mask=pair_mask, chunk_size=chunk_size
             )
-            
+
             return m, z
 
-        if(torch.is_grad_enabled() and self.ckpt):
+        if torch.is_grad_enabled() and self.ckpt:
             checkpoint_fn = get_checkpoint_fn()
             m, z = checkpoint_fn(fn, m, z)
         else:
@@ -413,7 +407,7 @@ class EvoformerStack(nn.Module):
         blocks_per_ckpt: int,
         inf: float,
         eps: float,
-        clear_cache_between_blocks: bool = False, 
+        clear_cache_between_blocks: bool = False,
         is_multimer: bool = False,
         **kwargs,
     ):
@@ -480,7 +474,8 @@ class EvoformerStack(nn.Module):
 
         self.linear = Linear(c_m, c_s)
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         msa_mask: torch.Tensor,
@@ -517,7 +512,8 @@ class EvoformerStack(nn.Module):
             for b in self.blocks
         ]
 
-        if(self.clear_cache_between_blocks):
+        if self.clear_cache_between_blocks:
+
             def block_with_cache_clear(block, *args):
                 torch.cuda.empty_cache()
                 return block(*args)
@@ -531,7 +527,7 @@ class EvoformerStack(nn.Module):
         )
 
         s = self.linear(m[..., 0, :, :])
-        
+
         return m, z, s
 
 
@@ -540,7 +536,8 @@ class ExtraMSAStack(nn.Module):
     Implements Algorithm 18.
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         c_m: int,
         c_z: int,
         c_hidden_msa_att: int,
@@ -561,7 +558,7 @@ class ExtraMSAStack(nn.Module):
         **kwargs,
     ):
         super(ExtraMSAStack, self).__init__()
-        
+
         self.clear_cache_between_blocks = clear_cache_between_blocks
         self.blocks = nn.ModuleList()
         for _ in range(no_blocks):
@@ -584,7 +581,8 @@ class ExtraMSAStack(nn.Module):
             )
             self.blocks.append(block)
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         chunk_size: int,
@@ -604,19 +602,19 @@ class ExtraMSAStack(nn.Module):
                 Optional [*, N_res, N_res] pair mask
         Returns:
             [*, N_res, N_res, C_z] pair update
-        """ 
-        #checkpoint_fn = get_checkpoint_fn()
-        #blocks = [
+        """
+        # checkpoint_fn = get_checkpoint_fn()
+        # blocks = [
         #    partial(b, msa_mask=msa_mask, pair_mask=pair_mask, chunk_size=chunk_size, _chunk_logits=None) for b in self.blocks
-        #]
+        # ]
 
-        #def dodo(b, *args):
+        # def dodo(b, *args):
         #    torch.cuda.empty_cache()
         #    return b(*args)
 
-        #blocks = [partial(dodo, b) for b in blocks]
+        # blocks = [partial(dodo, b) for b in blocks]
 
-        #for b in blocks:
+        # for b in blocks:
         #    if(torch.is_grad_enabled()):
         #        m, z = checkpoint_fn(b, *(m, z))
         #    else:
@@ -625,7 +623,7 @@ class ExtraMSAStack(nn.Module):
         for b in self.blocks:
             m, z = b(m, z, msa_mask, pair_mask, chunk_size=chunk_size)
 
-            if(self.clear_cache_between_blocks):
+            if self.clear_cache_between_blocks:
                 torch.cuda.empty_cache()
 
         return z

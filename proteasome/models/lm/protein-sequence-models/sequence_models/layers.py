@@ -1,10 +1,10 @@
+import math
 from typing import List
 
-import math
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
-import numpy as np
 
 
 class DoubleEmbedding(nn.Module):
@@ -28,22 +28,31 @@ class DoubleEmbedding(nn.Module):
             freeze_padding_idx = padding_idx - n_trainable
         self.n_trainable = n_trainable
         self.embedding_dim = embedding_dim
-        self.trainable = nn.Embedding(n_trainable, embedding_dim, padding_idx=train_padding_idx)
-        self.frozen = nn.Embedding(n_frozen, embedding_dim, padding_idx=freeze_padding_idx)
+        self.trainable = nn.Embedding(
+            n_trainable, embedding_dim, padding_idx=train_padding_idx
+        )
+        self.frozen = nn.Embedding(
+            n_frozen, embedding_dim, padding_idx=freeze_padding_idx
+        )
         self.frozen.weight.requires_grad = False
 
     def forward(self, idx):
         i = torch.where(idx < self.n_trainable)
         j = torch.where(idx >= self.n_trainable)
         b, ell = idx.shape
-        e = torch.empty(b, ell, self.embedding_dim, device=idx.device, dtype=self.trainable.weight.dtype)
+        e = torch.empty(
+            b,
+            ell,
+            self.embedding_dim,
+            device=idx.device,
+            dtype=self.trainable.weight.dtype,
+        )
         e[i] = self.trainable(idx[i])
         e[j] = self.frozen(idx[j] - self.n_trainable)
         return e
 
 
 class FactorizedLinear(nn.Module):
-
     def __init__(self, d_in, d_out, rank):
         super().__init__()
         layer = nn.Linear(d_in, d_out)
@@ -61,7 +70,6 @@ class FactorizedLinear(nn.Module):
 
 
 class PositionFeedForward(nn.Module):
-
     def __init__(self, d_in, d_out, rank=None):
         super().__init__()
         if rank is None:
@@ -88,7 +96,6 @@ class PositionFeedForward(nn.Module):
 
 
 class PositionFeedForward2d(nn.Module):
-
     def __init__(self, d_in, d_out):
         super().__init__()
         self.dense = nn.Linear(d_in, d_out)
@@ -102,7 +109,6 @@ class MaskedInstanceNorm2d(nn.InstanceNorm2d):
 
     def __init__(self, n_dims, affine=True, eps=1e-6):
         super().__init__(n_dims, affine=affine, eps=eps)
-
 
     def forward(self, x, input_mask=None):
         if input_mask is None:
@@ -122,25 +128,25 @@ class MaskedInstanceNorm2d(nn.InstanceNorm2d):
 class FCStack(nn.Sequential):
     """A stack of fully-connected layers.
 
-     Every nn.Linear is optionally followed by  a normalization layer,
-     a dropout layer, and then a ReLU.
+    Every nn.Linear is optionally followed by  a normalization layer,
+    a dropout layer, and then a ReLU.
 
-     Args:
-         sizes (List of ints): the all layer dimensions from input to output
-         norm (str): type of norm. 'bn' for batchnorm, 'ln' for layer norm. Default 'bn'
-         p (float): dropout probability
+    Args:
+        sizes (List of ints): the all layer dimensions from input to output
+        norm (str): type of norm. 'bn' for batchnorm, 'ln' for layer norm. Default 'bn'
+        p (float): dropout probability
 
-     Input (N, sizes[0])
-     Output (N, sizes[-1])
-     """
+    Input (N, sizes[0])
+    Output (N, sizes[-1])
+    """
 
-    def __init__(self, sizes: List[int], norm='bn', p=0.0):
+    def __init__(self, sizes: List[int], norm="bn", p=0.0):
         layers = []
         for d0, d1 in zip(sizes, sizes[1:]):
             layers.append(nn.Linear(d0, d1))
-            if norm == 'ln':
+            if norm == "ln":
                 layers.append(nn.LayerNorm(d1))
-            elif norm == 'bn':
+            elif norm == "bn":
                 layers.append(nn.BatchNorm1d(d1))
             if p != 0:
                 layers.append(nn.Dropout(p))
@@ -149,18 +155,19 @@ class FCStack(nn.Sequential):
 
 
 class PositionalEncoding(nn.Module):
-
     def __init__(self, d_model, dropout=0.0, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
+        )
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x):
         x = x + self.pe[:, x.size(0), :]

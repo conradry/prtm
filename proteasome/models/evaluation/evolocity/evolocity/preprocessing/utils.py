@@ -1,11 +1,12 @@
 import errno
-import numpy as np
 import os
+import warnings
+
+import numpy as np
 import pandas as pd
+from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
-from anndata import AnnData
-import warnings
 
 from .. import logging as logg
 

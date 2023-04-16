@@ -1,20 +1,21 @@
-from .utils import mkdir_p
-
+import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-import numpy as np
+
+from .utils import mkdir_p
+
 
 def onehot_msa(
-        adata,
-        reference=None,
-        seq_id_fields=None,
-        key='onehot',
-        seq_key='seq',
-        backend='mafft',
-        dirname='target/evolocity_alignments',
-        n_threads=1,
-        copy=False,
+    adata,
+    reference=None,
+    seq_id_fields=None,
+    key="onehot",
+    seq_key="seq",
+    backend="mafft",
+    dirname="target/evolocity_alignments",
+    n_threads=1,
+    copy=False,
 ):
     """Aligns and one-hot-encodes sequences.
 
@@ -60,47 +61,50 @@ def onehot_msa(
 
     seqs = []
     for idx, seq in enumerate(adata.obs[seq_key]):
-        seq_id = f'seq{idx}'
+        seq_id = f"seq{idx}"
         if seq_id_fields is not None:
             for field in seq_id_fields:
-                seq_id += f'_{field}{adata.obs[field][idx]}'
-        seqs.append(SeqRecord(Seq(seq), id=seq_id, description=''))
+                seq_id += f"_{field}{adata.obs[field][idx]}"
+        seqs.append(SeqRecord(Seq(seq), id=seq_id, description=""))
 
-    if dirname.endswith('/'):
-        dirname = dirname.rstrip('/')
+    if dirname.endswith("/"):
+        dirname = dirname.rstrip("/")
     mkdir_p(dirname)
-    ifname = dirname + '/unaligned.fasta'
-    SeqIO.write(seqs, ifname, 'fasta')
+    ifname = dirname + "/unaligned.fasta"
+    SeqIO.write(seqs, ifname, "fasta")
 
     # Align fasta.
 
-    if backend == 'mafft':
+    if backend == "mafft":
         command = (
-            'mafft ' +
-            '--thread {} '.format(n_threads) +
-            '--auto --treeout --inputorder ' +
-            ifname
+            "mafft "
+            + "--thread {} ".format(n_threads)
+            + "--auto --treeout --inputorder "
+            + ifname
         ).split()
     else:
-        raise ValueError('Unsupported backend: {}'.format(backend))
+        raise ValueError("Unsupported backend: {}".format(backend))
 
     import subprocess
-    ofname = dirname + '/aligned.fasta'
-    with open(ofname, 'w') as ofile, \
-         open(dirname + '/' + backend + '.log', 'w') as olog:
+
+    ofname = dirname + "/aligned.fasta"
+    with open(ofname, "w") as ofile, open(
+        dirname + "/" + backend + ".log", "w"
+    ) as olog:
         subprocess.run(command, stdout=ofile, stderr=olog)
 
     # Read alignment and turn to one-hot encoding.
 
     from Bio import AlignIO
+
     with open(ofname) as f:
-        alignment = AlignIO.read(f, 'fasta')
+        alignment = AlignIO.read(f, "fasta")
 
     n_seqs = len(alignment)
-    assert(n_seqs == adata.X.shape[0])
+    assert n_seqs == adata.X.shape[0]
     if reference is not None:
         ref_aseq = str(alignment[reference].seq)
-        n_residues = len(ref_aseq.replace('-', ''))
+        n_residues = len(ref_aseq.replace("-", ""))
     else:
         n_residues = len(alignment[0].seq)
     align_matrix = np.zeros((n_seqs, n_residues))
@@ -108,41 +112,43 @@ def onehot_msa(
     vocabulary = {}
 
     for i, record in enumerate(alignment):
-        assert(record.id.startswith('seq{}'.format(i)))
+        assert record.id.startswith("seq{}".format(i))
         aseq = str(record.seq)
         j = 0
         for char_idx, char in enumerate(aseq):
-            if reference is not None and ref_aseq[char_idx] == '-':
+            if reference is not None and ref_aseq[char_idx] == "-":
                 continue
             if char not in vocabulary:
                 vocabulary[char] = len(vocabulary)
             align_matrix[i, j] = vocabulary[char]
             j += 1
 
-    keys = sorted([ vocabulary[key] for key in vocabulary ])
+    keys = sorted([vocabulary[key] for key in vocabulary])
     from sklearn.preprocessing import OneHotEncoder
+
     enc = OneHotEncoder(
-        categories=[ keys ] * align_matrix.shape[1],
+        categories=[keys] * align_matrix.shape[1],
         sparse=False,
     )
     X_onehot = enc.fit_transform(align_matrix)
-    assert(X_onehot.shape[1] == len(keys) * n_residues)
+    assert X_onehot.shape[1] == len(keys) * n_residues
 
-    lookup = { vocabulary[key]: key for key in vocabulary }
+    lookup = {vocabulary[key]: key for key in vocabulary}
 
-    adata.obsm[f'X_{key}'] = X_onehot
-    adata.obs[f'seqs_msa'] = [ str(record.seq) for record in alignment ]
-    adata.uns[f'{key}_vocabulary'] = lookup
-    adata.uns[f'{key}_shape'] = [ n_residues, len(lookup) ]
+    adata.obsm[f"X_{key}"] = X_onehot
+    adata.obs[f"seqs_msa"] = [str(record.seq) for record in alignment]
+    adata.uns[f"{key}_vocabulary"] = lookup
+    adata.uns[f"{key}_shape"] = [n_residues, len(lookup)]
 
     return adata if copy else None
 
+
 def residue_scores(
-        adata,
-        basis='onehot',
-        scale=1.,
-        key='residue_scores',
-        copy=False,
+    adata,
+    basis="onehot",
+    scale=1.0,
+    key="residue_scores",
+    copy=False,
 ):
     """Score mutations by associated evolocity.
 
@@ -167,11 +173,13 @@ def residue_scores(
     residue_scores: `.uns`
         per-residue velocity scores
     """
-    if f'X_{basis}' not in adata.obsm:
-        raise ValueError(f'Could not find basis "{basis}", '
-                         'consider running onehot_msa() first.')
+    if f"X_{basis}" not in adata.obsm:
+        raise ValueError(
+            f'Could not find basis "{basis}", ' "consider running onehot_msa() first."
+        )
 
     from .velocity_embedding import velocity_embedding
+
     velocity_embedding(
         adata,
         basis=basis,
@@ -179,10 +187,8 @@ def residue_scores(
         autoscale=False,
     )
 
-    onehot_velo = np.array(adata.obsm[f'velocity_{basis}'])
+    onehot_velo = np.array(adata.obsm[f"velocity_{basis}"])
 
-    adata.uns[key] = onehot_velo.sum(0).reshape(
-        tuple(adata.uns[f'{basis}_shape'])
-    )
+    adata.uns[key] = onehot_velo.sum(0).reshape(tuple(adata.uns[f"{basis}_shape"]))
 
     return adata if copy else None

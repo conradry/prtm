@@ -1,6 +1,6 @@
 import pytest
-
-from colabfold.batch import get_queries, convert_pdb_to_mmcif, validate_and_fix_mmcif
+from colabfold.batch import (convert_pdb_to_mmcif, get_queries,
+                             validate_and_fix_mmcif)
 
 
 def test_get_queries_fasta_dir(pytestconfig, caplog):

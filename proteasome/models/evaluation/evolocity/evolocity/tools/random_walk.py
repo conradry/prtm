@@ -1,11 +1,11 @@
-from .. import settings
+import numpy as np
+import scipy.special
+
 from .. import logging as logg
+from .. import settings
 from ..preprocessing.neighbors import verify_neighbors
 from .transition_matrix import transition_matrix
 from .utils import groups_to_bool, strings_to_categoricals
-
-import numpy as np
-import scipy.special
 
 
 def random_walk(
@@ -14,8 +14,8 @@ def random_walk(
     walk_length=10,
     n_walks=1,
     forward_walk=True,
-    path_key='rw_paths',
-    vkey='velocity',
+    path_key="rw_paths",
+    vkey="velocity",
     groupby=None,
     groups=None,
     self_transitions=False,
@@ -85,16 +85,14 @@ def random_walk(
     for cat in categories:
         groups = cat if cat is not None else groups
         if groups is None:
-            node_subset = np.array([ True ] * len(adata))
+            node_subset = np.array([True] * len(adata))
             _adata = adata
         else:
             node_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
             _adata = adata[node_subset]
 
         if not node_subset[root_node]:
-            logg.warn(
-                "Root node not in grouped subset, skipping."
-            )
+            logg.warn("Root node not in grouped subset, skipping.")
             continue
 
         # Re-index into _adata.
@@ -102,7 +100,7 @@ def random_walk(
 
         T = transition_matrix(_adata, vkey=vkey, backward=(not forward_walk), **kwargs)
         n_nodes = _adata.X.shape[0]
-        assert(T.shape[0] == T.shape[1] == n_nodes)
+        assert T.shape[0] == T.shape[1] == n_nodes
         paths = np.zeros((n_walks, walk_length + 1), dtype=int)
         paths[:, 0] = root_node_index_in_group
 
@@ -114,18 +112,15 @@ def random_walk(
             paths[:, t + 1] = path
 
         group_map = np.argwhere(node_subset).ravel()
-        paths = np.vstack([
-            group_map[np.array(paths[w], dtype=np.int32)] for w in range(n_walks)
-        ])
+        paths = np.vstack(
+            [group_map[np.array(paths[w], dtype=np.int32)] for w in range(n_walks)]
+        )
 
         group_path_key = path_key
         if cat is not None:
-            group_path_key += f'_{cat}'
+            group_path_key += f"_{cat}"
         adata.uns[group_path_key] = paths
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added\n"
-        f"    '{path_key}', random walk paths (adata.uns)\n"
-    )
+    logg.hint("added\n" f"    '{path_key}', random walk paths (adata.uns)\n")
     return adata if copy else None

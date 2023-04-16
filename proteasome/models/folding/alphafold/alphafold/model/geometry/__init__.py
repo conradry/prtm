@@ -13,10 +13,8 @@
 # limitations under the License.
 """Geometry Module."""
 
-from alphafold.model.geometry import rigid_matrix_vector
-from alphafold.model.geometry import rotation_matrix
-from alphafold.model.geometry import struct_of_array
-from alphafold.model.geometry import vector
+from alphafold.model.geometry import (rigid_matrix_vector, rotation_matrix,
+                                      struct_of_array, vector)
 
 Rot3Array = rotation_matrix.Rot3Array
 Rigid3Array = rigid_matrix_vector.Rigid3Array

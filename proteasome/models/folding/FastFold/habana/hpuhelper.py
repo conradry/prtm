@@ -1,5 +1,7 @@
 import time
+
 import habana_frameworks.torch as ht
+
 
 class hpu_perf:
     def __init__(self, module, log=True, mark_step=True, memoryinfo=False, sync=False):
@@ -25,7 +27,11 @@ class hpu_perf:
 
         tmp = time.perf_counter()
         if self.log:
-            print(" {}: {} takes {:.2f} ms".format(self.module, log, (tmp - self.stime)*1000))
+            print(
+                " {}: {} takes {:.2f} ms".format(
+                    self.module, log, (tmp - self.stime) * 1000
+                )
+            )
         self.stime = tmp
 
     def checkahead(self, log):
@@ -38,6 +44,10 @@ class hpu_perf:
 
         tmp = time.perf_counter()
         if self.prelog is not None and self.log:
-            print(" {}: {} takes {:.2f} ms".format(self.module, self.prelog, (tmp - self.stime)*1000))
+            print(
+                " {}: {} takes {:.2f} ms".format(
+                    self.module, self.prelog, (tmp - self.stime) * 1000
+                )
+            )
         self.stime = tmp
         self.prelog = log

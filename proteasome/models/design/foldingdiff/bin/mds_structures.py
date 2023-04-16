@@ -8,20 +8,18 @@ Coloring options:
 * length
 """
 
-import os
+import argparse
 import json
 import logging
+import os
 from glob import glob
-import argparse
-
 
 import pandas as pd
-from sklearn.manifold import MDS
 import umap
-from matplotlib import pyplot as plt
-
-from hclust_structures import get_pairwise_tmscores, int_getter
 from annot_secondary_structures import count_structures_in_pdb
+from hclust_structures import get_pairwise_tmscores, int_getter
+from matplotlib import pyplot as plt
+from sklearn.manifold import MDS
 
 # :)
 SEED = int(

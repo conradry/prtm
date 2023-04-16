@@ -5,4 +5,3 @@
 from .fusedsoftmax import fused_softmax, fused_softmax_bias
 
 __all__ = [fused_softmax, fused_softmax_bias]
-

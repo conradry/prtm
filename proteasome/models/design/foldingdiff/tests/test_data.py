@@ -7,7 +7,6 @@ import unittest
 
 import numpy as np
 import torch
-
 from foldingdiff import datasets, utils
 
 
@@ -165,4 +164,7 @@ class TestNoisedDataset(unittest.TestCase):
         ]
         recovered = utils.modulo_with_wrapped_range(recovered, -np.pi, np.pi)
         delta = recovered - orig_angles
-        self.assertTrue(torch.allclose(delta, torch.zeros_like(delta), atol=1e-4), f"Got non-zero delta on de-noise: {delta}")
+        self.assertTrue(
+            torch.allclose(delta, torch.zeros_like(delta), atol=1e-4),
+            f"Got non-zero delta on de-noise: {delta}",
+        )

@@ -1,26 +1,21 @@
 import argparse
-from functools import partial
 import json
 import logging
-from multiprocessing import Pool
 import os
-
 import sys
-sys.path.append(".") # an innocent hack to get this to run from the top level
+from functools import partial
+from multiprocessing import Pool
 
+sys.path.append(".")  # an innocent hack to get this to run from the top level
+
+from openfold.data.mmcif_parsing import parse
+from openfold.np import protein, residue_constants
 from tqdm import tqdm
 
-from openfold.data.mmcif_parsing import parse 
-from openfold.np import protein, residue_constants
 
-
-def parse_file(
-    f, 
-    args,
-    chain_cluster_size_dict
-):
+def parse_file(f, args, chain_cluster_size_dict):
     file_id, ext = os.path.splitext(f)
-    if(ext == ".cif"):
+    if ext == ".cif":
         with open(os.path.join(args.data_dir, f), "r") as fp:
             mmcif_string = fp.read()
         mmcif = parse(file_id=file_id, mmcif_string=mmcif_string)
@@ -38,28 +33,24 @@ def parse_file(
             local_data["release_date"] = mmcif.header["release_date"]
             local_data["seq"] = seq
             local_data["resolution"] = mmcif.header["resolution"]
-           
-            if(chain_cluster_size_dict is not None):
-                cluster_size = chain_cluster_size_dict.get(
-                    full_name.upper(), -1
-                )
+
+            if chain_cluster_size_dict is not None:
+                cluster_size = chain_cluster_size_dict.get(full_name.upper(), -1)
                 local_data["cluster_size"] = cluster_size
-    elif(ext == ".pdb"):
+    elif ext == ".pdb":
         with open(os.path.join(args.data_dir, f), "r") as fp:
             pdb_string = fp.read()
-          
+
         protein_object = protein.from_pdb_string(pdb_string, None)
 
-        chain_dict = {} 
+        chain_dict = {}
         chain_dict["seq"] = residue_constants.aatype_to_str_sequence(
             protein_object.aatype,
         )
-        chain_dict["resolution"] = 0.
-        
-        if(chain_cluster_size_dict is not None):
-            cluster_size = chain_cluster_size_dict.get(
-                full_name.upper(), -1
-            )
+        chain_dict["resolution"] = 0.0
+
+        if chain_cluster_size_dict is not None:
+            cluster_size = chain_cluster_size_dict.get(full_name.upper(), -1)
             chain_dict["cluster_size"] = cluster_size
 
         out = {file_id: chain_dict}
@@ -69,7 +60,7 @@ def parse_file(
 
 def main(args):
     chain_cluster_size_dict = None
-    if(args.cluster_file is not None):
+    if args.cluster_file is not None:
         chain_cluster_size_dict = {}
         with open(args.cluster_file, "r") as fp:
             clusters = [l.strip() for l in fp.readlines()]
@@ -80,12 +71,12 @@ def main(args):
             for chain_id in chain_ids:
                 chain_id = chain_id.upper()
                 chain_cluster_size_dict[chain_id] = cluster_len
-   
+
     accepted_exts = [".cif", ".pdb"]
     files = list(os.listdir(args.data_dir))
     files = [f for f in files if os.path.splitext(f)[-1] in accepted_exts]
     fn = partial(
-        parse_file, 
+        parse_file,
         args=args,
         chain_cluster_size_dict=chain_cluster_size_dict,
     )
@@ -105,25 +96,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "data_dir", type=str, help="Directory containing mmCIF or PDB files"
     )
+    parser.add_argument("output_path", type=str, help="Path for .json output")
     parser.add_argument(
-        "output_path", type=str, help="Path for .json output"
-    )
-    parser.add_argument(
-        "--cluster_file", type=str, default=None,
+        "--cluster_file",
+        type=str,
+        default=None,
         help=(
             "Path to a cluster file (e.g. PDB40), one cluster "
             "({PROT1_ID}_{CHAIN_ID} {PROT2_ID}_{CHAIN_ID} ...) per line. "
             "Chains not in this cluster file will NOT be filtered by cluster "
             "size."
-        )
+        ),
     )
     parser.add_argument(
-        "--no_workers", type=int, default=4,
-        help="Number of workers to use for parsing"
+        "--no_workers", type=int, default=4, help="Number of workers to use for parsing"
     )
     parser.add_argument(
-        "--chunksize", type=int, default=10,
-        help="How many files should be distributed to each worker at a time"
+        "--chunksize",
+        type=int,
+        default=10,
+        help="How many files should be distributed to each worker at a time",
     )
 
     args = parser.parse_args()

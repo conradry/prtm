@@ -8,8 +8,8 @@ def _set_jit_fusion_options():
     global JIT_OPTIONS_SET
     if JIT_OPTIONS_SET == False:
         # flags required to enable jit fusion kernels
-        TORCH_MAJOR = int(torch.__version__.split('.')[0])
-        TORCH_MINOR = int(torch.__version__.split('.')[1])
+        TORCH_MAJOR = int(torch.__version__.split(".")[0])
+        TORCH_MINOR = int(torch.__version__.split(".")[1])
         # if (TORCH_MAJOR > 1) or (TORCH_MAJOR == 1 and TORCH_MINOR >= 10):
         #     # nvfuser
         #     torch._C._jit_set_profiling_executor(True)

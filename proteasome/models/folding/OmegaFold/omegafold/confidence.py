@@ -24,10 +24,8 @@ Code for confidence-relevant things
 import argparse
 
 import torch
-from torch import nn
-
 from omegafold import modules, utils
-
+from torch import nn
 
 # =============================================================================
 # Constants
@@ -36,11 +34,12 @@ from omegafold import modules, utils
 # Functions
 # =============================================================================
 
+
 def get_all_confidence(
-        lddt_per_residue: torch.Tensor,
-        ca_coordinates: torch.Tensor,
-        ca_mask: torch.Tensor,
-        cutoff=15.,
+    lddt_per_residue: torch.Tensor,
+    ca_coordinates: torch.Tensor,
+    ca_mask: torch.Tensor,
+    cutoff=15.0,
 ) -> float:
     """
     Compute an approximate LDDT score for the entire sequence
@@ -72,23 +71,24 @@ def get_all_confidence(
 
     # Compute true and predicted distance matrices.
     dmat_true = torch.sqrt(
-        torch.sum(
-            (ca_coordinates[:, None] - ca_coordinates[None, :]) ** 2, dim=-1
-        ).add(1e-10)
+        torch.sum((ca_coordinates[:, None] - ca_coordinates[None, :]) ** 2, dim=-1).add(
+            1e-10
+        )
     )
 
     dists_to_score = (
-            torch.lt(dmat_true, cutoff) * ca_mask[..., :, None] *
-            ca_mask[..., None, :] *
-            (1. - torch.eye(dmat_true.shape[1], device=ca_mask.device))
+        torch.lt(dmat_true, cutoff)
+        * ca_mask[..., :, None]
+        * ca_mask[..., None, :]
+        * (1.0 - torch.eye(dmat_true.shape[1], device=ca_mask.device))
         # Exclude self-interaction.
     )
 
     # Normalize over the appropriate axes.
 
-    score = (lddt_per_residue * (
-        torch.sum(dists_to_score, dim=(-1,)).add(1e-10))).sum(-1) / \
-            (1e-10 + torch.sum(dists_to_score, dim=(-1, -2)))
+    score = (lddt_per_residue * (torch.sum(dists_to_score, dim=(-1,)).add(1e-10))).sum(
+        -1
+    ) / (1e-10 + torch.sum(dists_to_score, dim=(-1, -2)))
 
     return score.item()
 
@@ -121,6 +121,7 @@ def _compute_confidence(logits: torch.Tensor) -> torch.Tensor:
 # Classes
 # =============================================================================
 
+
 class ConfidenceHead(modules.OFModule):
     """
     This is the same pLDDT head from AF2, which provides a confidence measure
@@ -149,5 +150,5 @@ class ConfidenceHead(modules.OFModule):
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

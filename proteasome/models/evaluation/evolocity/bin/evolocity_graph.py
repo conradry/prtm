@@ -1,24 +1,25 @@
-from Bio import pairwise2, SeqIO
-from Bio.SubsMat import MatrixInfo as matlist
-from scanpy.tools._dpt import DPT
-from scipy.sparse import coo_matrix, issparse, spdiags, linalg
 import scvelo as scv
 import scvelo.plotting.utils as scvu
+from Bio import SeqIO, pairwise2
+from Bio.SubsMat import MatrixInfo as matlist
+from mutation import predict_sequence_prob
+from scanpy.tools._dpt import DPT
+from scipy.sparse import coo_matrix, issparse, linalg, spdiags
 from scvelo.preprocessing.moments import get_connectivities
-from scvelo.preprocessing.neighbors import neighbors, verify_neighbors
-from scvelo.preprocessing.neighbors import get_neighs, get_n_neighs
+from scvelo.preprocessing.neighbors import (get_n_neighs, get_neighs,
+                                            neighbors, verify_neighbors)
 from scvelo.tools.utils import groups_to_bool, scale, strings_to_categoricals
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
-
-from mutation import predict_sequence_prob
 from utils import *
+
 
 def sum_var(A):
     """summation over axis 1 (var) equivalent to np.sum(A, 1)"""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         return A.sum(1).A1 if issparse(A) else np.sum(A, axis=1)
+
 
 def norm(A):
     """computes the L2-norm along axis 1
@@ -27,14 +28,14 @@ def norm(A):
     if issparse(A):
         return np.sqrt(A.multiply(A).sum(1).A1)
     else:
-        return np.sqrt(np.einsum('ij, ij -> i', A, A)
-                       if A.ndim > 1 else np.sum(A * A))
+        return np.sqrt(np.einsum("ij, ij -> i", A, A) if A.ndim > 1 else np.sum(A * A))
+
 
 def get_iterative_indices(
-        indices,
-        index,
-        n_recurse_neighbors=0,
-        max_neighs=None,
+    indices,
+    index,
+    n_recurse_neighbors=0,
+    max_neighs=None,
 ):
     def iterate_indices(indices, index, n_recurse_neighbors):
         if n_recurse_neighbors > 1:
@@ -49,7 +50,8 @@ def get_iterative_indices(
         indices = np.random.choice(indices, max_neighs, replace=False)
     return indices
 
-def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
+
+def get_indices(dist, n_neighbors=None, mode_neighbors="distances"):
     from scvelo.preprocessing.neighbors import compute_connectivities_umap
 
     D = dist.copy()
@@ -70,9 +72,9 @@ def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
     D.eliminate_zeros()
 
     D.data -= 1e-6
-    if mode_neighbors == 'distances':
+    if mode_neighbors == "distances":
         indices = D.indices.reshape((-1, n_neighbors))
-    elif mode_neighbors == 'connectivities':
+    elif mode_neighbors == "connectivities":
         knn_indices = D.indices.reshape((-1, n_neighbors))
         knn_distances = D.data.reshape((-1, n_neighbors))
         _, conn = compute_connectivities_umap(
@@ -81,11 +83,21 @@ def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
         indices = get_indices_from_csr(conn)
     return indices, D
 
-def likelihood_compare(seq1, seq2, args, vocabulary, model,
-                       pos1=None, pos2=None, seq_cache={}, verbose=False):
+
+def likelihood_compare(
+    seq1,
+    seq2,
+    args,
+    vocabulary,
+    model,
+    pos1=None,
+    pos2=None,
+    seq_cache={},
+    verbose=False,
+):
     likelihoods = []
 
-    for seq_pred, positions in zip([ seq1, seq2 ], [ pos1, pos2 ]):
+    for seq_pred, positions in zip([seq1, seq2], [pos1, pos2]):
         if positions is None:
             positions = range(len(seq_pred))
 
@@ -96,68 +108,104 @@ def likelihood_compare(seq1, seq2, args, vocabulary, model,
             y_pred = predict_sequence_prob(
                 args, seq_pred, vocabulary, model, verbose=verbose
             )
-            if not ('esm' in args.model_name or args.model_name == 'tape'):
+            if not ("esm" in args.model_name or args.model_name == "tape"):
                 y_pred = np.log(y_pred)
 
-            seq_probs = np.array([
-                y_pred[i + 1, (
-                    vocabulary[seq_pred[i]]
-                    if seq_pred[i] in vocabulary else
-                    model.unk_idx_
-                )]
-                for i in positions
-            ])
+            seq_probs = np.array(
+                [
+                    y_pred[
+                        i + 1,
+                        (
+                            vocabulary[seq_pred[i]]
+                            if seq_pred[i] in vocabulary
+                            else model.unk_idx_
+                        ),
+                    ]
+                    for i in positions
+                ]
+            )
 
         likelihoods.append(np.mean(seq_probs))
 
     return likelihoods[1] - likelihoods[0]
 
-def likelihood_full(seq1, seq2, args, vocabulary, model,
-                    seq_cache={}, verbose=False):
+
+def likelihood_full(seq1, seq2, args, vocabulary, model, seq_cache={}, verbose=False):
     return likelihood_compare(
-        seq1, seq2, args, vocabulary, model,
-        seq_cache=seq_cache, verbose=verbose,
+        seq1,
+        seq2,
+        args,
+        vocabulary,
+        model,
+        seq_cache=seq_cache,
+        verbose=verbose,
     )
 
-def likelihood_muts(seq1, seq2, args, vocabulary, model,
-                    seq_cache={}, verbose=False):
+
+def likelihood_muts(seq1, seq2, args, vocabulary, model, seq_cache={}, verbose=False):
     # Align, prefer matches to gaps.
     alignment = pairwise2.align.globalms(
-        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+        seq1, seq2, 5, -4, -4, -0.1, one_alignment_only=True
     )[0]
     a_seq1, a_seq2, _, _, _ = alignment
 
     # Map alignment to original indices.
     del1, sub1, del2, sub2 = [], [], [], []
     for a_seq, other_seq, deletions, substitutions in zip(
-            [ a_seq1, a_seq2, ], [ a_seq2, a_seq1, ],
-            [ del1, del2 ], [ sub1, sub2, ]
+        [
+            a_seq1,
+            a_seq2,
+        ],
+        [
+            a_seq2,
+            a_seq1,
+        ],
+        [del1, del2],
+        [
+            sub1,
+            sub2,
+        ],
     ):
         orig_idx = 0
         for a_idx, ch in enumerate(a_seq):
-            if ch == '-':
+            if ch == "-":
                 continue
-            if other_seq[a_idx] == '-':
+            if other_seq[a_idx] == "-":
                 deletions.append(orig_idx)
             elif other_seq[a_idx] != ch:
                 substitutions.append(orig_idx)
             orig_idx += 1
 
     return likelihood_compare(
-        seq1, seq2, args, vocabulary, model,
-        pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
+        seq1,
+        seq2,
+        args,
+        vocabulary,
+        model,
+        pos1=sub1,
+        pos2=sub2,
+        seq_cache=seq_cache,
+        verbose=verbose,
     )
 
+
 def likelihood_blosum62(
-        seq1, seq2, args, vocabulary, model,
-        seq_cache={}, verbose=False, natural_aas=None,
+    seq1,
+    seq2,
+    args,
+    vocabulary,
+    model,
+    seq_cache={},
+    verbose=False,
+    natural_aas=None,
 ):
     from Bio.SubsMat import MatrixInfo as matlist
+
     matrix = matlist.blosum62
 
     # Align, prefer matches to gaps.
     alignment = pairwise2.align.globalms(
-        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+        seq1, seq2, 5, -4, -4, -0.1, one_alignment_only=True
     )[0]
     a_seq1, a_seq2, _, _, _ = alignment
 
@@ -172,11 +220,11 @@ def likelihood_blosum62(
 
     return np.mean(scores)
 
-def likelihood_self(seq1, seq2, args, vocabulary, model,
-                    seq_cache={}, verbose=False):
+
+def likelihood_self(seq1, seq2, args, vocabulary, model, seq_cache={}, verbose=False):
     # Align, prefer matches to gaps.
-    alignment =pairwise2.align.globalms(
-        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+    alignment = pairwise2.align.globalms(
+        seq1, seq2, 5, -4, -4, -0.1, one_alignment_only=True
     )[0]
     a_seq1, a_seq2, _, _, _ = alignment
 
@@ -184,30 +232,29 @@ def likelihood_self(seq1, seq2, args, vocabulary, model,
 
     likelihood_change = []
 
-    for a_seq, other_seq in zip([ a_seq1, a_seq2 ],
-                                [ a_seq2, a_seq1 ]):
+    for a_seq, other_seq in zip([a_seq1, a_seq2], [a_seq2, a_seq1]):
         if a_seq in seq_cache:
             y_pred = seq_cache[a_seq]
         else:
             y_pred = predict_sequence_prob(
                 args, a_seq, vocabulary, model, verbose=verbose
             )
-            if not ('esm' in args.model_name or args.model_name == 'tape'):
+            if not ("esm" in args.model_name or args.model_name == "tape"):
                 y_pred = np.log(y_pred)
 
         orig_idx, scores = 0, []
         for a_idx, ch in enumerate(a_seq):
-            if ch == '-':
+            if ch == "-":
                 continue
-            if other_seq[a_idx] == '-':
+            if other_seq[a_idx] == "-":
                 pass
             elif other_seq[a_idx] != ch:
-                ch_idx = vocabulary[ch] \
-                         if ch in vocabulary else \
-                         model.unk_idx_
-                o_idx = vocabulary[other_seq[a_idx]] \
-                        if other_seq[a_idx] in vocabulary else \
-                        model.unk_idx_
+                ch_idx = vocabulary[ch] if ch in vocabulary else model.unk_idx_
+                o_idx = (
+                    vocabulary[other_seq[a_idx]]
+                    if other_seq[a_idx] in vocabulary
+                    else model.unk_idx_
+                )
 
                 prob_wt = y_pred[a_idx + 1, ch_idx]
                 prob_mut = y_pred[a_idx + 1, o_idx]
@@ -217,6 +264,7 @@ def likelihood_self(seq1, seq2, args, vocabulary, model,
         likelihood_change.append(np.mean(scores))
 
     return likelihood_change[1] - likelihood_change[0]
+
 
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
@@ -238,16 +286,16 @@ def vals_to_csr(vals, rows, cols, shape, split_negative=False):
 
 class VelocityGraph:
     def __init__(
-            self,
-            adata,
-            seqs,
-            score='other',
-            scale_dist=False,
-            vkey='velocity',
-            n_recurse_neighbors=None,
-            random_neighbors_at_max=None,
-            mode_neighbors='distances',
-            verbose=False,
+        self,
+        adata,
+        seqs,
+        score="other",
+        scale_dist=False,
+        vkey="velocity",
+        n_recurse_neighbors=None,
+        random_neighbors_at_max=None,
+        mode_neighbors="distances",
+        verbose=False,
     ):
         self.adata = adata
 
@@ -260,31 +308,30 @@ class VelocityGraph:
 
         self.n_recurse_neighbors = n_recurse_neighbors
         if self.n_recurse_neighbors is None:
-            if mode_neighbors == 'connectivities':
+            if mode_neighbors == "connectivities":
                 self.n_recurse_neighbors = 1
             else:
                 self.n_recurse_neighbors = 2
 
-        if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
+        if np.min((get_neighs(adata, "distances") > 0).sum(1).A1) == 0:
             raise ValueError(
-                'Your neighbor graph seems to be corrupted. '
-                'Consider recomputing via scanpy.pp.neighbors.'
+                "Your neighbor graph seems to be corrupted. "
+                "Consider recomputing via scanpy.pp.neighbors."
             )
         self.indices = get_indices(
-            dist=get_neighs(adata, 'distances'),
+            dist=get_neighs(adata, "distances"),
             mode_neighbors=mode_neighbors,
         )[0]
 
         self.max_neighs = random_neighbors_at_max
 
-        gkey, gkey_ = f'{vkey}_graph', f'{vkey}_graph_neg'
+        gkey, gkey_ = f"{vkey}_graph", f"{vkey}_graph_neg"
         self.graph = adata.uns[gkey] if gkey in adata.uns.keys() else []
         self.graph_neg = adata.uns[gkey_] if gkey_ in adata.uns.keys() else []
 
         self.self_prob = None
 
         self.verbose = verbose
-
 
     def compute_likelihoods(self, args, vocabulary, model):
         if self.verbose:
@@ -297,14 +344,20 @@ class VelocityGraph:
                 args, seq, vocabulary, model, verbose=self.verbose
             )
 
-            if self.score == 'other':
-                self.seq_probs[seq] = np.array([
-                    y_pred[i + 1, (
-                        vocabulary[seq[i]]
-                        if seq[i] in vocabulary else
-                        model.unk_idx_
-                    )] for i in range(len(seq))
-                ])
+            if self.score == "other":
+                self.seq_probs[seq] = np.array(
+                    [
+                        y_pred[
+                            i + 1,
+                            (
+                                vocabulary[seq[i]]
+                                if seq[i] in vocabulary
+                                else model.unk_idx_
+                            ),
+                        ]
+                        for i in range(len(seq))
+                    ]
+                )
             else:
                 self.seq_probs[seq] = y_pred
 
@@ -325,22 +378,29 @@ class VelocityGraph:
                 self.indices, i, self.n_recurse_neighbors, self.max_neighs
             )
 
-            if self.score == 'other':
+            if self.score == "other":
                 score_fn = likelihood_muts
             else:
                 score_fn = likelihood_self
 
-            val = np.array([
-                score_fn(
-                    self.seqs[i], self.seqs[j],
-                    args, vocabulary, model,
-                    seq_cache=self.seq_probs, verbose=self.verbose,
-                ) for j in neighs_idx
-            ])
+            val = np.array(
+                [
+                    score_fn(
+                        self.seqs[i],
+                        self.seqs[j],
+                        args,
+                        vocabulary,
+                        model,
+                        seq_cache=self.seq_probs,
+                        verbose=self.verbose,
+                    )
+                    for j in neighs_idx
+                ]
+            )
 
             if self.scale_dist:
                 dist = self.adata.X[neighs_idx] - self.adata.X[i, None]
-                dist = np.sqrt((dist ** 2).sum(1))
+                dist = np.sqrt((dist**2).sum(1))
                 val *= self.scale_dist * dist
 
             vals.extend(val)
@@ -360,34 +420,35 @@ class VelocityGraph:
         confidence = self.graph.max(1).A.flatten()
         self.self_prob = np.clip(np.percentile(confidence, 98) - confidence, 0, 1)
 
+
 def velocity_graph(
-        adata,
-        args,
-        vocabulary,
-        model,
-        score='other',
-        scale_dist=False,
-        seqs=None,
-        vkey='velocity',
-        n_recurse_neighbors=0,
-        random_neighbors_at_max=None,
-        mode_neighbors='distances',
-        copy=False,
-        verbose=True,
+    adata,
+    args,
+    vocabulary,
+    model,
+    score="other",
+    scale_dist=False,
+    seqs=None,
+    vkey="velocity",
+    n_recurse_neighbors=0,
+    random_neighbors_at_max=None,
+    mode_neighbors="distances",
+    copy=False,
+    verbose=True,
 ):
     adata = adata.copy() if copy else adata
     verify_neighbors(adata)
 
     if seqs is None:
-        seqs = adata.obs['seq']
+        seqs = adata.obs["seq"]
     if adata.X.shape[0] != len(seqs):
-        raise ValueError('Number of sequences should correspond to '
-                         'number of observations.')
+        raise ValueError(
+            "Number of sequences should correspond to " "number of observations."
+        )
 
-    valid_scores = { 'self', 'other' }
+    valid_scores = {"self", "other"}
     if score not in valid_scores:
-        raise ValueError('Score must be one of {}'
-                         .format(', '.join(valid_scores)))
+        raise ValueError("Score must be one of {}".format(", ".join(valid_scores)))
 
     vgraph = VelocityGraph(
         adata,
@@ -402,20 +463,20 @@ def velocity_graph(
     )
 
     if verbose:
-        tprint('Computing likelihoods...')
+        tprint("Computing likelihoods...")
     vgraph.compute_likelihoods(args, vocabulary, model)
     if verbose:
-        print('')
+        print("")
 
     if verbose:
-        tprint('Computing velocity graph...')
+        tprint("Computing velocity graph...")
     vgraph.compute_gradients(args, vocabulary, model)
     if verbose:
-        print('')
+        print("")
 
-    adata.uns[f'{vkey}_graph'] = vgraph.graph
-    adata.uns[f'{vkey}_graph_neg'] = vgraph.graph_neg
-    adata.obs[f'{vkey}_self_transition'] = vgraph.self_prob
+    adata.uns[f"{vkey}_graph"] = vgraph.graph
+    adata.uns[f"{vkey}_graph_neg"] = vgraph.graph_neg
+    adata.obs[f"{vkey}_self_transition"] = vgraph.self_prob
 
     adata.layers[vkey] = np.zeros(adata.X.shape)
 
@@ -429,18 +490,16 @@ class VPT(DPT):
             and root in self._adata.obs.keys()
             and self._adata.obs[root].max() != 0
         ):
-            #self.iroots = get_connectivities(self._adata).dot(self._adata.obs[root])
+            # self.iroots = get_connectivities(self._adata).dot(self._adata.obs[root])
             self.iroots = np.array(self._adata.obs[root])
             self.iroots = scale(self.iroots)
-            self.iroots = np.argwhere(
-                self.iroots >= self.iroots.max()
-            ).ravel()
+            self.iroots = np.argwhere(self.iroots >= self.iroots.max()).ravel()
         elif isinstance(root, str) and root in self._adata.obs_names:
-            self.iroots = [ self._adata.obs_names.get_loc(root) ]
+            self.iroots = [self._adata.obs_names.get_loc(root)]
         elif isinstance(root, (int, np.integer)) and root < self._adata.n_obs:
-            self.iroots = [ root ]
+            self.iroots = [root]
         else:
-            self.iroots = [ None ]
+            self.iroots = [None]
 
     def compute_transitions(self, density_normalize=True):
         T = self._connectivities
@@ -463,11 +522,11 @@ class VPT(DPT):
         )
         self._transitions_sym = Z.dot(K).dot(Z)
 
-    def compute_eigen(self, n_comps=10, sym=None, sort='decrease'):
+    def compute_eigen(self, n_comps=10, sym=None, sort="decrease"):
         if self._transitions_sym is None:
-            raise ValueError('Run `.compute_transitions` first.')
+            raise ValueError("Run `.compute_transitions` first.")
         n_comps = min(self._transitions_sym.shape[0] - 1, n_comps)
-        evals, evecs = linalg.eigsh(self._transitions_sym, k=n_comps, which='LM')
+        evals, evecs = linalg.eigsh(self._transitions_sym, k=n_comps, which="LM")
         self._eigen_values = evals[::-1]
         self._eigen_basis = evecs[:, ::-1]
 
@@ -480,34 +539,34 @@ class VPT(DPT):
             self.pseudotime = np.empty(self._adata.n_obs)
             self.pseudotime[:] = np.nan
 
+
 def velocity_pseudotime(
-        adata,
-        vkey='velocity',
-        rank_transform=False,
-        groupby=None,
-        groups=None,
-        root_key=None,
-        end_key=None,
-        use_ends=False,
-        n_dcs=10,
-        use_velocity_graph=True,
-        save_diffmap=None,
-        return_model=None,
-        **kwargs,
+    adata,
+    vkey="velocity",
+    rank_transform=False,
+    groupby=None,
+    groups=None,
+    root_key=None,
+    end_key=None,
+    use_ends=False,
+    n_dcs=10,
+    use_velocity_graph=True,
+    save_diffmap=None,
+    return_model=None,
+    **kwargs,
 ):
     strings_to_categoricals(adata)
-    if root_key is None and 'root_nodes' in adata.obs.keys():
-        root0 = adata.obs['root_nodes'][0]
+    if root_key is None and "root_nodes" in adata.obs.keys():
+        root0 = adata.obs["root_nodes"][0]
         if not np.isnan(root0) and not isinstance(root0, str):
-            root_key = 'root_nodes'
-    if end_key is None and 'end_points' in adata.obs.keys():
-        end0 = adata.obs['end_points'][0]
+            root_key = "root_nodes"
+    if end_key is None and "end_points" in adata.obs.keys():
+        end0 = adata.obs["end_points"][0]
         if not np.isnan(end0) and not isinstance(end0, str):
-            end_key = 'end_points'
+            end_key = "end_points"
 
     groupby = (
-        'cell_fate' if groupby is None and 'cell_fate' in adata.obs.keys()
-        else groupby
+        "cell_fate" if groupby is None and "cell_fate" in adata.obs.keys() else groupby
     )
     categories = (
         adata.obs[groupby].cat.categories
@@ -522,22 +581,22 @@ def velocity_pseudotime(
             and np.max(adata.obs[root_key]) == np.min(adata.obs[root_key])
         ):
             scv.tl.terminal_states(adata, vkey, groupby, groups)
-            root_key, end_key = 'root_nodes', 'end_points'
+            root_key, end_key = "root_nodes", "end_points"
         cell_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
         data = adata.copy() if cell_subset is None else adata[cell_subset].copy()
-        if 'allow_kendall_tau_shift' not in kwargs:
-            kwargs['allow_kendall_tau_shift'] = True
+        if "allow_kendall_tau_shift" not in kwargs:
+            kwargs["allow_kendall_tau_shift"] = True
         vpt = VPT(data, n_dcs=n_dcs, **kwargs)
 
         if use_velocity_graph:
-            T = data.uns[f'{vkey}_graph'] - data.uns[f'{vkey}_graph_neg']
+            T = data.uns[f"{vkey}_graph"] - data.uns[f"{vkey}_graph_neg"]
             vpt._connectivities = T + T.T
 
         vpt.compute_transitions()
         vpt.compute_eigen(n_comps=n_dcs)
 
         vpt.set_iroots(root_key)
-        pseudotimes = [ np.zeros(adata.X.shape[0]) ]
+        pseudotimes = [np.zeros(adata.X.shape[0])]
         for iroot in vpt.iroots:
             if iroot is None:
                 continue
@@ -559,26 +618,27 @@ def velocity_pseudotime(
             vpt.pseudotime = ss.rankdata(vpt.pseudotime)
         vpt.pseudotime = scale(vpt.pseudotime)
 
-        if 'n_branchings' in kwargs and kwargs['n_branchings'] > 0:
+        if "n_branchings" in kwargs and kwargs["n_branchings"] > 0:
             vpt.branchings_segments()
         else:
             vpt.indices = vpt.pseudotime.argsort()
 
-        if f'{vkey}_pseudotime' not in adata.obs.keys():
+        if f"{vkey}_pseudotime" not in adata.obs.keys():
             pseudotime = np.empty(adata.n_obs)
             pseudotime[:] = np.nan
         else:
-            pseudotime = adata.obs[f'{vkey}_pseudotime'].values
+            pseudotime = adata.obs[f"{vkey}_pseudotime"].values
         pseudotime[cell_subset] = vpt.pseudotime
-        adata.obs[f'{vkey}_pseudotime'] = np.array(pseudotime, dtype=np.float64)
+        adata.obs[f"{vkey}_pseudotime"] = np.array(pseudotime, dtype=np.float64)
 
         if save_diffmap:
             diffmap = np.empty(shape=(adata.n_obs, n_dcs))
             diffmap[:] = np.nan
             diffmap[cell_subset] = vpt.eigen_basis
-            adata.obsm[f'X_diffmap_{groups}'] = diffmap
+            adata.obsm[f"X_diffmap_{groups}"] = diffmap
 
     return vpt if return_model else None
+
 
 def quiver_autoscale(X_emb, V_emb):
     import matplotlib.pyplot as pl
@@ -590,8 +650,8 @@ def quiver_autoscale(X_emb, V_emb):
         X_emb[:, 1] / scale_factor,
         V_emb[:, 0],
         V_emb[:, 1],
-        angles='xy',
-        scale_units='xy',
+        angles="xy",
+        scale_units="xy",
         scale=None,
     )
     Q._init()
@@ -599,17 +659,18 @@ def quiver_autoscale(X_emb, V_emb):
     pl.close(fig)
     return Q.scale / scale_factor
 
+
 def compute_velocity_on_grid(
-        X_emb,
-        V_emb,
-        density=None,
-        smooth=None,
-        n_neighbors=None,
-        min_mass=None,
-        autoscale=True,
-        adjust_for_stream=False,
-        cutoff_perc=None,
-        return_mesh=False,
+    X_emb,
+    V_emb,
+    density=None,
+    smooth=None,
+    n_neighbors=None,
+    min_mass=None,
+    autoscale=True,
+    adjust_for_stream=False,
+    cutoff_perc=None,
+    return_mesh=False,
 ):
     # remove invalid cells
     idx_valid = np.isfinite(X_emb.sum(1) + V_emb.sum(1))
@@ -653,7 +714,7 @@ def compute_velocity_on_grid(
         ns = int(np.sqrt(len(V_grid[:, 0])))
         V_grid = V_grid.T.reshape(2, ns, ns)
 
-        mass = np.sqrt((V_grid ** 2).sum(0))
+        mass = np.sqrt((V_grid**2).sum(0))
         min_mass = 10 ** (min_mass - 6)  # default min_mass = 1e-5
         min_mass = np.clip(min_mass, None, np.max(mass) * 0.9)
         cutoff = mass.reshape(V_grid[0].shape) < min_mass
@@ -677,61 +738,62 @@ def compute_velocity_on_grid(
 
     return X_grid, V_grid
 
+
 def plot_pseudotime(
-        adata,
-        pfkey='pseudotime',
-        rank_transform=False,
-        use_ends=False,
-        fill=True,
-        levels=10,
-        basis=None,
-        vkey='velocity',
-        density=None,
-        smooth=None,
-        pf_smooth=None,
-        min_mass=None,
-        arrow_size=None,
-        arrow_length=None,
-        arrow_color=None,
-        scale=None,
-        autoscale=True,
-        n_neighbors=None,
-        recompute=None,
-        X=None,
-        V=None,
-        X_grid=None,
-        V_grid=None,
-        PF_grid=None,
-        color=None,
-        layer=None,
-        color_map=None,
-        colorbar=True,
-        palette=None,
-        size=None,
-        alpha=0.5,
-        offset=1,
-        vmin=None,
-        vmax=None,
-        perc=None,
-        sort_order=True,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='none',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        xlabel=None,
-        ylabel=None,
-        title=None,
-        fontsize=None,
-        figsize=None,
-        dpi=None,
-        frameon=None,
-        show=None,
-        save=None,
-        ax=None,
-        ncols=None,
-        **kwargs,
+    adata,
+    pfkey="pseudotime",
+    rank_transform=False,
+    use_ends=False,
+    fill=True,
+    levels=10,
+    basis=None,
+    vkey="velocity",
+    density=None,
+    smooth=None,
+    pf_smooth=None,
+    min_mass=None,
+    arrow_size=None,
+    arrow_length=None,
+    arrow_color=None,
+    scale=None,
+    autoscale=True,
+    n_neighbors=None,
+    recompute=None,
+    X=None,
+    V=None,
+    X_grid=None,
+    V_grid=None,
+    PF_grid=None,
+    color=None,
+    layer=None,
+    color_map=None,
+    colorbar=True,
+    palette=None,
+    size=None,
+    alpha=0.5,
+    offset=1,
+    vmin=None,
+    vmax=None,
+    perc=None,
+    sort_order=True,
+    groups=None,
+    components=None,
+    projection="2d",
+    legend_loc="none",
+    legend_fontsize=None,
+    legend_fontweight=None,
+    xlabel=None,
+    ylabel=None,
+    title=None,
+    fontsize=None,
+    figsize=None,
+    dpi=None,
+    frameon=None,
+    show=None,
+    save=None,
+    ax=None,
+    ncols=None,
+    **kwargs,
 ):
     if pfkey not in adata.obs:
         velocity_pseudotime(
@@ -742,26 +804,27 @@ def plot_pseudotime(
             use_velocity_graph=True,
             use_ends=use_ends,
         )
-        adata.obs[pfkey] = adata.obs[f'{vkey}_pseudotime']
+        adata.obs[pfkey] = adata.obs[f"{vkey}_pseudotime"]
 
     smooth = 0.5 if smooth is None else smooth
     pf_smooth = smooth if pf_smooth is None else pf_smooth
 
-    basis = scvu.default_basis(adata, **kwargs) \
-            if basis is None \
-            else scvu.get_basis(adata, basis)
-    if vkey == 'all':
+    basis = (
+        scvu.default_basis(adata, **kwargs)
+        if basis is None
+        else scvu.get_basis(adata, basis)
+    )
+    if vkey == "all":
         lkeys = list(adata.layers.keys())
-        vkey = [key for key in lkeys if 'velocity' in key and '_u' not in key]
-    color, color_map = kwargs.pop('c', color), kwargs.pop('cmap', color_map)
+        vkey = [key for key in lkeys if "velocity" in key and "_u" not in key]
+    color, color_map = kwargs.pop("c", color), kwargs.pop("cmap", color_map)
     colors = scvu.make_unique_list(color, allow_array=True)
-    layers, vkeys = (scvu.make_unique_list(layer),
-                     scvu.make_unique_list(vkey))
+    layers, vkeys = (scvu.make_unique_list(layer), scvu.make_unique_list(vkey))
 
     if V is None:
         for key in vkeys:
             if recompute or scvu.velocity_embedding_changed(
-                    adata, basis=basis, vkey=key
+                adata, basis=basis, vkey=key
             ):
                 scv.pl.velocity_embedding(adata, basis=basis, vkey=key)
 
@@ -774,10 +837,8 @@ def plot_pseudotime(
         else adata
     )
     comps, obsm = scvu.get_components(components, basis), _adata.obsm
-    X_emb = np.array(obsm[f'X_{basis}'][:, comps]) \
-            if X is None else X[:, :2]
-    V_emb = np.array(obsm[f'{vkey}_{basis}'][:, comps]) \
-            if V is None else V[:, :2]
+    X_emb = np.array(obsm[f"X_{basis}"][:, comps]) if X is None else X[:, :2]
+    V_emb = np.array(obsm[f"{vkey}_{basis}"][:, comps]) if V is None else V[:, :2]
     if X_grid is None or V_grid is None:
         X_grid, V_grid = compute_velocity_on_grid(
             X_emb=X_emb,
@@ -793,18 +854,18 @@ def plot_pseudotime(
         vmin = adata.obs[pfkey].min()
 
     contour_kwargs = {
-        'levels': levels,
-        'vmin': vmin,
-        'vmax': vmax,
-        'alpha': alpha,
-        'legend_fontsize': legend_fontsize,
-        'legend_fontweight': legend_fontweight,
-        'palette': palette,
-        'cmap': color_map,
-        'xlabel': xlabel,
-        'ylabel': ylabel,
-        'colorbar': colorbar,
-        'dpi': dpi,
+        "levels": levels,
+        "vmin": vmin,
+        "vmax": vmax,
+        "alpha": alpha,
+        "legend_fontsize": legend_fontsize,
+        "legend_fontweight": legend_fontweight,
+        "palette": palette,
+        "cmap": color_map,
+        "xlabel": xlabel,
+        "ylabel": ylabel,
+        "colorbar": colorbar,
+        "dpi": dpi,
     }
 
     ax, show = scvu.get_ax(ax, show, figsize, dpi)
@@ -814,11 +875,11 @@ def plot_pseudotime(
     if scale is None:
         scale = 1
     if arrow_color is None:
-        arrow_color = 'grey'
-    quiver_kwargs = {'angles': 'xy', 'scale_units': 'xy', 'edgecolors': 'k'}
-    quiver_kwargs.update({'scale': scale, 'width': 0.001, 'headlength': hl / 2})
-    quiver_kwargs.update({'headwidth': hw / 2, 'headaxislength': hal / 2})
-    quiver_kwargs.update({'color': arrow_color, 'linewidth': 0.2, 'zorder': 3})
+        arrow_color = "grey"
+    quiver_kwargs = {"angles": "xy", "scale_units": "xy", "edgecolors": "k"}
+    quiver_kwargs.update({"scale": scale, "width": 0.001, "headlength": hl / 2})
+    quiver_kwargs.update({"headwidth": hw / 2, "headaxislength": hal / 2})
+    quiver_kwargs.update({"color": arrow_color, "linewidth": 0.2, "zorder": 3})
 
     for arg in list(kwargs):
         if arg in quiver_kwargs:
@@ -826,9 +887,7 @@ def plot_pseudotime(
         else:
             scatter_kwargs.update({arg: kwargs[arg]})
 
-    ax.quiver(
-        X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs
-    )
+    ax.quiver(X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs)
 
     PF_emb = np.array(adata.obs[pfkey]).reshape(-1, 1)
     if offset is not None:
@@ -842,7 +901,7 @@ def plot_pseudotime(
             autoscale=False,
             smooth=pf_smooth,
             n_neighbors=n_neighbors,
-            min_mass=0.,
+            min_mass=0.0,
             return_mesh=True,
         )
         PF_grid = PF_grid.reshape(mesh[0].shape)
@@ -852,14 +911,13 @@ def plot_pseudotime(
     else:
         contour_fn = ax.contour
 
-    contour = contour_fn(mesh[0], mesh[1], PF_grid, zorder=1,
-                         **contour_kwargs)
+    contour = contour_fn(mesh[0], mesh[1], PF_grid, zorder=1, **contour_kwargs)
 
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-    #cbar = plt.colorbar(contour)
-    #cbar.ax.set_ylabel(pfkey)
+    # cbar = plt.colorbar(contour)
+    # cbar.ax.set_ylabel(pfkey)
 
     scvu.savefig_or_show(dpi=dpi, save=save, show=show)
     if show is False:
@@ -867,54 +925,52 @@ def plot_pseudotime(
 
 
 def shortest_path(
-        adata,
-        source_idx,
-        target_idx,
-        vkey='velocity',
+    adata,
+    source_idx,
+    target_idx,
+    vkey="velocity",
 ):
-    if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
+    if np.min((get_neighs(adata, "distances") > 0).sum(1).A1) == 0:
         raise ValueError(
-            'Your neighbor graph seems to be corrupted. '
-            'Consider recomputing via scanpy.pp.neighbors.'
+            "Your neighbor graph seems to be corrupted. "
+            "Consider recomputing via scanpy.pp.neighbors."
         )
 
-    if f'{vkey}_graph' not in adata.uns:
-        raise ValueError(
-            'Must run velocity_graph() first.'
-        )
+    if f"{vkey}_graph" not in adata.uns:
+        raise ValueError("Must run velocity_graph() first.")
 
-    T = adata.uns[f'{vkey}_graph'] - adata.uns[f'{vkey}_graph_neg']
+    T = adata.uns[f"{vkey}_graph"] - adata.uns[f"{vkey}_graph_neg"]
 
     import networkx as nx
 
     G = nx.convert_matrix.from_scipy_sparse_matrix(T)
 
     path = nx.algorithms.shortest_paths.generic.shortest_path(
-        G, source=source_idx, target=target_idx,
+        G,
+        source=source_idx,
+        target=target_idx,
     )
 
     return path
 
 
 def plot_path(
-        adata,
-        path=None,
-        source_idx=None,
-        target_idx=None,
-        basis='umap',
-        vkey='velocity',
-        ax=None,
-        color='white',
-        cmap=None,
-        size=15,
-        edgecolor='black',
-        linecolor='#888888',
-        linewidth=0.001,
+    adata,
+    path=None,
+    source_idx=None,
+    target_idx=None,
+    basis="umap",
+    vkey="velocity",
+    ax=None,
+    color="white",
+    cmap=None,
+    size=15,
+    edgecolor="black",
+    linecolor="#888888",
+    linewidth=0.001,
 ):
     if path is None and (source_idx is None or target_idx is None):
-        raise ValueError(
-            'Must provide path indices or source and target indices.'
-        )
+        raise ValueError("Must provide path indices or source and target indices.")
 
     if path is None:
         path = shortest_path(adata, source_idx, target_idx, vkey=vkey)
@@ -923,81 +979,99 @@ def plot_path(
         plt.figure()
         ax = plt.gca()
 
-    if f'X_{basis}' not in adata.obsm:
-        raise ValueError(
-            f'Basis {basis} not found in AnnData.'
-        )
+    if f"X_{basis}" not in adata.obsm:
+        raise ValueError(f"Basis {basis} not found in AnnData.")
 
-    basis_x = np.array(adata.obsm[f'X_{basis}'][path, 0]).ravel()
-    basis_y = np.array(adata.obsm[f'X_{basis}'][path, 1]).ravel()
+    basis_x = np.array(adata.obsm[f"X_{basis}"][path, 0]).ravel()
+    basis_y = np.array(adata.obsm[f"X_{basis}"][path, 1]).ravel()
 
     for idx, (x, y) in enumerate(zip(basis_x, basis_y)):
         if idx < len(basis_x) - 1:
             dx, dy = basis_x[idx + 1] - x, basis_y[idx + 1] - y
-            ax.arrow(x, y, dx, dy, width=linewidth, head_width=0,
-                     length_includes_head=True,
-                     color=linecolor, zorder=5)
+            ax.arrow(
+                x,
+                y,
+                dx,
+                dy,
+                width=linewidth,
+                head_width=0,
+                length_includes_head=True,
+                color=linecolor,
+                zorder=5,
+            )
 
-    ax.scatter(basis_x, basis_y,
-               s=size, c=color, cmap=cmap,
-               edgecolors=edgecolor, linewidths=0.5, zorder=10)
+    ax.scatter(
+        basis_x,
+        basis_y,
+        s=size,
+        c=color,
+        cmap=cmap,
+        edgecolors=edgecolor,
+        linewidths=0.5,
+        zorder=10,
+    )
 
     return ax
 
+
 def tool_onehot_msa(
-        adata,
-        reference=None,
-        key='onehot',
-        seq_key='seq',
-        backend='mafft',
-        dirname='target/evolocity_alignments',
-        n_threads=1,
-        copy=False,
+    adata,
+    reference=None,
+    key="onehot",
+    seq_key="seq",
+    backend="mafft",
+    dirname="target/evolocity_alignments",
+    n_threads=1,
+    copy=False,
 ):
     # Write unaligned fasta.
 
     from Bio.Seq import Seq
     from Bio.SeqRecord import SeqRecord
+
     seqs = [
-        SeqRecord(Seq(seq), id='seq{}'.format(idx), description='')
+        SeqRecord(Seq(seq), id="seq{}".format(idx), description="")
         for idx, seq in enumerate(adata.obs[seq_key])
     ]
 
-    if dirname.endswith('/'):
-        dirname = dirname.rstrip('/')
+    if dirname.endswith("/"):
+        dirname = dirname.rstrip("/")
     mkdir_p(dirname)
-    ifname = dirname + '/unaligned.fasta'
-    SeqIO.write(seqs, ifname, 'fasta')
+    ifname = dirname + "/unaligned.fasta"
+    SeqIO.write(seqs, ifname, "fasta")
 
     # Align fasta.
 
-    if backend == 'mafft':
+    if backend == "mafft":
         command = (
-            'mafft ' +
-            '--thread {} '.format(n_threads) +
-            '--auto --treeout --inputorder ' +
-            ifname
+            "mafft "
+            + "--thread {} ".format(n_threads)
+            + "--auto --treeout --inputorder "
+            + ifname
         ).split()
     else:
-        raise ValueError('Unsupported backend: {}'.format(backend))
+        raise ValueError("Unsupported backend: {}".format(backend))
 
     import subprocess
-    ofname = dirname + '/aligned.fasta'
-    with open(ofname, 'w') as ofile, \
-         open(dirname + '/' + backend + '.log', 'w') as olog:
+
+    ofname = dirname + "/aligned.fasta"
+    with open(ofname, "w") as ofile, open(
+        dirname + "/" + backend + ".log", "w"
+    ) as olog:
         subprocess.run(command, stdout=ofile, stderr=olog)
 
     # Read alignment and turn to one-hot encoding.
 
     from Bio import AlignIO
+
     with open(ofname) as f:
-        alignment = AlignIO.read(f, 'fasta')
+        alignment = AlignIO.read(f, "fasta")
 
     n_seqs = len(alignment)
-    assert(n_seqs == adata.X.shape[0])
+    assert n_seqs == adata.X.shape[0]
     if reference is not None:
         ref_aseq = str(alignment[reference].seq)
-        n_residues = len(ref_aseq.replace('-', ''))
+        n_residues = len(ref_aseq.replace("-", ""))
     else:
         n_residues = len(alignment[0].seq)
     align_matrix = np.zeros((n_seqs, n_residues))
@@ -1005,45 +1079,48 @@ def tool_onehot_msa(
     vocabulary = {}
 
     for i, record in enumerate(alignment):
-        assert(record.id == 'seq{}'.format(i))
+        assert record.id == "seq{}".format(i)
         aseq = str(record.seq)
         j = 0
         for char_idx, char in enumerate(aseq):
-            if reference is not None and ref_aseq[char_idx] == '-':
+            if reference is not None and ref_aseq[char_idx] == "-":
                 continue
             if char not in vocabulary:
                 vocabulary[char] = len(vocabulary)
             align_matrix[i, j] = vocabulary[char]
             j += 1
 
-    keys = sorted([ vocabulary[key] for key in vocabulary ])
+    keys = sorted([vocabulary[key] for key in vocabulary])
     from sklearn.preprocessing import OneHotEncoder
+
     enc = OneHotEncoder(
-        categories=[ keys ] * align_matrix.shape[1],
+        categories=[keys] * align_matrix.shape[1],
         sparse=False,
     )
     X_onehot = enc.fit_transform(align_matrix)
-    assert(X_onehot.shape[1] == len(keys) * n_residues)
+    assert X_onehot.shape[1] == len(keys) * n_residues
 
-    lookup = { vocabulary[key]: key for key in vocabulary }
+    lookup = {vocabulary[key]: key for key in vocabulary}
 
-    adata.obsm[f'X_{key}'] = X_onehot
-    adata.obs[f'seqs_msa'] = [ str(record.seq) for record in alignment ]
-    adata.uns[f'{key}_vocabulary'] = lookup
-    adata.uns[f'{key}_shape'] = [ n_residues, len(lookup) ]
+    adata.obsm[f"X_{key}"] = X_onehot
+    adata.obs[f"seqs_msa"] = [str(record.seq) for record in alignment]
+    adata.uns[f"{key}_vocabulary"] = lookup
+    adata.uns[f"{key}_shape"] = [n_residues, len(lookup)]
 
     return adata if copy else None
 
+
 def tool_residue_scores(
-        adata,
-        basis='onehot',
-        scale=1.,
-        key='residue_scores',
-        copy=False,
+    adata,
+    basis="onehot",
+    scale=1.0,
+    key="residue_scores",
+    copy=False,
 ):
-    if f'X_{basis}' not in adata.obsm:
-        raise ValueError(f'Could not find basis "{basis}", '
-                         'consider running onehot_msa() first.')
+    if f"X_{basis}" not in adata.obsm:
+        raise ValueError(
+            f'Could not find basis "{basis}", ' "consider running onehot_msa() first."
+        )
 
     scv.tl.velocity_embedding(
         adata,
@@ -1052,104 +1129,102 @@ def tool_residue_scores(
         autoscale=False,
     )
 
-    onehot_velo = np.array(adata.obsm[f'velocity_{basis}'])
+    onehot_velo = np.array(adata.obsm[f"velocity_{basis}"])
 
-    adata.uns[key] = onehot_velo.sum(0).reshape(
-        tuple(adata.uns[f'{basis}_shape'])
-    )
+    adata.uns[key] = onehot_velo.sum(0).reshape(tuple(adata.uns[f"{basis}_shape"]))
 
     return adata if copy else None
 
+
 def plot_residue_scores(
-        adata,
-        percentile_keep=75,
-        basis='onehot',
-        key='residue_scores',
-        cmap='RdBu',
-        save=None,
+    adata,
+    percentile_keep=75,
+    basis="onehot",
+    key="residue_scores",
+    cmap="RdBu",
+    save=None,
 ):
     scores = AnnData(adata.uns[key])
 
-    vocab = adata.uns[f'{basis}_vocabulary']
-    scores.var_names = [
-        vocab[key] for key in sorted(vocab.keys())
-    ]
+    vocab = adata.uns[f"{basis}_vocabulary"]
+    scores.var_names = [vocab[key] for key in sorted(vocab.keys())]
 
-    positions = [ str(x) for x in range(scores.X.shape[0]) ]
-    scores.obs['position'] = positions
+    positions = [str(x) for x in range(scores.X.shape[0])]
+    scores.obs["position"] = positions
 
     if percentile_keep > 0:
         score_sum = np.abs(scores.X).sum(1)
         cutoff = np.percentile(score_sum, percentile_keep)
         scores = scores[score_sum >= cutoff]
 
-    end = max(abs(np.min(scores.X)), np.max(scores.X)) # Zero-centered colors.
-    scores.X /= end # Scale within -1 and 1, inclusive.
+    end = max(abs(np.min(scores.X)), np.max(scores.X))  # Zero-centered colors.
+    scores.X /= end  # Scale within -1 and 1, inclusive.
 
-    plt.figure(figsize=(
-        max(scores.X.shape[1] // 2, 5),
-        max(scores.X.shape[0] // 20, 5)
-    ))
+    plt.figure(
+        figsize=(max(scores.X.shape[1] // 2, 5), max(scores.X.shape[0] // 20, 5))
+    )
     sns.heatmap(
         scores.X,
         xticklabels=scores.var_names,
-        yticklabels=scores.obs['position'],
+        yticklabels=scores.obs["position"],
         cmap=cmap,
-        vmin=-1.,
-        vmax=1.,
+        vmin=-1.0,
+        vmax=1.0,
     )
 
     if save is not None:
-        plt.savefig('figures/evolocity_' + save)
+        plt.savefig("figures/evolocity_" + save)
         plt.close()
     else:
         return ax
 
+
 def plot_residue_categories(
-        adata,
-        positions=None,
-        n_plot=5,
-        namespace='residue_categories',
-        reference=None
+    adata, positions=None, n_plot=5, namespace="residue_categories", reference=None
 ):
     if reference is not None:
-        seq_ref = adata.obs['seq'][reference]
-        seq_ref_msa = adata.obs['seqs_msa'][reference]
+        seq_ref = adata.obs["seq"][reference]
+        seq_ref_msa = adata.obs["seqs_msa"][reference]
         pos2msa, ref_idx = {}, 0
         for idx, ch in enumerate(seq_ref_msa):
-            if ch == '-':
+            if ch == "-":
                 continue
-            assert(ch == seq_ref[ref_idx])
+            assert ch == seq_ref[ref_idx]
             pos2msa[ref_idx] = idx
             ref_idx += 1
 
     if positions is None:
-        scores = adata.uns['residue_scores']
+        scores = adata.uns["residue_scores"]
         pos_seen = set()
         while len(pos_seen) < n_plot:
             min_idx = np.unravel_index(np.argmin(scores), scores.shape)
-            scores[min_idx] = float('inf')
-            aa = adata.uns['onehot_vocabulary'][min_idx[1]]
+            scores[min_idx] = float("inf")
+            aa = adata.uns["onehot_vocabulary"][min_idx[1]]
             pos = min_idx[0]
             if pos in pos_seen:
                 continue
             pos_seen.add(pos)
-            tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
+            tprint("Lowest score {}: {}{}".format(len(pos_seen), aa, pos + 1))
         positions = sorted(pos_seen)
 
     for pos in positions:
-        adata.obs[f'pos{pos}'] = [
+        adata.obs[f"pos{pos}"] = [
             seq[pos] if reference is None else seq[pos2msa[pos]]
-            for seq in adata.obs['seqs_msa']
+            for seq in adata.obs["seqs_msa"]
         ]
-        sc.pl.umap(adata, color=f'pos{pos}', save=f'_{namespace}_pos{pos}.png',
-                   edges=True,)
+        sc.pl.umap(
+            adata,
+            color=f"pos{pos}",
+            save=f"_{namespace}_pos{pos}.png",
+            edges=True,
+        )
+
 
 def load_uniref(ds_fname, map_fname=None):
-    if ds_fname.endswith('.fasta') or ds_fname.endswith('.fa'):
-        uniref_seqs = set([
-            str(record.seq) for record in SeqIO.parse(ds_fname, 'fasta')
-        ])
+    if ds_fname.endswith(".fasta") or ds_fname.endswith(".fa"):
+        uniref_seqs = set(
+            [str(record.seq) for record in SeqIO.parse(ds_fname, "fasta")]
+        )
     else:
         raise ValueError(f'Invalid extension for file "{ds_fname}"')
 
@@ -1157,8 +1232,7 @@ def load_uniref(ds_fname, map_fname=None):
         return uniref_seqs
 
     cluster_map = {
-        record.id: str(record.seq)
-        for record in SeqIO.parse(ds_fname, 'fasta')
+        record.id: str(record.seq) for record in SeqIO.parse(ds_fname, "fasta")
     }
     with open(map_fname) as f:
         for line in f:
@@ -1167,59 +1241,62 @@ def load_uniref(ds_fname, map_fname=None):
 
     return uniref_seqs, cluster_map
 
+
 def check_uniref50(
-        adata,
-        key='uniref50',
-        verbose=True,
-        id_key='gene_id',
-        ds_fname='data/uniref/uniref50_2018_03.fasta',
+    adata,
+    key="uniref50",
+    verbose=True,
+    id_key="gene_id",
+    ds_fname="data/uniref/uniref50_2018_03.fasta",
 ):
     uniref_seqs = load_uniref(ds_fname)
-    is_uniref = [ seq in uniref_seqs for seq in adata.obs['seq'] ]
+    is_uniref = [seq in uniref_seqs for seq in adata.obs["seq"]]
 
     if verbose:
-        tprint('UniRef50 seqs:')
+        tprint("UniRef50 seqs:")
         for gene_id in adata[is_uniref].obs[id_key]:
-            tprint(f'\t{gene_id}')
+            tprint(f"\t{gene_id}")
 
     adata.obs[key] = is_uniref
 
+
 def training_distances(
-        seqs,
-        namespace='',
-        key='homology',
-        accession_key='accession',
-        dataset='uniref',
-        ds_fname='data/uniref/uniref50_2018_03.fasta',
-        map_fname='data/uniref/uniref50_2018_03_mapping.txt',
-        exact_search=True,
+    seqs,
+    namespace="",
+    key="homology",
+    accession_key="accession",
+    dataset="uniref",
+    ds_fname="data/uniref/uniref50_2018_03.fasta",
+    map_fname="data/uniref/uniref50_2018_03_mapping.txt",
+    exact_search=True,
 ):
-    dirname = 'target/training_seqs'
+    dirname = "target/training_seqs"
     if namespace:
-        dirname += f'/{namespace}'
+        dirname += f"/{namespace}"
     mkdir_p(dirname)
 
     # Get set of closest training sequences.
 
-    fname = dirname + f'/training_{dataset}.txt'
+    fname = dirname + f"/training_{dataset}.txt"
     if os.path.isfile(fname):
         with open(fname) as f:
             training_seqs = f.read().rstrip().split()
     else:
         dataset_seqs, cluster_map = load_uniref(ds_fname, map_fname)
 
-        training_seqs = (set([
-            seq for seq in seqs if str(seq) in dataset_seqs
-        ]) | set([
-            cluster_map[cluster_map[meta[accession_key]]]
-            for seq in seqs for meta in seqs[seq]
-            if accession_key in meta and meta[accession_key] in cluster_map
-        ]))
+        training_seqs = set([seq for seq in seqs if str(seq) in dataset_seqs]) | set(
+            [
+                cluster_map[cluster_map[meta[accession_key]]]
+                for seq in seqs
+                for meta in seqs[seq]
+                if accession_key in meta and meta[accession_key] in cluster_map
+            ]
+        )
 
         if namespace:
-            with open(fname, 'w') as of:
+            with open(fname, "w") as of:
                 for seq in sorted(training_seqs):
-                    of.write(str(seq) + '\n')
+                    of.write(str(seq) + "\n")
 
     # Compute distance to closest training sequence.
 
@@ -1239,7 +1316,7 @@ def training_distances(
             seq = str(seq)
             minhash = MinHash(num_perm=128)
             for d in ngrams(seq, 5):
-                minhash.update(''.join(d).encode('utf-8'))
+                minhash.update("".join(d).encode("utf-8"))
             lsh.add(seq, minhash)
         lsh.index()
 
@@ -1247,7 +1324,7 @@ def training_distances(
         for seq in seqs:
             minhash = MinHash(num_perm=128)
             for d in ngrams(seq, 5):
-                minhash.update(''.join(d).encode('utf-8'))
+                minhash.update("".join(d).encode("utf-8"))
             result = lsh.query(minhash, 1)[0]
             ratio = fuzz.ratio(str(seq), result)
             for meta in seqs[seq]:
@@ -1255,45 +1332,48 @@ def training_distances(
 
     return seqs
 
+
 def plot_ancestral(
-        df,
-        meta_key,
-        name_key='name',
-        score_key='score',
-        homology_key='homology',
-        namespace='ancestral',
+    df,
+    meta_key,
+    name_key="name",
+    score_key="score",
+    homology_key="homology",
+    namespace="ancestral",
 ):
     if meta_key not in df:
-        raise ValueError('Metadata key not found.')
+        raise ValueError("Metadata key not found.")
     if name_key not in df:
-        raise ValueError('Ancestral names key not found.')
+        raise ValueError("Ancestral names key not found.")
     if score_key not in df:
-        raise ValueError('Likelihood scores key not found.')
+        raise ValueError("Likelihood scores key not found.")
 
     for name in set(df[name_key]):
         df_name = df[df[name_key] == name]
 
         plt.figure()
         sns.boxplot(
-            data=df_name, x=meta_key, y=score_key,
+            data=df_name,
+            x=meta_key,
+            y=score_key,
         )
-        plt.axhline(y=0, c='#CCCCCC', linestyle='dashed')
-        name_sanitized = name.replace('/', '-')
-        plt.savefig(f'figures/{namespace}_ancestral_{name_sanitized}.svg',
-                    dpi=500)
+        plt.axhline(y=0, c="#CCCCCC", linestyle="dashed")
+        name_sanitized = name.replace("/", "-")
+        plt.savefig(f"figures/{namespace}_ancestral_{name_sanitized}.svg", dpi=500)
         plt.close()
 
         if homology_key in df_name:
-            r, p = ss.spearmanr(df_name[score_key].values,
-                                df_name[homology_key].values,
-                                nan_policy='omit')
-            tprint('{} corr with ancestral: Spearman r = {}, P = {}'.format(
-                name, r, p
-            ))
+            r, p = ss.spearmanr(
+                df_name[score_key].values,
+                df_name[homology_key].values,
+                nan_policy="omit",
+            )
+            tprint("{} corr with ancestral: Spearman r = {}, P = {}".format(name, r, p))
 
         for meta in set(df_name[meta_key]):
             score_dist = df_name[df_name[meta_key] == meta].score.values
-            tprint('{} and {}: {}% percentile'.format(
-                name, meta,
-                ss.percentileofscore(score_dist, 0)
-            ))
+            tprint(
+                "{} and {}: {}% percentile".format(
+                    name, meta, ss.percentileofscore(score_dist, 0)
+                )
+            )

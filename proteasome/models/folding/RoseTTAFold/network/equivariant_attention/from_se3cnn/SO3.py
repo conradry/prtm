@@ -1,16 +1,16 @@
 # pylint: disable=C,E1101,E1102
-'''
+"""
 Some functions related to SO3 and his usual representations
 
 Using ZYZ Euler angles parametrisation
-'''
-import torch
+"""
 import math
+
 import numpy as np
+import torch
 
 
 class torch_default_dtype:
-
     def __init__(self, dtype):
         self.saved_dtype = None
         self.dtype = dtype
@@ -24,42 +24,48 @@ class torch_default_dtype:
 
 
 def rot_z(gamma):
-    '''
+    """
     Rotation around Z axis
-    '''
+    """
     if not torch.is_tensor(gamma):
         gamma = torch.tensor(gamma, dtype=torch.get_default_dtype())
-    return torch.tensor([
-        [torch.cos(gamma), -torch.sin(gamma), 0],
-        [torch.sin(gamma), torch.cos(gamma), 0],
-        [0, 0, 1]
-    ], dtype=gamma.dtype)
+    return torch.tensor(
+        [
+            [torch.cos(gamma), -torch.sin(gamma), 0],
+            [torch.sin(gamma), torch.cos(gamma), 0],
+            [0, 0, 1],
+        ],
+        dtype=gamma.dtype,
+    )
 
 
 def rot_y(beta):
-    '''
+    """
     Rotation around Y axis
-    '''
+    """
     if not torch.is_tensor(beta):
         beta = torch.tensor(beta, dtype=torch.get_default_dtype())
-    return torch.tensor([
-        [torch.cos(beta), 0, torch.sin(beta)],
-        [0, 1, 0],
-        [-torch.sin(beta), 0, torch.cos(beta)]
-    ], dtype=beta.dtype)
+    return torch.tensor(
+        [
+            [torch.cos(beta), 0, torch.sin(beta)],
+            [0, 1, 0],
+            [-torch.sin(beta), 0, torch.cos(beta)],
+        ],
+        dtype=beta.dtype,
+    )
 
 
 def rot(alpha, beta, gamma):
-    '''
+    """
     ZYZ Eurler angles rotation
-    '''
+    """
     return rot_z(alpha) @ rot_y(beta) @ rot_z(gamma)
 
 
 def x_to_alpha_beta(x):
-    '''
+    """
     Convert point (x, y, z) on the sphere into (alpha, beta)
-    '''
+    """
     if not torch.is_tensor(x):
         x = torch.tensor(x, dtype=torch.get_default_dtype())
     x = x / torch.norm(x)
@@ -81,14 +87,17 @@ def irr_repr(order, alpha, beta, gamma, dtype=None):
     """
     # from from_lielearn_SO3.wigner_d import wigner_D_matrix
     from lie_learn.representations.SO3.wigner_d import wigner_D_matrix
+
     # if order == 1:
     #     # change of basis to have vector_field[x, y, z] = [vx, vy, vz]
     #     A = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
     #     return A @ wigner_D_matrix(1, alpha, beta, gamma) @ A.T
-
     # TODO (non-essential): try to do everything in torch
     # return torch.tensor(wigner_D_matrix(torch.tensor(order), alpha, beta, gamma), dtype=torch.get_default_dtype() if dtype is None else dtype)
-    return torch.tensor(wigner_D_matrix(order, np.array(alpha), np.array(beta), np.array(gamma)), dtype=torch.get_default_dtype() if dtype is None else dtype)
+    return torch.tensor(
+        wigner_D_matrix(order, np.array(alpha), np.array(beta), np.array(gamma)),
+        dtype=torch.get_default_dtype() if dtype is None else dtype,
+    )
 
 
 # def spherical_harmonics(order, alpha, beta, dtype=None):
@@ -125,7 +134,7 @@ def compose(a1, b1, c1, a2, b2, c2):
     (a, b, c) = (a1, b1, c1) composed with (a2, b2, c2)
     """
     comp = rot(a1, b1, c1) @ rot(a2, b2, c2)
-    xyz = comp @ torch.tensor([0, 0, 1.])
+    xyz = comp @ torch.tensor([0, 0, 1.0])
     a, b = x_to_alpha_beta(xyz)
     rotz = rot(0, -b, -a) @ comp
     c = torch.atan2(rotz[1, 0], rotz[0, 0])
@@ -135,7 +144,9 @@ def compose(a1, b1, c1, a2, b2, c2):
 def kron(x, y):
     assert x.ndimension() == 2
     assert y.ndimension() == 2
-    return torch.einsum("ij,kl->ikjl", (x, y)).view(x.size(0) * y.size(0), x.size(1) * y.size(1))
+    return torch.einsum("ij,kl->ikjl", (x, y)).view(
+        x.size(0) * y.size(0), x.size(1) * y.size(1)
+    )
 
 
 ################################################################################
@@ -151,7 +162,10 @@ def xyz_vector_basis_to_spherical_basis():
     """
     with torch_default_dtype(torch.float64):
         A = torch.tensor([[0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=torch.float64)
-        assert all(torch.allclose(irr_repr(1, a, b, c) @ A, A @ rot(a, b, c)) for a, b, c in torch.rand(10, 3))
+        assert all(
+            torch.allclose(irr_repr(1, a, b, c) @ A, A @ rot(a, b, c))
+            for a, b, c in torch.rand(10, 3)
+        )
     return A.type(torch.get_default_dtype())
 
 
@@ -171,28 +185,50 @@ def tensor3x3_repr_basis_to_spherical_basis():
     see assert for usage
     """
     with torch_default_dtype(torch.float64):
-        to1 = torch.tensor([
-            [1, 0, 0, 0, 1, 0, 0, 0, 1],
-        ], dtype=torch.get_default_dtype())
-        assert all(torch.allclose(irr_repr(0, a, b, c) @ to1, to1 @ tensor3x3_repr(a, b, c)) for a, b, c in torch.rand(10, 3))
+        to1 = torch.tensor(
+            [
+                [1, 0, 0, 0, 1, 0, 0, 0, 1],
+            ],
+            dtype=torch.get_default_dtype(),
+        )
+        assert all(
+            torch.allclose(irr_repr(0, a, b, c) @ to1, to1 @ tensor3x3_repr(a, b, c))
+            for a, b, c in torch.rand(10, 3)
+        )
 
-        to3 = torch.tensor([
-            [0, 0, -1, 0, 0, 0, 1, 0, 0],
-            [0, 1, 0, -1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, -1, 0],
-        ], dtype=torch.get_default_dtype())
-        assert all(torch.allclose(irr_repr(1, a, b, c) @ to3, to3 @ tensor3x3_repr(a, b, c)) for a, b, c in torch.rand(10, 3))
+        to3 = torch.tensor(
+            [
+                [0, 0, -1, 0, 0, 0, 1, 0, 0],
+                [0, 1, 0, -1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, -1, 0],
+            ],
+            dtype=torch.get_default_dtype(),
+        )
+        assert all(
+            torch.allclose(irr_repr(1, a, b, c) @ to3, to3 @ tensor3x3_repr(a, b, c))
+            for a, b, c in torch.rand(10, 3)
+        )
 
-        to5 = torch.tensor([
-            [0, 1, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 1, 0],
-            [-3**.5/3, 0, 0, 0, -3**.5/3, 0, 0, 0, 12**.5/3],
-            [0, 0, 1, 0, 0, 0, 1, 0, 0],
-            [1, 0, 0, 0, -1, 0, 0, 0, 0]
-        ], dtype=torch.get_default_dtype())
-        assert all(torch.allclose(irr_repr(2, a, b, c) @ to5, to5 @ tensor3x3_repr(a, b, c)) for a, b, c in torch.rand(10, 3))
+        to5 = torch.tensor(
+            [
+                [0, 1, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 1, 0],
+                [-(3**0.5) / 3, 0, 0, 0, -(3**0.5) / 3, 0, 0, 0, 12**0.5 / 3],
+                [0, 0, 1, 0, 0, 0, 1, 0, 0],
+                [1, 0, 0, 0, -1, 0, 0, 0, 0],
+            ],
+            dtype=torch.get_default_dtype(),
+        )
+        assert all(
+            torch.allclose(irr_repr(2, a, b, c) @ to5, to5 @ tensor3x3_repr(a, b, c))
+            for a, b, c in torch.rand(10, 3)
+        )
 
-    return to1.type(torch.get_default_dtype()), to3.type(torch.get_default_dtype()), to5.type(torch.get_default_dtype())
+    return (
+        to1.type(torch.get_default_dtype()),
+        to3.type(torch.get_default_dtype()),
+        to5.type(torch.get_default_dtype()),
+    )
 
 
 ################################################################################
@@ -251,11 +287,7 @@ def _test_change_basis_wigner_to_rot():
     from lie_learn.representations.SO3.wigner_d import wigner_D_matrix
 
     with torch_default_dtype(torch.float64):
-        A = torch.tensor([
-            [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 0]
-        ], dtype=torch.float64)
+        A = torch.tensor([[0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=torch.float64)
 
         a, b, c = torch.rand(3)
 

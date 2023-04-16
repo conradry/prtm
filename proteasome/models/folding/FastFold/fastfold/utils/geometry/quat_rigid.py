@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-
 from fastfold.model.nn.primitives import Linear
 from fastfold.utils.geometry.rigid_matrix_vector import Rigid3Array
 from fastfold.utils.geometry.rotation_matrix import Rot3Array
@@ -21,9 +20,9 @@ class QuatRigid(nn.Module):
     def forward(self, activations: torch.Tensor) -> Rigid3Array:
         # NOTE: During training, this needs to be run in higher precision
         rigid_flat = self.linear(activations.to(torch.float32))
-        
+
         rigid_flat = torch.unbind(rigid_flat, dim=-1)
-        if(self.full_quat):
+        if self.full_quat:
             qw, qx, qy, qz = rigid_flat[:4]
             translation = rigid_flat[4:]
         else:
@@ -32,7 +31,11 @@ class QuatRigid(nn.Module):
             translation = rigid_flat[3:]
 
         rotation = Rot3Array.from_quaternion(
-            qw, qx, qy, qz, normalize=True,
+            qw,
+            qx,
+            qy,
+            qz,
+            normalize=True,
         )
         translation = Vec3Array(*translation)
         return Rigid3Array(rotation, translation)

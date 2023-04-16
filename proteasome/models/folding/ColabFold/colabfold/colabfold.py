@@ -1,27 +1,26 @@
 # fmt: off
 # @formatter:off
 
+import hashlib
+import logging
+import os
+import random
+import tarfile
+import time
+from typing import List, Tuple
+
 ############################################
 # imports
 ############################################
 import jax
-import requests
-import hashlib
-import tarfile
-import time
-import os
-from typing import Tuple, List
-
-import random
-from tqdm import tqdm
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patheffects
+import matplotlib.pyplot as plt
+import numpy as np
+import requests
 from matplotlib import collections as mcoll
+from tqdm import tqdm
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:
@@ -29,7 +28,7 @@ try:
 except:
   pass
 
-from string import ascii_uppercase,ascii_lowercase
+from string import ascii_lowercase, ascii_uppercase
 
 pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5","#7f7fff","#ff7f00",
                     "#7fff7f","#199999","#ff007f","#ffdd5e","#8c3f99","#b2b2b2","#007fff","#c4b200",

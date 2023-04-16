@@ -1,16 +1,19 @@
+import esm
 import torch
 from fairscale.nn.data_parallel import FullyShardedDataParallel as FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
 
-import esm
-
 # init the distributed world with world_size 1
 url = "tcp://localhost:23456"
-torch.distributed.init_process_group(backend="nccl", init_method=url, world_size=1, rank=0)
+torch.distributed.init_process_group(
+    backend="nccl", init_method=url, world_size=1, rank=0
+)
 
 # download model data from the hub
 model_name = "esm2_t48_15B_UR50D"
-model_data, regression_data = esm.pretrained._download_model_and_regression_data(model_name)
+model_data, regression_data = esm.pretrained._download_model_and_regression_data(
+    model_name
+)
 
 # initialize the model with FSDP wrapper
 fsdp_params = dict(
@@ -36,7 +39,10 @@ with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
 
 data = [
     ("protein1", "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG"),
-    ("protein2", "KALTARQQEVFDLIRDHISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE"),
+    (
+        "protein2",
+        "KALTARQQEVFDLIRDHISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE",
+    ),
     (
         "protein2 with mask",
         "KALTARQQEVFDLIRD<mask>ISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE",

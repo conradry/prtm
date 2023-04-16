@@ -6,30 +6,24 @@ Assumes directory structure (e.g., contains sampled_angles folder)
 Usage: python sample_potting_only.py <dirname_with_results>
 """
 
-from glob import glob
-import os, sys
-import re
-import logging
 import json
+import logging
+import os
+import re
+import sys
+from glob import glob
 from pathlib import Path
 from typing import *
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-
 import torch
-
-# Import data loading code from main training script
-from sample import (
-    FT_NAME_MAP,
-    build_datasets,
-    plot_distribution_overlap,
-    plot_ramachandran,
-)
-
 from foldingdiff import custom_metrics as cm
 from foldingdiff.angles_and_coords import get_pdb_length
+from matplotlib import pyplot as plt
+# Import data loading code from main training script
+from sample import (FT_NAME_MAP, build_datasets, plot_distribution_overlap,
+                    plot_ramachandran)
 
 
 def int_getter(x: str) -> int:

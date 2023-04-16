@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
-
 from fastfold.model.fastnn import EvoformerStack, ExtraMSAStack
 from fastfold.model.fastnn.embedders import TemplateEmbedder
 from fastfold.model.fastnn.embedders_multimer import TemplateEmbedderMultimer
-from fastfold.model.fastnn.ops import RecyclingEmbedder, InputEmbedder
-from fastfold.model.nn.triangular_multiplicative_update import is_fused_triangle_multiplication
+from fastfold.model.fastnn.ops import InputEmbedder, RecyclingEmbedder
+from fastfold.model.nn.triangular_multiplicative_update import \
+    is_fused_triangle_multiplication
 
 
 def copy_layernorm(model_fast, model_ori):
@@ -45,11 +45,15 @@ def copy_kv_linear(model_fast, ori_k, ori_v):
 
 
 def copy_qkv_linear(model_fast, ori_q, ori_k, ori_v):
-    model_fast.weight.copy_(torch.cat((ori_q.weight, ori_k.weight, ori_v.weight), dim=0))
+    model_fast.weight.copy_(
+        torch.cat((ori_q.weight, ori_k.weight, ori_v.weight), dim=0)
+    )
 
 
 def copy_attention(model_fast, model_ori):
-    copy_qkv_linear(model_fast.to_qkv, model_ori.linear_q, model_ori.linear_k, model_ori.linear_v)
+    copy_qkv_linear(
+        model_fast.to_qkv, model_ori.linear_q, model_ori.linear_k, model_ori.linear_v
+    )
     copy_linear(model_fast.gating_linear, model_ori.linear_g)
     copy_linear(model_fast.o_linear, model_ori.linear_o)
 
@@ -73,7 +77,7 @@ def copy_transition(model_fast, model_ori):
 def copy_triangle(model_fast, model_ori):
     copy_layernorm(model_fast.layernorm1, model_ori.layer_norm_in)
     copy_layernorm(model_fast.layernorm2, model_ori.layer_norm_out)
-    
+
     copy_linear(model_fast.output_projection, model_ori.linear_z)
     model_fast.output_bias.copy_(model_ori.linear_z.bias)
 
@@ -83,8 +87,12 @@ def copy_triangle(model_fast, model_ori):
         copy_linear(model_fast.left_right_gate, model_ori.linear_g)
     else:
         copy_linear(model_fast.output_gate, model_ori.linear_g)
-        copy_left_right(model_fast.left_right_projection, model_ori.linear_a_p, model_ori.linear_b_p)
-        copy_left_right(model_fast.left_right_gate, model_ori.linear_a_g, model_ori.linear_b_g)
+        copy_left_right(
+            model_fast.left_right_projection, model_ori.linear_a_p, model_ori.linear_b_p
+        )
+        copy_left_right(
+            model_fast.left_right_gate, model_ori.linear_a_g, model_ori.linear_b_g
+        )
 
 
 def copy_triangle_att(model_fast, model_ori):
@@ -101,53 +109,78 @@ def copy_native_att(model_fast, model_ori):
     copy_native_linear(model_fast.linear_v, model_ori.linear_v)
     copy_native_linear(model_fast.linear_o, model_ori.linear_o)
     if model_ori.gating:
-         copy_native_linear(model_fast.linear_g, model_ori.linear_g)
+        copy_native_linear(model_fast.linear_g, model_ori.linear_g)
 
 
 def copy_evoformer_para(block_fast, block_ori):
     # msa_stack
     # MSARowAttentionWithPairBias
-    copy_layernorm(block_fast.msa.MSARowAttentionWithPairBias.layernormM,
-                   block_ori.msa_att_row.layer_norm_m)
-    copy_layernorm(block_fast.msa.MSARowAttentionWithPairBias.layernormZ,
-                   block_ori.msa_att_row.layer_norm_z)
+    copy_layernorm(
+        block_fast.msa.MSARowAttentionWithPairBias.layernormM,
+        block_ori.msa_att_row.layer_norm_m,
+    )
+    copy_layernorm(
+        block_fast.msa.MSARowAttentionWithPairBias.layernormZ,
+        block_ori.msa_att_row.layer_norm_z,
+    )
 
-    copy_attention(block_fast.msa.MSARowAttentionWithPairBias.attention,
-                   block_ori.msa_att_row.mha)
+    copy_attention(
+        block_fast.msa.MSARowAttentionWithPairBias.attention, block_ori.msa_att_row.mha
+    )
 
     block_fast.msa.MSARowAttentionWithPairBias.linear_b_weights.copy_(
-        block_ori.msa_att_row.linear_z.weight)
+        block_ori.msa_att_row.linear_z.weight
+    )
 
     block_fast.msa.MSARowAttentionWithPairBias.out_bias.copy_(
-        block_ori.msa_att_row.mha.linear_o.bias)
+        block_ori.msa_att_row.mha.linear_o.bias
+    )
 
     # MSAColumnAttention
-    copy_layernorm(block_fast.msa.MSAColumnAttention.layernormM,
-                   block_ori.msa_att_col._msa_att.layer_norm_m)
+    copy_layernorm(
+        block_fast.msa.MSAColumnAttention.layernormM,
+        block_ori.msa_att_col._msa_att.layer_norm_m,
+    )
 
-    copy_attention(block_fast.msa.MSAColumnAttention.attention,
-                   block_ori.msa_att_col._msa_att.mha)
+    copy_attention(
+        block_fast.msa.MSAColumnAttention.attention, block_ori.msa_att_col._msa_att.mha
+    )
 
     # MSATransition
     copy_transition(block_fast.msa.MSATransition, block_ori.core.msa_transition)
 
     # communication
-    copy_layernorm(block_fast.communication.layernormM,
-                   block_ori.core.outer_product_mean.layer_norm)
-    copy_linear(block_fast.communication.linear_a, block_ori.core.outer_product_mean.linear_1)
-    copy_linear(block_fast.communication.linear_b, block_ori.core.outer_product_mean.linear_2)
-    copy_linear(block_fast.communication.o_linear, block_ori.core.outer_product_mean.linear_out)
+    copy_layernorm(
+        block_fast.communication.layernormM,
+        block_ori.core.outer_product_mean.layer_norm,
+    )
+    copy_linear(
+        block_fast.communication.linear_a, block_ori.core.outer_product_mean.linear_1
+    )
+    copy_linear(
+        block_fast.communication.linear_b, block_ori.core.outer_product_mean.linear_2
+    )
+    copy_linear(
+        block_fast.communication.o_linear, block_ori.core.outer_product_mean.linear_out
+    )
 
     # pair_stack
     # TriangleMultiplicationOutgoing
-    copy_triangle(block_fast.pair.TriangleMultiplicationOutgoing, block_ori.core.tri_mul_out)
+    copy_triangle(
+        block_fast.pair.TriangleMultiplicationOutgoing, block_ori.core.tri_mul_out
+    )
     # TriangleMultiplicationIncoming
-    copy_triangle(block_fast.pair.TriangleMultiplicationIncoming, block_ori.core.tri_mul_in)
+    copy_triangle(
+        block_fast.pair.TriangleMultiplicationIncoming, block_ori.core.tri_mul_in
+    )
 
     # TriangleAttentionStartingNode
-    copy_triangle_att(block_fast.pair.TriangleAttentionStartingNode,
-                      block_ori.core.tri_att_start)
-    copy_triangle_att(block_fast.pair.TriangleAttentionEndingNode, block_ori.core.tri_att_end)
+    copy_triangle_att(
+        block_fast.pair.TriangleAttentionStartingNode, block_ori.core.tri_att_start
+    )
+    copy_triangle_att(
+        block_fast.pair.TriangleAttentionEndingNode, block_ori.core.tri_att_end
+    )
 
     copy_transition(block_fast.pair.PairTransition, block_ori.core.pair_transition)
 
@@ -205,7 +238,7 @@ def copy_extra_msa_para(block_fast, block_ori):
 
     # communication
     comm_model = (
-        block_ori.core.outer_product_mean# if not block_ori.is_multimer else block_ori.outer_product_mean
+        block_ori.core.outer_product_mean  # if not block_ori.is_multimer else block_ori.outer_product_mean
     )
     copy_layernorm(block_fast.communication.layernormM, comm_model.layer_norm)
     copy_linear(block_fast.communication.linear_a, comm_model.linear_1)
@@ -259,61 +292,98 @@ def copy_template_pair_block_para(fast_module, target_module):
 
 def copy_template_para(block_fast, block_ori):
     # TemplateAngleEmbedder
-    copy_linear(block_fast.template_angle_embedder.linear_1, 
-                block_ori.template_angle_embedder.linear_1)
-    copy_linear(block_fast.template_angle_embedder.linear_2, 
-                block_ori.template_angle_embedder.linear_2)
-    
+    copy_linear(
+        block_fast.template_angle_embedder.linear_1,
+        block_ori.template_angle_embedder.linear_1,
+    )
+    copy_linear(
+        block_fast.template_angle_embedder.linear_2,
+        block_ori.template_angle_embedder.linear_2,
+    )
+
     # TemplatePairEmbedder
-    copy_linear(block_fast.template_pair_embedder.linear, 
-                block_ori.template_pair_embedder.linear)
-    
+    copy_linear(
+        block_fast.template_pair_embedder.linear,
+        block_ori.template_pair_embedder.linear,
+    )
+
     # TemplatePairStack
-    copy_template_pair_block_para(block_fast.template_pair_stack, 
-                                  block_ori.template_pair_stack)
-    copy_layernorm(block_fast.template_pair_stack.layer_norm,
-                   block_ori.template_pair_stack.layer_norm)
-    
+    copy_template_pair_block_para(
+        block_fast.template_pair_stack, block_ori.template_pair_stack
+    )
+    copy_layernorm(
+        block_fast.template_pair_stack.layer_norm,
+        block_ori.template_pair_stack.layer_norm,
+    )
+
     # TemplatePointwiseAttention
-    copy_native_att(block_fast.template_pointwise_att.mha,
-                    block_ori.template_pointwise_att.mha)
+    copy_native_att(
+        block_fast.template_pointwise_att.mha, block_ori.template_pointwise_att.mha
+    )
 
 
 def copy_template_multimer_para(block_fast, block_ori):
     # TemplatePairEmbedderMultimer
-    copy_linear(block_fast.template_pair_embedder.dgram_linear, 
-                block_ori.template_pair_embedder.dgram_linear)
-    copy_linear(block_fast.template_pair_embedder.aatype_linear_1, 
-                block_ori.template_pair_embedder.aatype_linear_1)
-    copy_linear(block_fast.template_pair_embedder.aatype_linear_2, 
-                block_ori.template_pair_embedder.aatype_linear_2)
-    copy_layernorm(block_fast.template_pair_embedder.query_embedding_layer_norm, 
-                   block_ori.template_pair_embedder.query_embedding_layer_norm)
-    copy_linear(block_fast.template_pair_embedder.query_embedding_linear, 
-                block_ori.template_pair_embedder.query_embedding_linear)
-    copy_linear(block_fast.template_pair_embedder.pseudo_beta_mask_linear, 
-                block_ori.template_pair_embedder.pseudo_beta_mask_linear)
-    copy_linear(block_fast.template_pair_embedder.x_linear, 
-                block_ori.template_pair_embedder.x_linear)
-    copy_linear(block_fast.template_pair_embedder.y_linear, 
-                block_ori.template_pair_embedder.y_linear)
-    copy_linear(block_fast.template_pair_embedder.z_linear, 
-                block_ori.template_pair_embedder.z_linear)
-    copy_linear(block_fast.template_pair_embedder.backbone_mask_linear, 
-                block_ori.template_pair_embedder.backbone_mask_linear)
-    
+    copy_linear(
+        block_fast.template_pair_embedder.dgram_linear,
+        block_ori.template_pair_embedder.dgram_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.aatype_linear_1,
+        block_ori.template_pair_embedder.aatype_linear_1,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.aatype_linear_2,
+        block_ori.template_pair_embedder.aatype_linear_2,
+    )
+    copy_layernorm(
+        block_fast.template_pair_embedder.query_embedding_layer_norm,
+        block_ori.template_pair_embedder.query_embedding_layer_norm,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.query_embedding_linear,
+        block_ori.template_pair_embedder.query_embedding_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.pseudo_beta_mask_linear,
+        block_ori.template_pair_embedder.pseudo_beta_mask_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.x_linear,
+        block_ori.template_pair_embedder.x_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.y_linear,
+        block_ori.template_pair_embedder.y_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.z_linear,
+        block_ori.template_pair_embedder.z_linear,
+    )
+    copy_linear(
+        block_fast.template_pair_embedder.backbone_mask_linear,
+        block_ori.template_pair_embedder.backbone_mask_linear,
+    )
+
     # TemplateSingleEmbedderMultimer
-    copy_linear(block_fast.template_single_embedder.template_single_embedder, 
-                block_ori.template_single_embedder.template_single_embedder)
-    copy_linear(block_fast.template_single_embedder.template_projector, 
-                block_ori.template_single_embedder.template_projector)
-    
+    copy_linear(
+        block_fast.template_single_embedder.template_single_embedder,
+        block_ori.template_single_embedder.template_single_embedder,
+    )
+    copy_linear(
+        block_fast.template_single_embedder.template_projector,
+        block_ori.template_single_embedder.template_projector,
+    )
+
     # TemplatePairStack
-    copy_template_pair_block_para(block_fast.template_pair_stack, 
-                                  block_ori.template_pair_stack)
-    copy_layernorm(block_fast.template_pair_stack.layer_norm,
-                   block_ori.template_pair_stack.layer_norm)
-    
+    copy_template_pair_block_para(
+        block_fast.template_pair_stack, block_ori.template_pair_stack
+    )
+    copy_layernorm(
+        block_fast.template_pair_stack.layer_norm,
+        block_ori.template_pair_stack.layer_norm,
+    )
+
     # linear_t
     copy_linear(block_fast.linear_t, block_ori.linear_t)
 
@@ -359,7 +429,9 @@ def inject_template(model):
     with torch.no_grad():
         if model.evoformer.blocks[0].is_multimer:
             target_module = model.template_embedder
-            fast_module = TemplateEmbedderMultimer(config=model.template_embedder.config)
+            fast_module = TemplateEmbedderMultimer(
+                config=model.template_embedder.config
+            )
             copy_template_multimer_para(fast_module, target_module)
             if target_module.training == False:
                 fast_module.eval()
@@ -376,7 +448,7 @@ def inject_template(model):
 def inject_embedder(model):
     if model.evoformer.blocks[0].is_multimer:
         return
- 
+
     # recycle embedder
     with torch.no_grad():
         target_module = model.recycling_embedder
@@ -386,7 +458,7 @@ def inject_embedder(model):
             min_bin=target_module.min_bin,
             max_bin=target_module.max_bin,
             no_bins=target_module.no_bins,
-            inf=target_module.inf
+            inf=target_module.inf,
         )
         copy_native_linear(fast_module.linear, target_module.linear)
         copy_layernorm(fast_module.layer_norm_m, target_module.layer_norm_m)

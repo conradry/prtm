@@ -1,10 +1,10 @@
 from functools import partial
 from typing import Optional, Tuple
 
+import habana_frameworks.torch.core as htcore
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-
 from fastfold.habana.distributed import All_to_All, gather, scatter
 from fastfold.utils.checkpointing import checkpoint_blocks
 
@@ -12,16 +12,16 @@ from .msa import ExtraMSACore, MSAStack
 from .ops import Linear, OutProductMean
 from .triangle import PairStack
 
-import habana_frameworks.torch.core as htcore
 
 class Evoformer(nn.Module):
-
-    def __init__(self,
-                 c_m: int,
-                 c_z: int,
-                 first_block: bool,
-                 last_block: bool,
-                 is_multimer: bool = False):
+    def __init__(
+        self,
+        c_m: int,
+        c_z: int,
+        first_block: bool,
+        last_block: bool,
+        is_multimer: bool = False,
+    ):
         super(Evoformer, self).__init__()
 
         self.first_block = first_block
@@ -41,7 +41,6 @@ class Evoformer(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         dap_size = dist.get_world_size()
 
         seq_length = pair_mask.size(-1)
@@ -64,7 +63,9 @@ class Evoformer(nn.Module):
         # pair_mask = pair_mask.unsqueeze(0)
 
         msa_mask = torch.nn.functional.pad(msa_mask, (0, padding_size))
-        pair_mask = torch.nn.functional.pad(pair_mask, (0, padding_size, 0, padding_size))
+        pair_mask = torch.nn.functional.pad(
+            pair_mask, (0, padding_size, 0, padding_size)
+        )
 
         if not self.is_multimer:
             m = self.msa(m, z, msa_mask)
@@ -205,7 +206,8 @@ class EvoformerStack(nn.Module):
                 pair_mask=pair_mask,
                 chunk_size=chunk_size,
                 _mask_trans=_mask_trans,
-            ) for b in self.blocks
+            )
+            for b in self.blocks
         ]
 
         if torch.is_grad_enabled():
@@ -226,13 +228,14 @@ class EvoformerStack(nn.Module):
 
 
 class ExtraMSABlock(nn.Module):
-
-    def __init__(self,
-                 c_m: int,
-                 c_z: int,
-                 first_block: bool,
-                 last_block: bool,
-                 is_multimer: bool = False):
+    def __init__(
+        self,
+        c_m: int,
+        c_z: int,
+        first_block: bool,
+        last_block: bool,
+        is_multimer: bool = False,
+    ):
         super(ExtraMSABlock, self).__init__()
 
         self.first_block = first_block
@@ -252,7 +255,6 @@ class ExtraMSABlock(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         htcore.mark_step()
 
         dap_size = dist.get_world_size()
@@ -277,7 +279,9 @@ class ExtraMSABlock(nn.Module):
         pair_mask = pair_mask.unsqueeze(0)
 
         msa_mask = torch.nn.functional.pad(msa_mask, (0, padding_size))
-        pair_mask = torch.nn.functional.pad(pair_mask, (0, padding_size, 0, padding_size))
+        pair_mask = torch.nn.functional.pad(
+            pair_mask, (0, padding_size, 0, padding_size)
+        )
 
         if not self.is_multimer:
             m = self.msa_stack(m, z, msa_mask)
@@ -355,7 +359,8 @@ class ExtraMSAStack(nn.Module):
                 pair_mask=pair_mask,
                 chunk_size=chunk_size,
                 _mask_trans=_mask_trans,
-            ) for b in self.blocks
+            )
+            for b in self.blocks
         ]
 
         if torch.is_grad_enabled():

@@ -1,37 +1,31 @@
 """
 Modelling
 """
+import functools
+import glob
+import inspect
+import json
+import logging
+import math
 import os
 import re
 import shutil
 import time
-import glob
 from pathlib import Path
-import json
-import inspect
-import logging
-import math
-import functools
 from typing import *
 
-import torch
-from torch import nn
-from torch.nn import functional as F
-
 import pytorch_lightning as pl
-
-from transformers import BertConfig
-from transformers.models.bert.modeling_bert import (
-    BertPreTrainedModel,
-    BertEncoder,
-)
-from transformers.activations import get_activation
-from transformers.optimization import get_linear_schedule_with_warmup
-
-from tqdm.auto import tqdm
-
+import torch
 from foldingdiff import losses, nerf
 from foldingdiff.datasets import FEATURE_SET_NAMES_TO_ANGULARITY
+from torch import nn
+from torch.nn import functional as F
+from tqdm.auto import tqdm
+from transformers import BertConfig
+from transformers.activations import get_activation
+from transformers.models.bert.modeling_bert import (BertEncoder,
+                                                    BertPreTrainedModel)
+from transformers.optimization import get_linear_schedule_with_warmup
 
 LR_SCHEDULE = Optional[Literal["OneCycleLR", "LinearWarmup"]]
 TIME_ENCODING = Literal["gaussian_fourier", "sinusoidal"]

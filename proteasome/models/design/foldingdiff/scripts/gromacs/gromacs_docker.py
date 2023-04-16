@@ -4,12 +4,12 @@ to avoid all the messiness of trying to do mounting and stuff.
 
 Usage: python gromacs_docker.py <input_file> <output_dir>
 """
-import os
-import logging
-import shutil
-import tempfile
-import subprocess
 import argparse
+import logging
+import os
+import shutil
+import subprocess
+import tempfile
 
 
 def build_parser():

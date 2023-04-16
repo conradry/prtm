@@ -9,16 +9,21 @@ import warnings
 from argparse import Namespace
 from pathlib import Path
 
-import torch
-
 import esm
+import torch
 from esm.model.esm2 import ESM2
 
 
 def _has_regression_weights(model_name):
     """Return whether we expect / require regression weights;
-    Right now that is all models except ESM-1v, ESM-IF, and partially trained ESM2 models"""
-    return not ("esm1v" in model_name or "esm_if" in model_name or "270K" in model_name or "500K" in model_name)
+    Right now that is all models except ESM-1v, ESM-IF, and partially trained ESM2 models
+    """
+    return not (
+        "esm1v" in model_name
+        or "esm_if" in model_name
+        or "270K" in model_name
+        or "500K" in model_name
+    )
 
 
 def load_model_and_alphabet(model_name):
@@ -30,7 +35,9 @@ def load_model_and_alphabet(model_name):
 
 def load_hub_workaround(url):
     try:
-        data = torch.hub.load_state_dict_from_url(url, progress=False, map_location="cpu")
+        data = torch.hub.load_state_dict_from_url(
+            url, progress=False, map_location="cpu"
+        )
     except RuntimeError:
         # Pytorch version issue - see https://github.com/pytorch/pytorch/issues/43106
         fn = Path(url).name
@@ -39,7 +46,9 @@ def load_hub_workaround(url):
             map_location="cpu",
         )
     except urllib.error.HTTPError as e:
-        raise Exception(f"Could not load {url}, check if you specified a correct model name?")
+        raise Exception(
+            f"Could not load {url}, check if you specified a correct model name?"
+        )
     return data
 
 
@@ -70,7 +79,9 @@ def load_model_and_alphabet_local(model_location):
     model_data = torch.load(str(model_location), map_location="cpu")
     model_name = model_location.stem
     if _has_regression_weights(model_name):
-        regression_location = str(model_location.with_suffix("")) + "-contact-regression.pt"
+        regression_location = (
+            str(model_location.with_suffix("")) + "-contact-regression.pt"
+        )
         regression_data = torch.load(regression_location, map_location="cpu")
     else:
         regression_data = None
@@ -79,7 +90,9 @@ def load_model_and_alphabet_local(model_location):
 
 def has_emb_layer_norm_before(model_state):
     """Determine whether layer norm needs to be applied before the encoder"""
-    return any(k.startswith("emb_layer_norm_before") for k, param in model_state.items())
+    return any(
+        k.startswith("emb_layer_norm_before") for k, param in model_state.items()
+    )
 
 
 def _load_model_and_alphabet_core_v1(model_data):
@@ -95,13 +108,14 @@ def _load_model_and_alphabet_core_v1(model_data):
             s.split("sentence_encoder.")[1:] if "sentence_encoder" in s else s
         )
         model_args = {pra(arg[0]): arg[1] for arg in vars(model_data["args"]).items()}
-        model_state = {prs1(prs2(arg[0])): arg[1] for arg in model_data["model"].items()}
+        model_state = {
+            prs1(prs2(arg[0])): arg[1] for arg in model_data["model"].items()
+        }
         model_state["embed_tokens.weight"][alphabet.mask_idx].zero_()  # For token drop
         model_args["emb_layer_norm_before"] = has_emb_layer_norm_before(model_state)
         model_type = esm.ProteinBertModel
 
     elif model_data["args"].arch == "protein_bert_base":
-
         # upgrade state dict
         pra = lambda s: "".join(s.split("decoder_")[1:] if "decoder" in s else s)
         prs = lambda s: "".join(s.split("decoder.")[1:] if "decoder" in s else s)
@@ -109,19 +123,26 @@ def _load_model_and_alphabet_core_v1(model_data):
         model_state = {prs(arg[0]): arg[1] for arg in model_data["model"].items()}
         model_type = esm.ProteinBertModel
     elif model_data["args"].arch == "msa_transformer":
-
         # upgrade state dict
         pra = lambda s: "".join(s.split("encoder_")[1:] if "encoder" in s else s)
         prs1 = lambda s: "".join(s.split("encoder.")[1:] if "encoder" in s else s)
         prs2 = lambda s: "".join(
             s.split("sentence_encoder.")[1:] if "sentence_encoder" in s else s
         )
-        prs3 = lambda s: s.replace("row", "column") if "row" in s else s.replace("column", "row")
+        prs3 = (
+            lambda s: s.replace("row", "column")
+            if "row" in s
+            else s.replace("column", "row")
+        )
         model_args = {pra(arg[0]): arg[1] for arg in vars(model_data["args"]).items()}
-        model_state = {prs1(prs2(prs3(arg[0]))): arg[1] for arg in model_data["model"].items()}
+        model_state = {
+            prs1(prs2(prs3(arg[0]))): arg[1] for arg in model_data["model"].items()
+        }
         if model_args.get("embed_positions_msa", False):
             emb_dim = model_state["msa_position_embedding"].size(-1)
-            model_args["embed_positions_msa_dim"] = emb_dim  # initial release, bug: emb_dim==1
+            model_args[
+                "embed_positions_msa_dim"
+            ] = emb_dim  # initial release, bug: emb_dim==1
 
         model_type = esm.MSATransformer
 
@@ -166,7 +187,9 @@ def _load_model_and_alphabet_core_v2(model_data):
         """Removes prefixes 'model.encoder.sentence_encoder.' and 'model.encoder.'."""
         prefixes = ["encoder.sentence_encoder.", "encoder."]
         pattern = re.compile("^" + "|".join(prefixes))
-        state_dict = {pattern.sub("", name): param for name, param in state_dict.items()}
+        state_dict = {
+            pattern.sub("", name): param for name, param in state_dict.items()
+        }
         return state_dict
 
     cfg = model_data["cfg"]["model"]
@@ -196,7 +219,10 @@ def load_model_and_alphabet_core(model_name, model_data, regression_data=None):
     found_keys = set(model_state.keys())
 
     if regression_data is None:
-        expected_missing = {"contact_head.regression.weight", "contact_head.regression.bias"}
+        expected_missing = {
+            "contact_head.regression.weight",
+            "contact_head.regression.bias",
+        }
         error_msgs = []
         missing = (expected_keys - found_keys) - expected_missing
         if missing:
@@ -400,11 +426,12 @@ def esm2_t48_15B_UR50D():
 def esmfold_v0():
     """
     ESMFold v0 model with 3B ESM-2, 48 folding blocks.
-    This version was used for the paper (Lin et al, 2022). It was trained 
+    This version was used for the paper (Lin et al, 2022). It was trained
     on all PDB chains until 2020-05, to ensure temporal holdout with CASP14
     and the CAMEO validation and test set reported there.
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_v0()
 
 
@@ -417,7 +444,9 @@ def esmfold_v1():
     protein sequence.
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_v1()
+
 
 def esmfold_structure_module_only_8M():
     """
@@ -428,6 +457,7 @@ def esmfold_structure_module_only_8M():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_8M()
 
 
@@ -440,6 +470,7 @@ def esmfold_structure_module_only_8M_270K():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_8M_270K()
 
 
@@ -452,6 +483,7 @@ def esmfold_structure_module_only_35M():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_35M()
 
 
@@ -464,6 +496,7 @@ def esmfold_structure_module_only_35M_270K():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_35M_270K()
 
 
@@ -476,6 +509,7 @@ def esmfold_structure_module_only_150M():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_150M()
 
 
@@ -488,6 +522,7 @@ def esmfold_structure_module_only_150M_270K():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_150M_270K()
 
 
@@ -500,6 +535,7 @@ def esmfold_structure_module_only_650M():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_650M()
 
 
@@ -512,6 +548,7 @@ def esmfold_structure_module_only_650M_270K():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_650M_270K()
 
 
@@ -524,6 +561,7 @@ def esmfold_structure_module_only_3B():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_3B()
 
 
@@ -536,6 +574,7 @@ def esmfold_structure_module_only_3B_270K():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_3B_270K()
 
 
@@ -549,4 +588,5 @@ def esmfold_structure_module_only_15B():
     See table S1 in (Lin et al, 2022).
     """
     import esm.esmfold.v1.pretrained
+
     return esm.esmfold.v1.pretrained.esmfold_structure_module_only_15B()

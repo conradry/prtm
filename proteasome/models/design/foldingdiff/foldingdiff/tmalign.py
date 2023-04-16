@@ -2,13 +2,13 @@
 Short and easy wrapper for TMalign
 """
 
+import itertools
+import logging
+import multiprocessing
 import os
 import re
-import itertools
 import shutil
 import subprocess
-import multiprocessing
-import logging
 from typing import List, Tuple
 
 import numpy as np

@@ -4,22 +4,22 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import itertools
 import pathlib
 import string
-
-import torch
-
-from esm import Alphabet, FastaBatchedDataset, ProteinBertModel, pretrained, MSATransformer
-import pandas as pd
-from tqdm import tqdm
-from Bio import SeqIO
-import itertools
 from typing import List, Tuple
+
 import numpy as np
+import pandas as pd
+import torch
+from Bio import SeqIO
+from esm import (Alphabet, FastaBatchedDataset, MSATransformer,
+                 ProteinBertModel, pretrained)
+from tqdm import tqdm
 
 
 def remove_insertions(sequence: str) -> str:
-    """ Removes any insertions into the sequence. Needed to load aligned sequences in an MSA. """
+    """Removes any insertions into the sequence. Needed to load aligned sequences in an MSA."""
     # This is an efficient way to delete lowercase characters and insertion characters from a string
     deletekeys = dict.fromkeys(string.ascii_lowercase)
     deletekeys["."] = None
@@ -30,8 +30,8 @@ def remove_insertions(sequence: str) -> str:
 
 
 def read_msa(filename: str, nseq: int) -> List[Tuple[str, str]]:
-    """ Reads the first nseq sequences from an MSA file, automatically removes insertions.
-    
+    """Reads the first nseq sequences from an MSA file, automatically removes insertions.
+
     The input file must be in a3m format (although we use the SeqIO fasta parser)
     for remove_insertions to work properly."""
 
@@ -100,13 +100,17 @@ def create_parser():
         help="number of sequences to select from the start of the MSA"
     )
     # fmt: on
-    parser.add_argument("--nogpu", action="store_true", help="Do not use GPU even if available")
+    parser.add_argument(
+        "--nogpu", action="store_true", help="Do not use GPU even if available"
+    )
     return parser
 
 
 def label_row(row, sequence, token_probs, alphabet, offset_idx):
     wt, idx, mt = row[0], int(row[1:-1]) - offset_idx, row[-1]
-    assert sequence[idx] == wt, "The listed wildtype does not match the provided sequence"
+    assert (
+        sequence[idx] == wt
+    ), "The listed wildtype does not match the provided sequence"
 
     wt_encoded, mt_encoded = alphabet.get_idx(wt), alphabet.get_idx(mt)
 
@@ -117,7 +121,9 @@ def label_row(row, sequence, token_probs, alphabet, offset_idx):
 
 def compute_pppl(row, sequence, model, alphabet, offset_idx):
     wt, idx, mt = row[0], int(row[1:-1]) - offset_idx, row[-1]
-    assert sequence[idx] == wt, "The listed wildtype does not match the provided sequence"
+    assert (
+        sequence[idx] == wt
+    ), "The listed wildtype does not match the provided sequence"
 
     # modify the sequence
     sequence = sequence[:idx] + mt + sequence[(idx + 1) :]
@@ -139,8 +145,12 @@ def compute_pppl(row, sequence, model, alphabet, offset_idx):
         batch_tokens_masked = batch_tokens.clone()
         batch_tokens_masked[0, i] = alphabet.mask_idx
         with torch.no_grad():
-            token_probs = torch.log_softmax(model(batch_tokens_masked.cuda())["logits"], dim=-1)
-        log_probs.append(token_probs[0, i, alphabet.get_idx(sequence[i])].item())  # vocab size
+            token_probs = torch.log_softmax(
+                model(batch_tokens_masked.cuda())["logits"], dim=-1
+            )
+        log_probs.append(
+            token_probs[0, i, alphabet.get_idx(sequence[i])].item()
+        )  # vocab size
     return sum(log_probs)
 
 
@@ -169,7 +179,9 @@ def main(args):
             all_token_probs = []
             for i in tqdm(range(batch_tokens.size(2))):
                 batch_tokens_masked = batch_tokens.clone()
-                batch_tokens_masked[0, 0, i] = alphabet.mask_idx  # mask out first sequence
+                batch_tokens_masked[
+                    0, 0, i
+                ] = alphabet.mask_idx  # mask out first sequence
                 with torch.no_grad():
                     token_probs = torch.log_softmax(
                         model(batch_tokens_masked.cuda())["logits"], dim=-1
@@ -178,7 +190,11 @@ def main(args):
             token_probs = torch.cat(all_token_probs, dim=0).unsqueeze(0)
             df[model_location] = df.apply(
                 lambda row: label_row(
-                    row[args.mutation_col], args.sequence, token_probs, alphabet, args.offset_idx
+                    row[args.mutation_col],
+                    args.sequence,
+                    token_probs,
+                    alphabet,
+                    args.offset_idx,
                 ),
                 axis=1,
             )
@@ -191,7 +207,9 @@ def main(args):
 
             if args.scoring_strategy == "wt-marginals":
                 with torch.no_grad():
-                    token_probs = torch.log_softmax(model(batch_tokens.cuda())["logits"], dim=-1)
+                    token_probs = torch.log_softmax(
+                        model(batch_tokens.cuda())["logits"], dim=-1
+                    )
                 df[model_location] = df.apply(
                     lambda row: label_row(
                         row[args.mutation_col],
@@ -227,7 +245,11 @@ def main(args):
                 tqdm.pandas()
                 df[model_location] = df.progress_apply(
                     lambda row: compute_pppl(
-                        row[args.mutation_col], args.sequence, model, alphabet, args.offset_idx
+                        row[args.mutation_col],
+                        args.sequence,
+                        model,
+                        alphabet,
+                        args.offset_idx,
                     ),
                     axis=1,
                 )

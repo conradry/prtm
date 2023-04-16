@@ -51,7 +51,9 @@ class RotaryEmbedding(torch.nn.Module):
         # or if we're on a new device (possibly due to tracing for instance)
         if seq_len != self._seq_len_cached or self._cos_cached.device != x.device:
             self._seq_len_cached = seq_len
-            t = torch.arange(x.shape[seq_dimension], device=x.device).type_as(self.inv_freq)
+            t = torch.arange(x.shape[seq_dimension], device=x.device).type_as(
+                self.inv_freq
+            )
             freqs = torch.einsum("i,j->ij", t, self.inv_freq)
             emb = torch.cat((freqs, freqs), dim=-1).to(x.device)
 
@@ -60,8 +62,12 @@ class RotaryEmbedding(torch.nn.Module):
 
         return self._cos_cached, self._sin_cached
 
-    def forward(self, q: torch.Tensor, k: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        self._cos_cached, self._sin_cached = self._update_cos_sin_tables(k, seq_dimension=-2)
+    def forward(
+        self, q: torch.Tensor, k: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self._cos_cached, self._sin_cached = self._update_cos_sin_tables(
+            k, seq_dimension=-2
+        )
 
         return (
             apply_rotary_pos_emb(q, self._cos_cached, self._sin_cached),

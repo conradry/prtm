@@ -4,9 +4,8 @@ Loss functions!
 from typing import Optional, Sequence, Tuple
 
 import torch
-from torch.nn import functional as F
-
 from foldingdiff import utils
+from torch.nn import functional as F
 
 
 def radian_l1_loss(input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:

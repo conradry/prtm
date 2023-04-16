@@ -2,9 +2,9 @@
 Script to splice the given AA nucleotide sequence onto the given backbone.
 """
 
-import os
 import argparse
 import multiprocessing as mp
+import os
 from typing import Dict
 
 from foldingdiff import angles_and_coords as ac

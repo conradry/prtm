@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Callable, List, Optional, Tuple
+
 import torch
 import torch.utils.checkpoint
-from typing import Any, Tuple, List, Callable, Optional
-
 
 BLOCK_ARG = Any
 BLOCK_ARGS = List[BLOCK_ARG]
@@ -46,12 +46,13 @@ def checkpoint_blocks(
         args:
             Tuple of arguments for the first block.
         blocks_per_ckpt:
-            Size of each chunk. A higher value corresponds to fewer 
-            checkpoints, and trades memory for speed. If None, no checkpointing 
+            Size of each chunk. A higher value corresponds to fewer
+            checkpoints, and trades memory for speed. If None, no checkpointing
             is performed.
     Returns:
         The output of the final block
     """
+
     def wrap(a):
         return (a,) if type(a) is not tuple else a
 
@@ -74,7 +75,7 @@ def checkpoint_blocks(
     elif blocks_per_ckpt < 1 or blocks_per_ckpt > len(blocks):
         raise ValueError("blocks_per_ckpt must be between 1 and len(blocks)")
 
-    checkpoint = get_checkpoint_fn() 
+    checkpoint = get_checkpoint_fn()
 
     for s in range(0, len(blocks), blocks_per_ckpt):
         e = s + blocks_per_ckpt

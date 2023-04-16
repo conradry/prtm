@@ -33,11 +33,12 @@ class TestTMalign(unittest.TestCase):
         """Test that comparing a file to itself should yield a perfect score of 1"""
         x = tmalign.run_tmalign(self.fname1, self.fname1)
         self.assertAlmostEqual(x, 1.0)
-    
+
     def test_nonself_less_than_1(self):
         """Test that comparing against a different structure yields a value < 1"""
         x = tmalign.run_tmalign(self.fname1, self.fname2)
         self.assertLess(x, 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,18 +15,21 @@ See https://hydra.cc/docs/advanced/hydra-command-line-flags/ for more options.
 
 """
 
-import re
-import os, time, pickle
-import torch
-from omegaconf import OmegaConf
-import hydra
-import logging
-from rfdiffusion.util import writepdb_multi, writepdb
-from rfdiffusion.inference import utils as iu
-from hydra.core.hydra_config import HydraConfig
-import numpy as np
-import random
 import glob
+import logging
+import os
+import pickle
+import random
+import re
+import time
+
+import hydra
+import numpy as np
+import torch
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import OmegaConf
+from rfdiffusion.inference import utils as iu
+from rfdiffusion.util import writepdb, writepdb_multi
 
 
 def make_deterministic(seed=0):
@@ -44,7 +47,9 @@ def main(conf: HydraConfig) -> None:
     # Check for available GPU and print result of check
     if torch.cuda.is_available():
         device_name = torch.cuda.get_device_name(torch.cuda.current_device())
-        log.info(f"Found GPU with device_name {device_name}. Will run RFdiffusion on {device_name}")
+        log.info(
+            f"Found GPU with device_name {device_name}. Will run RFdiffusion on {device_name}"
+        )
     else:
         log.info("////////////////////////////////////////////////")
         log.info("///// NO GPU DETECTED! Falling back to CPU /////")

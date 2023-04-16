@@ -1,10 +1,9 @@
+import metrics
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from tqdm import tqdm
-import metrics
-
 from dataset import PT_FEATURE_SIZE
+from tqdm import tqdm
 
 CHAR_SMI_SET_LEN = 64
 
@@ -18,7 +17,9 @@ class CDilated(nn.Module):
     def __init__(self, nIn, nOut, kSize, stride=1, d=1):
         super().__init__()
         padding = int((kSize - 1) / 2) * d
-        self.conv = nn.Conv1d(nIn, nOut, kSize, stride=stride, padding=padding, bias=False, dilation=d)
+        self.conv = nn.Conv1d(
+            nIn, nOut, kSize, stride=stride, padding=padding, bias=False, dilation=d
+        )
 
     def forward(self, input):
         output = self.conv(input)
@@ -40,7 +41,7 @@ class DilatedParllelResidualBlockA(nn.Module):
         self.br2 = nn.Sequential(nn.BatchNorm1d(nOut), nn.PReLU())
 
         if nIn != nOut:
-#             print(f'{nIn}-{nOut}: add=False')
+            #             print(f'{nIn}-{nOut}: add=False')
             add = False
         self.add = add
 
@@ -70,6 +71,7 @@ class DilatedParllelResidualBlockA(nn.Module):
         output = self.br2(combine)
         return output
 
+
 class DilatedParllelResidualBlockB(nn.Module):
     def __init__(self, nIn, nOut, add=True):
         super().__init__()
@@ -84,7 +86,7 @@ class DilatedParllelResidualBlockB(nn.Module):
         self.br2 = nn.Sequential(nn.BatchNorm1d(nOut), nn.PReLU())
 
         if nIn != nOut:
-#             print(f'{nIn}-{nOut}: add=False')
+            #             print(f'{nIn}-{nOut}: add=False')
             add = False
         self.add = add
 
@@ -114,20 +116,21 @@ class DilatedParllelResidualBlockB(nn.Module):
 
 
 class DeepDTAF(nn.Module):
-
     def __init__(self):
         super().__init__()
 
         smi_embed_size = 128
         seq_embed_size = 128
-        
+
         seq_oc = 128
         pkt_oc = 128
         smi_oc = 128
 
         self.smi_embed = nn.Embedding(CHAR_SMI_SET_LEN, smi_embed_size)
 
-        self.seq_embed = nn.Linear(PT_FEATURE_SIZE, seq_embed_size)  # (N, *, H_{in}) -> (N, *, H_{out})
+        self.seq_embed = nn.Linear(
+            PT_FEATURE_SIZE, seq_embed_size
+        )  # (N, *, H_{in}) -> (N, *, H_{out})
 
         conv_seq = []
         ic = seq_embed_size
@@ -158,20 +161,19 @@ class DeepDTAF(nn.Module):
         conv_smi.append(nn.AdaptiveMaxPool1d(1))
         conv_smi.append(Squeeze())
         self.conv_smi = nn.Sequential(*conv_smi)  # (N,128)
-        
-        
+
         self.cat_dropout = nn.Dropout(0.2)
-        
+
         self.classifier = nn.Sequential(
-            nn.Linear(seq_oc+pkt_oc+smi_oc, 128),
+            nn.Linear(seq_oc + pkt_oc + smi_oc, 128),
             nn.Dropout(0.5),
             nn.PReLU(),
             nn.Linear(128, 64),
             nn.Dropout(0.5),
             nn.PReLU(),
-            nn.Linear(64,1),
-            nn.PReLU())
-        
+            nn.Linear(64, 1),
+            nn.PReLU(),
+        )
 
     def forward(self, seq, pkt, smi):
         # assert seq.shape == (N,L,43)
@@ -191,7 +193,7 @@ class DeepDTAF(nn.Module):
 
         cat = torch.cat([seq_conv, pkt_conv, smi_conv], dim=1)  # (N,128*3)
         cat = self.cat_dropout(cat)
-        
+
         output = self.classifier(cat)
         return output
 
@@ -202,7 +204,9 @@ def test(model: nn.Module, test_loader, loss_function, device, show):
     outputs = []
     targets = []
     with torch.no_grad():
-        for idx, (*x, y) in tqdm(enumerate(test_loader), disable=not show, total=len(test_loader)):
+        for idx, (*x, y) in tqdm(
+            enumerate(test_loader), disable=not show, total=len(test_loader)
+        ):
             for i in range(len(x)):
                 x[i] = x[i].to(device)
             y = y.to(device)
@@ -219,12 +223,12 @@ def test(model: nn.Module, test_loader, loss_function, device, show):
     test_loss /= len(test_loader.dataset)
 
     evaluation = {
-        'loss': test_loss,
-        'c_index': metrics.c_index(targets, outputs),
-        'RMSE': metrics.RMSE(targets, outputs),
-        'MAE': metrics.MAE(targets, outputs),
-        'SD': metrics.SD(targets, outputs),
-        'CORR': metrics.CORR(targets, outputs),
+        "loss": test_loss,
+        "c_index": metrics.c_index(targets, outputs),
+        "RMSE": metrics.RMSE(targets, outputs),
+        "MAE": metrics.MAE(targets, outputs),
+        "SD": metrics.SD(targets, outputs),
+        "CORR": metrics.CORR(targets, outputs),
     }
 
     return evaluation

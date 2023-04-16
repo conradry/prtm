@@ -2,11 +2,10 @@
 
 import argparse
 
+import h5py
 import numpy as np
 import pandas as pd
-import h5py
-
-from proteinbert.shared_utils.util import log, get_parser_file_type
+from proteinbert.shared_utils.util import get_parser_file_type, log
 
 if __name__ == '__main__':
 

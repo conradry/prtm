@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 import operator
+import os
 import time
 
 import dllogger as logger
-from dllogger import JSONStreamBackend, StdOutBackend, Verbosity
 import numpy as np
-from pytorch_lightning import Callback
 import torch.cuda.profiler as profiler
+from dllogger import JSONStreamBackend, StdOutBackend, Verbosity
+from pytorch_lightning import Callback
 
 
 def is_main_process():
@@ -27,8 +27,15 @@ def is_main_process():
 
 
 class PerformanceLoggingCallback(Callback):
-    def __init__(self, log_file, global_batch_size, warmup_steps: int = 0, profile: bool = False):
-        logger.init(backends=[JSONStreamBackend(Verbosity.VERBOSE, log_file), StdOutBackend(Verbosity.VERBOSE)])
+    def __init__(
+        self, log_file, global_batch_size, warmup_steps: int = 0, profile: bool = False
+    ):
+        logger.init(
+            backends=[
+                JSONStreamBackend(Verbosity.VERBOSE, log_file),
+                StdOutBackend(Verbosity.VERBOSE),
+            ]
+        )
         self.warmup_steps = warmup_steps
         self.global_batch_size = global_batch_size
         self.step = 0
@@ -42,7 +49,9 @@ class PerformanceLoggingCallback(Callback):
         if self.step > self.warmup_steps:
             self.timestamps.append(time.time())
 
-    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
+    def on_train_batch_start(
+        self, trainer, pl_module, batch, batch_idx, dataloader_idx
+    ):
         self.do_step()
 
     def on_test_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
@@ -59,7 +68,9 @@ class PerformanceLoggingCallback(Callback):
             f"latency_mean": _round3(timestamps_ms.mean()),
         }
         for level in [90, 95, 99]:
-            stats.update({f"latency_{level}": _round3(np.percentile(timestamps_ms, level))})
+            stats.update(
+                {f"latency_{level}": _round3(np.percentile(timestamps_ms, level))}
+            )
 
         return stats
 

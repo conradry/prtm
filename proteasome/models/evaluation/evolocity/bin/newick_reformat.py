@@ -1,14 +1,14 @@
 import sys
 
-newick = ''
+newick = ""
 
 with open(sys.argv[1]) as f:
     orig = f.read().rstrip()
 
-orig = orig.replace('(', '(\n').replace(',', '\n,\n').replace(')', ')\n')
+orig = orig.replace("(", "(\n").replace(",", "\n,\n").replace(")", ")\n")
 
-for line in orig.split('\n'):
-    fields = line.rstrip().split(':')
+for line in orig.split("\n"):
+    fields = line.rstrip().split(":")
     if len(fields) == 0:
         continue
     elif len(fields) == 1:
@@ -16,9 +16,9 @@ for line in orig.split('\n'):
     else:
         prefix, suffix = fields
         newick += prefix[:30]
-        if suffix != '':
-            newick += ':'
+        if suffix != "":
+            newick += ":"
             newick += suffix
 
-with open(sys.argv[2], 'w') as of:
-    of.write(newick + '\n')
+with open(sys.argv[2], "w") as of:
+    of.write(newick + "\n")

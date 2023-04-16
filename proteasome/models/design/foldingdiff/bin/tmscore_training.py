@@ -3,20 +3,20 @@ Compute the maximum TM score against training set
 """
 # NOTE this is a thin wrapper around function called in sample.py
 
-import logging
-import os, sys
-import re
+import argparse
 import json
+import logging
+import multiprocessing as mp
+import os
+import re
+import sys
 from glob import glob
 from pathlib import Path
-import argparse
 from typing import *
-import multiprocessing as mp
 
-from tqdm.auto import tqdm
-
-from foldingdiff.datasets import CathCanonicalAnglesDataset
 from foldingdiff import tmalign
+from foldingdiff.datasets import CathCanonicalAnglesDataset
+from tqdm.auto import tqdm
 
 
 def compute_training_tm_scores(
@@ -38,7 +38,7 @@ def compute_training_tm_scores(
         all_tm_scores_ref[samp_name] = tm_score_ref
     with open(outdir / "tm_scores.json", "w") as sink:
         json.dump(all_tm_scores, sink, indent=4)
-    with open(outdir / "tm_scores_ref.json", 'w') as sink:
+    with open(outdir / "tm_scores_ref.json", "w") as sink:
         json.dump(all_tm_scores_ref, sink, indent=4)
 
 

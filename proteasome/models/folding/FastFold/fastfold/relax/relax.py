@@ -16,7 +16,6 @@
 from typing import Any, Dict, Sequence, Tuple
 
 import numpy as np
-
 from fastfold.common import protein
 from fastfold.relax import amber_minimize, utils
 
@@ -86,7 +85,5 @@ class AmberRelaxation(object):
         utils.assert_equal_nonterminal_atom_types(
             protein.from_pdb_string(min_pdb).atom_mask, prot.atom_mask
         )
-        violations = out["structural_violations"][
-            "total_per_residue_violations_mask"
-        ]
+        violations = out["structural_violations"]["total_per_residue_violations_mask"]
         return min_pdb, debug_data, violations

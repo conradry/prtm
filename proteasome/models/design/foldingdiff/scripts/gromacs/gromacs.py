@@ -9,15 +9,15 @@ GROMACS can do no hydrogen
 pdb2gmx ignore h to add them in
 """
 
-import os
-import sys
-import socket
 import argparse
-import tempfile
 import logging
+import os
 import shlex
-import subprocess
 import shutil
+import socket
+import subprocess
+import sys
+import tempfile
 
 GRO_FILE_DIR = os.path.join(os.path.dirname(__file__), "mdp")
 # Up the prod.mdp nsteps to 50000000 to run a longer simulation
@@ -26,6 +26,7 @@ GRO_FILE_DIR = os.path.join(os.path.dirname(__file__), "mdp")
 
 # Run the biggest thing, use box volume and the same number of waters for other things
 # Run a bunch of 128 residues and see how many water get added
+
 
 def run_gromacs(
     pdb_file: str,
@@ -70,7 +71,6 @@ def run_gromacs(
 
     addwater_cmd = f"{gmx} insert-molecules -f {gro_file} -ci {gro_file_dir}water2.gro -box 12 12 12 -nmol 12000 -o solv.gro"
     subprocess.call(shlex.split(addwater_cmd))
-
 
     # add ions - add counter postive and negative ions to make
     # the box "neutral"

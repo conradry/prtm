@@ -16,20 +16,17 @@
 
 import io
 import time
-from typing import Collection, Optional, Sequence, Dict
+from typing import Collection, Dict, Optional, Sequence
 
-from absl import logging
-from fastfold.common import (
-    protein,
-    residue_constants,
-)
 import fastfold.model.hub.loss as loss
-from fastfold.relax import cleanup, utils
 import ml_collections
 import numpy as np
 import openmm
-from openmm import unit
+from absl import logging
+from fastfold.common import protein, residue_constants
+from fastfold.relax import cleanup, utils
 from openmm import app as openmm_app
+from openmm import unit
 from openmm.app.internal.pdbstructure import PdbStructure
 
 ENERGY = unit.kilocalories_per_mole
@@ -125,22 +122,28 @@ def _check_cleaned_atoms(pdb_cleaned_string: str, pdb_ref_string: str):
     cl_xyz = np.array(cleaned.getPositions().value_in_unit(LENGTH))
     ref_xyz = np.array(reference.getPositions().value_in_unit(LENGTH))
 
-    for ref_res, cl_res in zip(reference.topology.residues(), cleaned.topology.residues()):
+    for ref_res, cl_res in zip(
+        reference.topology.residues(), cleaned.topology.residues()
+    ):
         assert ref_res.name == cl_res.name
         for rat in ref_res.atoms():
             for cat in cl_res.atoms():
                 if cat.name == rat.name:
                     if not np.array_equal(cl_xyz[cat.index], ref_xyz[rat.index]):
-                        raise ValueError(f"Coordinates of cleaned atom {cat} do not match "
-                                         f"coordinates of reference atom {rat}.")
+                        raise ValueError(
+                            f"Coordinates of cleaned atom {cat} do not match "
+                            f"coordinates of reference atom {rat}."
+                        )
 
 
 def _check_residues_are_well_defined(prot: protein.Protein):
     """Checks that all residues contain non-empty atom sets."""
     if (prot.atom_mask.sum(axis=-1) == 0).any():
-        raise ValueError("Amber minimization can only be performed on proteins with"
-                         " well-defined residues. This protein contains at least"
-                         " one residue with no atoms.")
+        raise ValueError(
+            "Amber minimization can only be performed on proteins with"
+            " well-defined residues. This protein contains at least"
+            " one residue with no atoms."
+        )
 
 
 def _check_atom_mask_is_ideal(prot):
@@ -190,17 +193,20 @@ def make_atom14_positions(prot):
 
     for rt in residue_constants.restypes:
         atom_names = residue_constants.restype_name_to_atom14_names[
-            residue_constants.restype_1to3[rt]]
+            residue_constants.restype_1to3[rt]
+        ]
 
-        restype_atom14_to_atom37.append([
-            (residue_constants.atom_order[name] if name else 0) for name in atom_names
-        ])
+        restype_atom14_to_atom37.append(
+            [(residue_constants.atom_order[name] if name else 0) for name in atom_names]
+        )
 
         atom_name_to_idx14 = {name: i for i, name in enumerate(atom_names)}
-        restype_atom37_to_atom14.append([
-            (atom_name_to_idx14[name] if name in atom_name_to_idx14 else 0)
-            for name in residue_constants.atom_types
-        ])
+        restype_atom37_to_atom14.append(
+            [
+                (atom_name_to_idx14[name] if name in atom_name_to_idx14 else 0)
+                for name in residue_constants.atom_types
+            ]
+        )
 
         restype_atom14_mask.append([(1.0 if name else 0.0) for name in atom_names])
 
@@ -220,14 +226,17 @@ def make_atom14_positions(prot):
 
     # Create a mask for known ground truth positions.
     residx_atom14_gt_mask = residx_atom14_mask * np.take_along_axis(
-        prot["all_atom_mask"], residx_atom14_to_atom37, axis=1).astype(np.float32)
+        prot["all_atom_mask"], residx_atom14_to_atom37, axis=1
+    ).astype(np.float32)
 
     # Gather the ground truth positions.
-    residx_atom14_gt_positions = residx_atom14_gt_mask[:, :, None] * (np.take_along_axis(
-        prot["all_atom_positions"],
-        residx_atom14_to_atom37[..., None],
-        axis=1,
-    ))
+    residx_atom14_gt_positions = residx_atom14_gt_mask[:, :, None] * (
+        np.take_along_axis(
+            prot["all_atom_positions"],
+            residx_atom14_to_atom37[..., None],
+            axis=1,
+        )
+    )
 
     prot["atom14_atom_exists"] = residx_atom14_mask
     prot["atom14_gt_exists"] = residx_atom14_gt_mask
@@ -253,7 +262,9 @@ def make_atom14_positions(prot):
 
     # As the atom naming is ambiguous for 7 of the 20 amino acids, provide
     # alternative ground truth coordinates where the naming is swapped
-    restype_3 = [residue_constants.restype_1to3[res] for res in residue_constants.restypes]
+    restype_3 = [
+        residue_constants.restype_1to3[res] for res in residue_constants.restypes
+    ]
     restype_3 += ["UNK"]
 
     # Matrices for renaming ambiguous atoms.
@@ -261,10 +272,12 @@ def make_atom14_positions(prot):
     for resname, swap in residue_constants.residue_atom_renaming_swaps.items():
         correspondences = np.arange(14)
         for source_atom_swap, target_atom_swap in swap.items():
-            source_index = residue_constants.restype_name_to_atom14_names[resname].index(
-                source_atom_swap)
-            target_index = residue_constants.restype_name_to_atom14_names[resname].index(
-                target_atom_swap)
+            source_index = residue_constants.restype_name_to_atom14_names[
+                resname
+            ].index(source_atom_swap)
+            target_index = residue_constants.restype_name_to_atom14_names[
+                resname
+            ].index(target_atom_swap)
             correspondences[source_index] = target_index
             correspondences[target_index] = source_index
             renaming_matrix = np.zeros((14, 14), dtype=np.float32)
@@ -278,14 +291,17 @@ def make_atom14_positions(prot):
     renaming_transform = renaming_matrices[prot["aatype"]]
 
     # Apply it to the ground truth positions. shape (num_res, 14, 3).
-    alternative_gt_positions = np.einsum("rac,rab->rbc", residx_atom14_gt_positions,
-                                         renaming_transform)
+    alternative_gt_positions = np.einsum(
+        "rac,rab->rbc", residx_atom14_gt_positions, renaming_transform
+    )
     prot["atom14_alt_gt_positions"] = alternative_gt_positions
 
     # Create the mask for the alternative ground truth (differs from the
     # ground truth mask, if only one of the atoms in an ambiguous pair has a
     # ground truth position).
-    alternative_gt_mask = np.einsum("ra,rab->rb", residx_atom14_gt_mask, renaming_transform)
+    alternative_gt_mask = np.einsum(
+        "ra,rab->rb", residx_atom14_gt_mask, renaming_transform
+    )
 
     prot["atom14_alt_gt_exists"] = alternative_gt_mask
 
@@ -293,9 +309,15 @@ def make_atom14_positions(prot):
     restype_atom14_is_ambiguous = np.zeros((21, 14), dtype=np.float32)
     for resname, swap in residue_constants.residue_atom_renaming_swaps.items():
         for atom_name1, atom_name2 in swap.items():
-            restype = residue_constants.restype_order[residue_constants.restype_3to1[resname]]
-            atom_idx1 = residue_constants.restype_name_to_atom14_names[resname].index(atom_name1)
-            atom_idx2 = residue_constants.restype_name_to_atom14_names[resname].index(atom_name2)
+            restype = residue_constants.restype_order[
+                residue_constants.restype_3to1[resname]
+            ]
+            atom_idx1 = residue_constants.restype_name_to_atom14_names[resname].index(
+                atom_name1
+            )
+            atom_idx2 = residue_constants.restype_name_to_atom14_names[resname].index(
+                atom_name2
+            )
             restype_atom14_is_ambiguous[restype, atom_idx1] = 1
             restype_atom14_is_ambiguous[restype, atom_idx2] = 1
 
@@ -328,10 +350,12 @@ def find_violations(prot_np: protein.Protein):
     violations = loss.find_structural_violations_np(
         batch=batch,
         atom14_pred_positions=batch["atom14_gt_positions"],
-        config=ml_collections.ConfigDict({
-            "violation_tolerance_factor": 12,  # Taken from model config.
-            "clash_overlap_tolerance": 1.5,  # Taken from model config.
-        }),
+        config=ml_collections.ConfigDict(
+            {
+                "violation_tolerance_factor": 12,  # Taken from model config.
+                "clash_overlap_tolerance": 1.5,  # Taken from model config.
+            }
+        ),
     )
     violation_metrics = loss.compute_violation_metrics_np(
         batch=batch,
@@ -345,7 +369,9 @@ def find_violations(prot_np: protein.Protein):
 def get_violation_metrics(prot: protein.Protein):
     """Computes violation and alignment metrics."""
     structural_violations, struct_metrics = find_violations(prot)
-    violation_idx = np.flatnonzero(structural_violations["total_per_residue_violations_mask"])
+    violation_idx = np.flatnonzero(
+        structural_violations["total_per_residue_violations_mask"]
+    )
 
     struct_metrics["residue_violations"] = violation_idx
     struct_metrics["num_residue_violations"] = len(violation_idx)
@@ -393,7 +419,9 @@ def _run_one_iteration(
     while not minimized and attempts < max_attempts:
         attempts += 1
         try:
-            logging.info("Minimizing protein, attempt %d of %d.", attempts, max_attempts)
+            logging.info(
+                "Minimizing protein, attempt %d of %d.", attempts, max_attempts
+            )
             ret = _openmm_minimize(
                 pdb_string,
                 max_iterations=max_iterations,
@@ -481,10 +509,12 @@ def run_pipeline(
         else:
             pdb_string = ret["min_pdb"]
         ret.update(get_violation_metrics(prot))
-        ret.update({
-            "num_exclusions": len(exclude_residues),
-            "iteration": iteration,
-        })
+        ret.update(
+            {
+                "num_exclusions": len(exclude_residues),
+                "iteration": iteration,
+            }
+        )
         violations = ret["violations_per_residue"]
         exclude_residues = exclude_residues.union(ret["residue_violations"])
 
@@ -528,10 +558,14 @@ def get_initial_energies(
 
     openmm_pdbs = [openmm_app.PDBFile(PdbStructure(io.StringIO(p))) for p in pdb_strs]
     force_field = openmm_app.ForceField("amber99sb.xml")
-    system = force_field.createSystem(openmm_pdbs[0].topology, constraints=openmm_app.HBonds)
+    system = force_field.createSystem(
+        openmm_pdbs[0].topology, constraints=openmm_app.HBonds
+    )
     stiffness = stiffness * ENERGY / (LENGTH**2)
     if stiffness > 0 * ENERGY / (LENGTH**2):
-        _add_restraints(system, openmm_pdbs[0], stiffness, restraint_set, exclude_residues)
+        _add_restraints(
+            system, openmm_pdbs[0], stiffness, restraint_set, exclude_residues
+        )
     simulation = openmm_app.Simulation(
         openmm_pdbs[0].topology,
         system,

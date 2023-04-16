@@ -1,5 +1,5 @@
-import math
 import logging
+import math
 
 import torch
 from einops import rearrange
@@ -15,7 +15,7 @@ if _triton_available:
 
 
 def _torch_attention_core(q, k, v, mask, bias):
-    scaling = 1. / math.sqrt(q.size(-1))
+    scaling = 1.0 / math.sqrt(q.size(-1))
     q = q * scaling
 
     logits = torch.matmul(q, k.transpose(-1, -2))
@@ -26,16 +26,14 @@ def _torch_attention_core(q, k, v, mask, bias):
 
     weighted_avg = torch.matmul(weights, v)
 
-    weighted_avg = rearrange(weighted_avg, 'b1 b2 h n d -> b1 b2 n (h d)')
+    weighted_avg = rearrange(weighted_avg, "b1 b2 h n d -> b1 b2 n (h d)")
 
     return weighted_avg
 
 
 class FusedAttenionCoreFunc(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx, q, k, v, mask=None, bias=None):
-
         if _triton_available:
             o = attention_core_triton_kernel_wrapper(q, k, v, mask, bias)
         else:

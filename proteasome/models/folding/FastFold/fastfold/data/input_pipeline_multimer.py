@@ -16,11 +16,7 @@
 from functools import partial
 
 import torch
-
-from fastfold.data import (
-    data_transforms,
-    data_transforms_multimer,
-)
+from fastfold.data import data_transforms, data_transforms_multimer
 
 
 def nonensembled_transform_fns(common_cfg, mode_cfg):
@@ -32,10 +28,12 @@ def nonensembled_transform_fns(common_cfg, mode_cfg):
         data_transforms.make_atom14_masks,
     ]
 
-    if(common_cfg.use_templates):
-        transforms.extend([
-            data_transforms.make_pseudo_beta("template_"),
-        ])
+    if common_cfg.use_templates:
+        transforms.extend(
+            [
+                data_transforms.make_pseudo_beta("template_"),
+            ]
+        )
 
     return transforms
 
@@ -49,12 +47,12 @@ def ensembled_transform_fns(common_cfg, mode_cfg, ensemble_seed):
     max_extra_msa = common_cfg.max_extra_msa
 
     msa_seed = None
-    if(not common_cfg.resample_msa_in_recycling):
+    if not common_cfg.resample_msa_in_recycling:
         msa_seed = ensemble_seed
-    
+
     transforms.append(
         data_transforms_multimer.sample_msa(
-            max_msa_clusters, 
+            max_msa_clusters,
             max_extra_msa,
             seed=msa_seed,
         )
@@ -66,7 +64,7 @@ def ensembled_transform_fns(common_cfg, mode_cfg, ensemble_seed):
         # the masked locations and secret corrupted locations.
         transforms.append(
             data_transforms_multimer.make_masked_msa(
-                common_cfg.masked_msa, 
+                common_cfg.masked_msa,
                 mode_cfg.masked_msa_replace_fraction,
                 seed=(msa_seed + 1) if msa_seed else None,
             )
@@ -87,8 +85,8 @@ def process_tensors_from_config(tensors, common_cfg, mode_cfg):
         """Function to be mapped over the ensemble dimension."""
         d = data.copy()
         fns = ensembled_transform_fns(
-            common_cfg, 
-            mode_cfg, 
+            common_cfg,
+            mode_cfg,
             ensemble_seed,
         )
         fn = compose(fns)
@@ -96,7 +94,7 @@ def process_tensors_from_config(tensors, common_cfg, mode_cfg):
         return fn(d)
 
     no_templates = True
-    if("template_aatype" in tensors):
+    if "template_aatype" in tensors:
         no_templates = tensors["template_aatype"].shape[0] == 0
 
     nonensembled = nonensembled_transform_fns(
@@ -106,7 +104,7 @@ def process_tensors_from_config(tensors, common_cfg, mode_cfg):
 
     tensors = compose(nonensembled)(tensors)
 
-    if("no_recycling_iters" in tensors):
+    if "no_recycling_iters" in tensors:
         num_recycling = int(tensors["no_recycling_iters"])
     else:
         num_recycling = common_cfg.max_recycling_iters

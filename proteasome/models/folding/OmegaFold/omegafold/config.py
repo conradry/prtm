@@ -105,7 +105,7 @@ def make_config(model_idx: int = 1) -> argparse.Namespace:
             num_residual_block=2,
             hidden_dim=128,
             num_bins=50,
-        )
+        ),
     )
     cfg["struct_embedder"] = model_idx == 2
     return _make_config(cfg)
@@ -117,5 +117,5 @@ def make_config(model_idx: int = 1) -> argparse.Namespace:
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

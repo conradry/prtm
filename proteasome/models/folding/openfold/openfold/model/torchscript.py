@@ -16,62 +16,46 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-
-from openfold.model.dropout import (
-    DropoutRowwise,
-    DropoutColumnwise,
-)
-from openfold.model.evoformer import (
-    EvoformerBlock,
-    EvoformerStack,
-)
+from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
+from openfold.model.evoformer import EvoformerBlock, EvoformerStack
+from openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
+                                MSARowAttentionWithPairBias)
 from openfold.model.outer_product_mean import OuterProductMean
-from openfold.model.msa import (
-    MSARowAttentionWithPairBias, 
-    MSAColumnAttention,
-    MSAColumnGlobalAttention,
-)
 from openfold.model.pair_transition import PairTransition
 from openfold.model.primitives import Attention, GlobalAttention
-from openfold.model.structure_module import (
-    InvariantPointAttention,
-    BackboneUpdate,
-)
+from openfold.model.structure_module import (BackboneUpdate,
+                                             InvariantPointAttention)
 from openfold.model.template import TemplatePairStackBlock
-from openfold.model.triangular_attention import (
-    TriangleAttentionStartingNode,
-    TriangleAttentionEndingNode,
-)
+from openfold.model.triangular_attention import (TriangleAttentionEndingNode,
+                                                 TriangleAttentionStartingNode)
 from openfold.model.triangular_multiplicative_update import (
-    TriangleMultiplicationOutgoing,
-    TriangleMultiplicationIncoming,
-)
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 
 
 def script_preset_(model: torch.nn.Module):
     """
-    TorchScript a handful of low-level but frequently used submodule types 
+    TorchScript a handful of low-level but frequently used submodule types
     that are known to be scriptable.
 
     Args:
-        model: 
-            A torch.nn.Module. It should contain at least some modules from 
+        model:
+            A torch.nn.Module. It should contain at least some modules from
             this repository, or this function won't do anything.
     """
     script_submodules_(
-        model, 
+        model,
         [
             nn.Dropout,
             Attention,
             GlobalAttention,
             EvoformerBlock,
-            #TemplatePairStackBlock,
-        ], 
+            # TemplatePairStackBlock,
+        ],
         attempt_trace=False,
         batch_dims=None,
-    ) 
+    )
 
-    
+
 def _get_module_device(module: torch.nn.Module) -> torch.device:
     """
     Fetches the device of a module, assuming that all of the module's
@@ -86,7 +70,7 @@ def _get_module_device(module: torch.nn.Module) -> torch.device:
 
 
 def _trace_module(module, batch_dims=None):
-    if(batch_dims is None):
+    if batch_dims is None:
         batch_dims = ()
 
     # Stand-in values
@@ -107,41 +91,30 @@ def _trace_module(module, batch_dims=None):
             device=device,
         )
 
-    if(isinstance(module, MSARowAttentionWithPairBias)):
+    if isinstance(module, MSARowAttentionWithPairBias):
         inputs = {
             "forward": (
-                msa(module.c_in), # m
-                pair(module.c_z), # z
-                torch.randint(
-                    0, 2, 
-                    (*batch_dims, n_seq, n_res)
-                ), # mask
+                msa(module.c_in),  # m
+                pair(module.c_z),  # z
+                torch.randint(0, 2, (*batch_dims, n_seq, n_res)),  # mask
             ),
         }
-    elif(isinstance(module, MSAColumnAttention)):
+    elif isinstance(module, MSAColumnAttention):
         inputs = {
             "forward": (
-                msa(module.c_in), # m
-                torch.randint(
-                    0, 2, 
-                    (*batch_dims, n_seq, n_res)
-                ), # mask
+                msa(module.c_in),  # m
+                torch.randint(0, 2, (*batch_dims, n_seq, n_res)),  # mask
             ),
         }
-    elif(isinstance(module, OuterProductMean)):
+    elif isinstance(module, OuterProductMean):
         inputs = {
             "forward": (
                 msa(module.c_m),
-                torch.randint(
-                    0, 2,
-                    (*batch_dims, n_seq, n_res)
-                )
+                torch.randint(0, 2, (*batch_dims, n_seq, n_res)),
             )
         }
     else:
-        raise TypeError(
-            f"tracing is not supported for modules of type {type(module)}"
-        )
+        raise TypeError(f"tracing is not supported for modules of type {type(module)}")
 
     return torch.jit.trace_module(module, inputs)
 
@@ -153,17 +126,17 @@ def _script_submodules_helper_(
     to_trace,
 ):
     for name, child in model.named_children():
-        if(types is None or any(isinstance(child, t) for t in types)):
+        if types is None or any(isinstance(child, t) for t in types):
             try:
                 scripted = torch.jit.script(child)
                 setattr(model, name, scripted)
                 continue
             except (RuntimeError, torch.jit.frontend.NotSupportedError) as e:
-                if(attempt_trace):
+                if attempt_trace:
                     to_trace.add(type(child))
                 else:
                     raise e
-        
+
         _script_submodules_helper_(child, types, attempt_trace, to_trace)
 
 
@@ -173,7 +146,7 @@ def _trace_submodules_(
     batch_dims=None,
 ):
     for name, child in model.named_children():
-        if(any(isinstance(child, t) for t in types)):
+        if any(isinstance(child, t) for t in types):
             traced = _trace_module(child, batch_dims=batch_dims)
             setattr(model, name, traced)
         else:
@@ -187,29 +160,29 @@ def script_submodules_(
     batch_dims: Optional[Tuple[int]] = None,
 ):
     """
-    Convert all submodules whose types match one of those in the input 
+    Convert all submodules whose types match one of those in the input
     list to recursively scripted equivalents in place. To script the entire
     model, just call torch.jit.script on it directly.
 
     When types is None, all submodules are scripted.
 
     Args:
-        model: 
+        model:
             A torch.nn.Module
-        types: 
+        types:
             A list of types of submodules to script
-        attempt_trace: 
-            Whether to attempt to trace specified modules if scripting 
-            fails. Recall that tracing eliminates all conditional 
-            logic---with great tracing comes the mild responsibility of 
-            having to remember to ensure that the modules in question 
+        attempt_trace:
+            Whether to attempt to trace specified modules if scripting
+            fails. Recall that tracing eliminates all conditional
+            logic---with great tracing comes the mild responsibility of
+            having to remember to ensure that the modules in question
             perform the same computations no matter what.
     """
     to_trace = set()
 
     # Aggressively script as much as possible first...
     _script_submodules_helper_(model, types, attempt_trace, to_trace)
-  
+
     # ... and then trace stragglers.
-    if(attempt_trace and len(to_trace) > 0):
+    if attempt_trace and len(to_trace) > 0:
         _trace_submodules_(model, to_trace, batch_dims=batch_dims)

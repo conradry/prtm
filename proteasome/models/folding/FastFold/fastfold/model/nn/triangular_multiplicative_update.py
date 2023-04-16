@@ -18,8 +18,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
-from fastfold.model.nn.primitives import Linear, LayerNorm
+from fastfold.model.nn.primitives import LayerNorm, Linear
 from fastfold.utils.tensor_utils import permute_final_dims
 
 _FUSED_TRIANGLE_MULTIPLICATION = False
@@ -29,14 +28,17 @@ def set_fused_triangle_multiplication():
     global _FUSED_TRIANGLE_MULTIPLICATION
     _FUSED_TRIANGLE_MULTIPLICATION = True
 
+
 def is_fused_triangle_multiplication():
     global _FUSED_TRIANGLE_MULTIPLICATION
     return _FUSED_TRIANGLE_MULTIPLICATION
+
 
 class TriangleMultiplicativeUpdate(nn.Module):
     """
     Implements Algorithms 11 and 12.
     """
+
     def __init__(self, c_z, c_hidden, _outgoing=True):
         """
         Args:
@@ -67,15 +69,15 @@ class TriangleMultiplicativeUpdate(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def _combine_projections(self,
+    def _combine_projections(
+        self,
         a: torch.Tensor,
         b: torch.Tensor,
     ) -> torch.Tensor:
         raise NotImplementedError("This method needs to be overridden")
 
-    def forward(self, 
-        z: torch.Tensor, 
-        mask: Optional[torch.Tensor] = None
+    def forward(
+        self, z: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
         Args:
@@ -106,7 +108,7 @@ class TriangleMultiplicativeUpdate(nn.Module):
         x = self._combine_projections(a, b)
         x = self.layer_norm_out(x)
         x = self.linear_z(x)
-        
+
         if _FUSED_TRIANGLE_MULTIPLICATION:
             g = self.sigmoid(self.linear_gate(z))
         else:
@@ -120,7 +122,9 @@ class TriangleMultiplicationOutgoing(TriangleMultiplicativeUpdate):
     """
     Implements Algorithm 11.
     """
-    def _combine_projections(self,
+
+    def _combine_projections(
+        self,
         a: torch.Tensor,  # [*, N_i, N_k, C]
         b: torch.Tensor,  # [*, N_j, N_k, C]
     ):
@@ -138,7 +142,9 @@ class TriangleMultiplicationIncoming(TriangleMultiplicativeUpdate):
     """
     Implements Algorithm 12.
     """
-    def _combine_projections(self,
+
+    def _combine_projections(
+        self,
         a: torch.Tensor,  # [*, N_k, N_i, C]
         b: torch.Tensor,  # [*, N_k, N_j, C]
     ):
@@ -150,4 +156,3 @@ class TriangleMultiplicationIncoming(TriangleMultiplicativeUpdate):
 
         # [*, N_i, N_j, C]
         return permute_final_dims(p, (1, 2, 0))
-

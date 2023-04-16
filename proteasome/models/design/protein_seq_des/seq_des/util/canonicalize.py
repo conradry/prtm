@@ -1,14 +1,16 @@
-import numpy as np
 import copy
 import glob
 import pickle
 
+import numpy as np
 
-gly_CB_mu = np.array([-0.5311191 , -0.75842446,  1.2198311 ]) #pickle.load(open("pkl/CB_mu.pkl", "rb"))
+gly_CB_mu = np.array(
+    [-0.5311191, -0.75842446, 1.2198311]
+)  # pickle.load(open("pkl/CB_mu.pkl", "rb"))
 
 
 def get_len(v):
-    return np.sqrt(np.sum(v ** 2, -1))
+    return np.sqrt(np.sum(v**2, -1))
 
 
 def get_unit_normal(ab, bc):
@@ -31,7 +33,11 @@ def bdot(a, b):
 def return_align_f(axis, theta):
     c_theta = np.cos(theta)[..., None]
     s_theta = np.sin(theta)[..., None]
-    f_rot = lambda v: c_theta * v + s_theta * np.cross(axis, v, axis=-1) + (1 - c_theta) * bdot(axis, v.transpose(0, 2, 1)) * axis
+    f_rot = (
+        lambda v: c_theta * v
+        + s_theta * np.cross(axis, v, axis=-1)
+        + (1 - c_theta) * bdot(axis, v.transpose(0, 2, 1)) * axis
+    )
     return f_rot
 
 
@@ -43,7 +49,11 @@ def return_batch_align_f(axis, theta, n):
     c_theta = np.repeat(c_theta, n, axis=1)[:, :, None, None]
     s_theta = np.repeat(s_theta, n, axis=1)[:, :, None, None]
 
-    f_rot = lambda v: c_theta * v + s_theta * np.cross(axis, v, axis=-1) + (1 - c_theta) * bdot(axis, v.transpose(0, 1, 3, 2)) * axis
+    f_rot = (
+        lambda v: c_theta * v
+        + s_theta * np.cross(axis, v, axis=-1)
+        + (1 - c_theta) * bdot(axis, v.transpose(0, 1, 3, 2)) * axis
+    )
     return f_rot
 
 
@@ -65,14 +75,21 @@ def get_batch_N_CA_align(v, r, n):
     return return_align_f(axis, theta), return_batch_align_f(axis, theta, n=n)
 
 
-def batch_canonicalize_coords(atom_coords, atom_data, residue_bb_index_list, res_idx=None, num_return=400, bb_only=0):
+def batch_canonicalize_coords(
+    atom_coords,
+    atom_data,
+    residue_bb_index_list,
+    res_idx=None,
+    num_return=400,
+    bb_only=0,
+):
     """Function to get batch canonicalize atoms about all residues in a structure and mask out residue of interest.
-    
+
     Args:
-        atom_coords (np.array): num_atoms x 3 coordinates of all retained atoms in structure 
-        atom_data (np.array): num_atoms x 4 data for atoms  -- [residue idx, BB ind, atom type, res type] 
+        atom_coords (np.array): num_atoms x 3 coordinates of all retained atoms in structure
+        atom_data (np.array): num_atoms x 4 data for atoms  -- [residue idx, BB ind, atom type, res type]
         residue_bb_index_list (np.array): num_res x 4 mapping from residue idx to atom indices for backbone atoms (N, CA, C, CB) used for canonicalization
-        res_idx (np.array): num_output_res x 1 -- residue indices for subsampling residues ahead of canonicalization   
+        res_idx (np.array): num_output_res x 1 -- residue indices for subsampling residues ahead of canonicalization
         num_return (int): number of atoms to preserve about residue in environment
     Returns:
         x_coords (np.array): num_output_res x num_return x 1 x 3 -- canonicalized coordinates about each residue with center residue masked
@@ -90,11 +107,21 @@ def batch_canonicalize_coords(atom_coords, atom_data, residue_bb_index_list, res
 
     num_return = min(num_return, n_atoms - 15)
 
-    idx_N, idx_CA, idx_C, idx_CB = residue_bb_index_list[:, 0], residue_bb_index_list[:, 1], residue_bb_index_list[:, 2], residue_bb_index_list[:, 3]
+    idx_N, idx_CA, idx_C, idx_CB = (
+        residue_bb_index_list[:, 0],
+        residue_bb_index_list[:, 1],
+        residue_bb_index_list[:, 2],
+        residue_bb_index_list[:, 3],
+    )
     x = atom_coords.copy()
 
     center = x[idx_CA].copy()
-    x_idxN, x_idxC, x_idxCA, x_idxCB = x[idx_N] - center, x[idx_C] - center, x[idx_CA] - center, x[idx_CB] - center
+    x_idxN, x_idxC, x_idxCA, x_idxCB = (
+        x[idx_N] - center,
+        x[idx_C] - center,
+        x[idx_CA] - center,
+        x[idx_CB] - center,
+    )
     x_data = atom_data.copy()
 
     x = np.repeat(x[None], n_res, axis=0)
@@ -135,7 +162,7 @@ def batch_canonicalize_coords(atom_coords, atom_data, residue_bb_index_list, res
     x_data = x_data.reshape(bs, n_atoms, x_data_dim)[:, :, None]
 
     # select num_return nearest atoms to env center
-    d_x_out = np.sqrt(np.sum(x ** 2, -1))
+    d_x_out = np.sqrt(np.sum(x**2, -1))
     idx = np.argpartition(d_x_out, kth=num_return, axis=1)
     idx = idx[:, :num_return]
 
@@ -147,12 +174,22 @@ def batch_canonicalize_coords(atom_coords, atom_data, residue_bb_index_list, res
     # align N-CA along x axis
     f_R, f_bR = get_batch_N_CA_align(x_idxN - x_idxCA, r=n_res, n=n)  # um_return)
     x = f_bR(x)
-    x_idxN, x_idxC, x_idxCA, x_idxCB = f_R(x_idxN), f_R(x_idxC), f_R(x_idxCA), f_R(x_idxCB)
+    x_idxN, x_idxC, x_idxCA, x_idxCB = (
+        f_R(x_idxN),
+        f_R(x_idxC),
+        f_R(x_idxCA),
+        f_R(x_idxCB),
+    )
 
     # rotate so that normal of N-CA-C plane aligns to positive z_hat
     normal = get_unit_normal(x_idxN, x_idxC)
     f_R, f_bR = get_batch_N_CA_C_align(normal, r=n_res, n=n)  # um_return)
-    x_idxN, x_idxC, x_idxCA, x_idxCB = f_R(x_idxN), f_R(x_idxC), f_R(x_idxCA), f_R(x_idxCB)
+    x_idxN, x_idxC, x_idxCA, x_idxCB = (
+        f_R(x_idxN),
+        f_R(x_idxC),
+        f_R(x_idxCA),
+        f_R(x_idxCB),
+    )
     x = f_bR(x)
 
     # recenter at CB

@@ -14,32 +14,25 @@
 # limitations under the License.
 
 import math
-import torch
-import torch.nn as nn
 from typing import Any, Dict, Optional, Tuple, Union
 
-from fastfold.model.nn.primitives import Linear, LayerNorm, ipa_point_weights_init_
+import fastfold.habana as habana
+import torch
+import torch.nn as nn
 from fastfold.common.residue_constants import (
-    restype_rigid_group_default_frame,
-    restype_atom14_to_rigid_group,
-    restype_atom14_mask,
-    restype_atom14_rigid_group_positions,
-)
+    restype_atom14_mask, restype_atom14_rigid_group_positions,
+    restype_atom14_to_rigid_group, restype_rigid_group_default_frame)
+from fastfold.model.nn.primitives import (LayerNorm, Linear,
+                                          ipa_point_weights_init_)
+from fastfold.utils.feats import (
+    frames_and_literature_positions_to_atom14_pos, torsion_angles_to_frames)
 from fastfold.utils.geometry.quat_rigid import QuatRigid
 from fastfold.utils.geometry.rigid_matrix_vector import Rigid3Array
 from fastfold.utils.geometry.vector import Vec3Array
-from fastfold.utils.feats import (
-    frames_and_literature_positions_to_atom14_pos,
-    torsion_angles_to_frames,
-)
-from fastfold.utils.rigid_utils import Rotation, Rigid
-from fastfold.utils.tensor_utils import (
-    dict_multimap,
-    permute_final_dims,
-    flatten_final_dims,
-)
+from fastfold.utils.rigid_utils import Rigid, Rotation
+from fastfold.utils.tensor_utils import (dict_multimap, flatten_final_dims,
+                                         permute_final_dims)
 
-import fastfold.habana as habana
 
 class AngleResnetBlock(nn.Module):
     def __init__(self, c_hidden):
@@ -58,7 +51,6 @@ class AngleResnetBlock(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, a: torch.Tensor) -> torch.Tensor:
-
         s_initial = a
 
         a = self.relu(a)
@@ -76,7 +68,7 @@ class AngleResnet(nn.Module):
 
     def __init__(
         self, c_in: int, c_hidden: int, no_blocks: int, no_angles: int, epsilon: float
-    ):        
+    ):
         """
         Args:
             c_in:
@@ -406,7 +398,7 @@ class InvariantPointAttention(nn.Module):
             k_shape = k_pts_t0.shape
             k_pts_t0 = k_pts_t0.reshape([k_shape[0], k_shape[1], -1])
             q_k = q_pts_t0 - k_pts_t0
-            q_k = q_k ** 2
+            q_k = q_k**2
             q_k_shape = q_k.shape
             pt_att = q_k.reshape(q_k_shape[:2] + q_shape[-3:])
             #####################################
@@ -423,7 +415,7 @@ class InvariantPointAttention(nn.Module):
         pt_att_t0 = pt_att.permute(0, 3, 1, 2)
         head_weights_t0 = head_weights.permute(0, 3, 1, 2)
         pt_att_o = pt_att_t0 * head_weights_t0
-        pt_att = pt_att_o.permute(0, 2,3, 1)
+        pt_att = pt_att_o.permute(0, 2, 3, 1)
         ##############################
 
         # [*, N_res, N_res, H]
@@ -528,12 +520,12 @@ class BackboneUpdate(nn.Module):
         Args:
             [*, N_res, C_s] single representation
         Returns:
-            [*, N_res, 6] update vector 
+            [*, N_res, 6] update vector
         """
         # [*, 6]
         update = self.linear(s)
 
-        return update 
+        return update
 
 
 class StructureModuleTransitionLayer(nn.Module):
@@ -744,9 +736,9 @@ class StructureModule(nn.Module):
 
         # [*, N]
         rigids = Rigid.identity(
-            s.shape[:-1], 
-            s.dtype, 
-            s.device, 
+            s.shape[:-1],
+            s.dtype,
+            s.device,
             self.training,
             fmt="quat",
         )
@@ -765,16 +757,11 @@ class StructureModule(nn.Module):
             # quaternion-based transformations to rotation-matrix ones
             # here
             backb_to_global = Rigid(
-                Rotation(
-                    rot_mats=rigids.get_rots().get_rot_mats(), 
-                    quats=None
-                ),
+                Rotation(rot_mats=rigids.get_rots().get_rot_mats(), quats=None),
                 rigids.get_trans(),
             )
 
-            backb_to_global = backb_to_global.scale_translation(
-                self.trans_scale_factor
-            )
+            backb_to_global = backb_to_global.scale_translation(self.trans_scale_factor)
 
             # [*, N, 7, 2]
             unnormalized_angles, angles = self.angle_resnet(s, s_initial)
@@ -791,7 +778,7 @@ class StructureModule(nn.Module):
             )
 
             scaled_rigids = rigids.scale_translation(self.trans_scale_factor)
-            
+
             preds = {
                 "frames": scaled_rigids.to_tensor_7(),
                 "sidechain_frames": all_frames_to_global.to_tensor_4x4(),
@@ -807,6 +794,7 @@ class StructureModule(nn.Module):
 
             if habana.is_habana():
                 import habana_frameworks.torch.core as htcore
+
                 htcore.mark_step()
 
         outputs = dict_multimap(torch.stack, outputs)

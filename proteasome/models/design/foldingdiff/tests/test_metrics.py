@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from foldingdiff import custom_metrics as cm
 
 

@@ -5,8 +5,9 @@
 
 import os
 import subprocess
-import pytest
 from pathlib import Path
+
+import pytest
 
 notebook_dir = Path(__file__).parents[1] / "examples"
 notebook_fns = notebook_dir.glob("*.ipynb")
@@ -39,7 +40,7 @@ def run_multiple(cmds):
 
 
 def do_setup(nb_name):
-    """ Do any setup work; see intro of the notebook """
+    """Do any setup work; see intro of the notebook"""
     if nb_name == "sup_variant_prediction":
         cmds = """
         curl -O https://dl.fbaipublicfiles.com/fair-esm/examples/P62593_reprs.tar.gz
@@ -53,7 +54,7 @@ def do_setup(nb_name):
 
 @pytest.mark.parametrize("nb_fn", list(notebook_fns))
 def test_run_notebook(nb_fn: Path, tmp_path: Path):
-    """ Simply make sure the notebooks run from a-z """
+    """Simply make sure the notebooks run from a-z"""
     py_fn = tmp_path / (nb_fn.stem + ".py")
     print(py_fn)
     convert_notebook_to_py(nb_fn, py_fn)

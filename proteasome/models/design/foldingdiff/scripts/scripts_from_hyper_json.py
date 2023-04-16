@@ -3,11 +3,12 @@ Code to read in a json describing hyperparam sweep and create
 scripts to execute each combination
 """
 
-import os, sys
-import logging
 import argparse
 import itertools
 import json
+import logging
+import os
+import sys
 from typing import *
 
 logging.basicConfig(level=logging.INFO)
@@ -77,7 +78,11 @@ def build_parser():
         help="Directory to write shell files",
     )
     parser.add_argument(
-        "-t", "--template", type=str, default="", help="template to append to",
+        "-t",
+        "--template",
+        type=str,
+        default="",
+        help="template to append to",
     )
     return parser
 

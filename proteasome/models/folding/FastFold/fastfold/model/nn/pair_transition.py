@@ -16,8 +16,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
-from fastfold.model.nn.primitives import Linear, LayerNorm
+from fastfold.model.nn.primitives import LayerNorm, Linear
 from fastfold.utils.tensor_utils import chunk_layer
 
 
@@ -56,7 +55,8 @@ class PairTransition(nn.Module):
         return z
 
     @torch.jit.ignore
-    def _chunk(self,
+    def _chunk(
+        self,
         z: torch.Tensor,
         mask: torch.Tensor,
         chunk_size: int,
@@ -68,9 +68,9 @@ class PairTransition(nn.Module):
             no_batch_dims=len(z.shape[:-2]),
         )
 
-
-    def forward(self, 
-        z: torch.Tensor, 
+    def forward(
+        self,
+        z: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
         chunk_size: Optional[int] = None,
     ) -> torch.Tensor:

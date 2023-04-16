@@ -80,9 +80,10 @@ _rcParams_style = None
 # Functions
 # --------------------------------------------------------------------------------
 
-from matplotlib import rcParams, cm, colors, cbook
-from cycler import cycler
 import warnings
+
+from cycler import cycler
+from matplotlib import cbook, cm, colors, rcParams
 
 warnings.filterwarnings("ignore", category=cbook.mplDeprecation)
 

@@ -1,11 +1,12 @@
-from .. import settings
+import numpy as np
+from scipy.sparse import csr_matrix, issparse, linalg
+
 from .. import logging as logg
+from .. import settings
 from ..preprocessing.neighbors import get_connectivities, verify_neighbors
 from .transition_matrix import transition_matrix
-from .utils import scale, groups_to_bool, strings_to_categoricals, get_plasticity_score
-
-from scipy.sparse import linalg, csr_matrix, issparse
-import numpy as np
+from .utils import (get_plasticity_score, groups_to_bool, scale,
+                    strings_to_categoricals)
 
 
 def eigs(T, k=10, eps=1e-3, perc=None, random_state=None, v0=None):
@@ -128,11 +129,13 @@ def terminal_states(
         _adata = adata if groups is None else adata[node_subset]
         connectivities = get_connectivities(_adata, "distances")
 
-        T_velo = data.uns[f'{vkey}_graph'] + data.uns[f'{vkey}_graph_neg']
+        T_velo = data.uns[f"{vkey}_graph"] + data.uns[f"{vkey}_graph_neg"]
         T_velo = np.expm1(T_velo * exp_scale)
         T_velo.data += 1
         T_velo = T_velo.T
-        eigvecs_roots = eigs(T_velo, eps=eps, perc=[2, 98], random_state=random_state)[1]
+        eigvecs_roots = eigs(T_velo, eps=eps, perc=[2, 98], random_state=random_state)[
+            1
+        ]
         roots_velo = csr_matrix.dot(connectivities, eigvecs_roots).sum(1)
 
         T = transition_matrix(_adata, vkey=vkey, backward=True, **kwargs)

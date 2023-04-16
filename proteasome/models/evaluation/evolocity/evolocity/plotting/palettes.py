@@ -84,9 +84,9 @@ from typing import Mapping, Sequence
 
 
 def _plot_color_cylce(clists: Mapping[str, Sequence[str]]):
-    import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap, BoundaryNorm
+    import numpy as np
+    from matplotlib.colors import BoundaryNorm, ListedColormap
 
     fig, axes = plt.subplots(nrows=len(clists))  # type: plt.Figure, plt.Axes
     fig.subplots_adjust(top=0.95, bottom=0.01, left=0.3, right=0.99)

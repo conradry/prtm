@@ -1,27 +1,26 @@
-from .. import settings
+import os
+from collections import abc
+
+import matplotlib.pyplot as pl
+import matplotlib.transforms as tx
+import numpy as np
+import pandas as pd
+from cycler import Cycler, cycler
+from matplotlib import patheffects, rcParams
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, cnames, is_color_like, to_rgb
+from matplotlib.gridspec import SubplotSpec
+from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from pandas import Index, unique
+from scipy.sparse import issparse
+from scipy.stats import pearsonr
+
 from .. import logging as logg
+from .. import settings
 from ..preprocessing.neighbors import get_connectivities
 from ..tools.utils import strings_to_categoricals
 from . import palettes
-
-import os
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as pl
-from matplotlib.ticker import MaxNLocator
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from matplotlib.colors import is_color_like, ListedColormap, to_rgb, cnames
-from matplotlib.collections import LineCollection
-from matplotlib.gridspec import SubplotSpec
-from matplotlib import patheffects
-import matplotlib.transforms as tx
-from matplotlib import rcParams
-from pandas import unique, Index
-from scipy.sparse import issparse
-from scipy.stats import pearsonr
-from cycler import Cycler, cycler
-from collections import abc
-
 
 """helper functions"""
 
@@ -369,6 +368,7 @@ def default_xkey(adata, use_raw):
 def default_ykey(adata, use_raw):
     return None
 
+
 def default_arrow(size):
     if isinstance(size, (list, tuple)) and len(size) == 3:
         head_l, head_w, ax_l = size
@@ -457,7 +457,8 @@ def set_artist_frame(ax, length=0.2, figsize=None):
     ax.xaxis.label.set_size(ax.xaxis.label.get_size() / 1.2)
     ax.yaxis.label.set_size(ax.yaxis.label.get_size() / 1.2)
 
-    from mpl_toolkits.axes_grid1.anchored_artists import AnchoredDirectionArrows
+    from mpl_toolkits.axes_grid1.anchored_artists import \
+        AnchoredDirectionArrows
 
     kwargs = dict(loc=3, pad=-1, back_length=0, fontsize=0, aspect_ratio=aspect_ratio)
     kwargs.update({"text_props": {"ec": "k", "fc": "k", "lw": 0.1}})
@@ -634,9 +635,7 @@ def interpret_colorkey(adata, c=None, layer=None, perc=None, use_raw=None):
             use_raw and adata.raw is not None and c in adata.raw.var_names
         ):  # by gene
             if layer in adata.layers.keys():
-                if perc is None and any(
-                    l in layer for l in [ "velocity" ]
-                ):
+                if perc is None and any(l in layer for l in ["velocity"]):
                     perc = [1, 99]  # to ignore outliers in non-logarithmized layers
                 c = adata.obs_vector(c, layer=layer)
             elif layer is not None and np.any(
@@ -698,8 +697,9 @@ def set_colors_for_categorical_obs(adata, value_to_plot, palette=None):
         a sequence of colors (in a format that can be understood by matplotlib,
         eg. RGB, RGBS, hex, or a cycler object with key='color'
     """
-    from .palettes import additional_colors
     from matplotlib.colors import to_hex
+
+    from .palettes import additional_colors
 
     color_key = f"{value_to_plot}_colors"
     valid = True
@@ -979,7 +979,7 @@ def plot_linfit(
         mu_x, mu_y = (0, 0)
     else:
         mu_x, mu_y = np.mean(x), np.mean(y)
-    slope = (np.mean(x * y) - mu_x * mu_y) / (np.mean(x ** 2) - mu_x ** 2)
+    slope = (np.mean(x * y) - mu_x * mu_y) / (np.mean(x**2) - mu_x**2)
     offset = mu_y - slope * mu_x
 
     if isinstance(add_linfit, str) and "intercept" in add_linfit:
@@ -1392,7 +1392,7 @@ def hist(
     if xscale == "log":
         if xticks is None:
             lspace = np.linspace(-10, 10, 21)
-            ticks = [a for a in [10 ** a for a in lspace] if bmin < a < bmax]
+            ticks = [a for a in [10**a for a in lspace] if bmin < a < bmax]
             ax.set_xticks(ticks)
         ax.xaxis.set_major_formatter(log_fmt)
         ax.minorticks_off()

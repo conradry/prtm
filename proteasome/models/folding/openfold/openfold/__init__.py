@@ -1,6 +1,3 @@
-from . import model
-from . import utils
-from . import np
-from . import resources
+from . import model, np, resources, utils
 
 __all__ = ["model", "utils", "np", "data", "resources"]

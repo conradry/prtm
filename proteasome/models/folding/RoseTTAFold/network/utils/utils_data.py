@@ -20,8 +20,10 @@ class PickleGraph:
             self.dst = []
         else:
             if G.batch_size > 1:
-                warnings.warn("Copying a batched graph to a PickleGraph is not supported. "
-                              "All node and edge data will be copied, but batching information will be lost.")
+                warnings.warn(
+                    "Copying a batched graph to a PickleGraph is not supported. "
+                    "All node and edge data will be copied, but batching information will be lost."
+                )
 
             self.src, self.dst = (to_np(idx) for idx in G.all_edges())
 
@@ -56,7 +58,9 @@ def copy_dgl_graph(G):
         return dgl.batch(list_of_copies)
 
 
-def update_relative_positions(G, *, relative_position_key='d', absolute_position_key='x'):
+def update_relative_positions(
+    G, *, relative_position_key="d", absolute_position_key="x"
+):
     """For each directed edge in the graph, calculate the relative position of the destination node with respect
     to the source node. Write the relative positions to the graph as edge data."""
     src, dst = G.all_edges()

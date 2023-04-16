@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import torch
-
 from esm.esmfold.v1.esmfold import ESMFold
 
 
@@ -11,7 +10,9 @@ def _load_model(model_name):
         model_data = torch.load(str(model_path), map_location="cpu")
     else:  # load from hub
         url = f"https://dl.fbaipublicfiles.com/fair-esm/models/{model_name}.pt"
-        model_data = torch.hub.load_state_dict_from_url(url, progress=False, map_location="cpu")
+        model_data = torch.hub.load_state_dict_from_url(
+            url, progress=False, map_location="cpu"
+        )
 
     cfg = model_data["cfg"]["model"]
     model_state = model_data["model"]

@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import torch
-
 from foldingdiff import losses
 
 
@@ -11,7 +10,9 @@ class TestRadianSmoothL1Loss(unittest.TestCase):
         """
         Easy test of basic wrapping functionality
         """
-        l = losses.radian_smooth_l1_loss(torch.tensor(0.1), torch.tensor(2 * torch.pi), beta=1.0)
+        l = losses.radian_smooth_l1_loss(
+            torch.tensor(0.1), torch.tensor(2 * torch.pi), beta=1.0
+        )
         self.assertAlmostEqual(0.0050, l.item())
 
     def test_rounding(self):
@@ -191,12 +192,12 @@ class TestPairwiseDistLoss(unittest.TestCase):
             target_mutated[i, idx] = self.input[i, idx]
         l_new = losses.pairwise_dist_loss(self.input, target_mutated, self.lengths)
         self.assertLess(l_new.item(), l_ref.item())
-    
+
     def test_zero_on_identical(self):
         """Test that pairwise loss is zero when inputs are identical (up to shift)"""
         l_zero = losses.pairwise_dist_loss(self.input, self.input + 99.9, self.lengths)
         self.assertAlmostEqual(l_zero.item(), 0.0, places=5)
-    
+
     def test_symmetric(self):
         """Test that pairwise loss is symmetric"""
         l = losses.pairwise_dist_loss(self.input, self.target, self.lengths)

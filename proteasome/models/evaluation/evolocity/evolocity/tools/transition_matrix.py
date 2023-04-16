@@ -1,12 +1,12 @@
-from ..preprocessing.neighbors import get_connectivities, get_neighs
-from .utils import normalize
+import warnings
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import SparseEfficiencyWarning, csr_matrix
 from scipy.spatial.distance import pdist, squareform
-from scipy.sparse import csr_matrix, SparseEfficiencyWarning
 
-import warnings
+from ..preprocessing.neighbors import get_connectivities, get_neighs
+from .utils import normalize
 
 warnings.simplefilter("ignore", SparseEfficiencyWarning)
 
@@ -140,13 +140,13 @@ def transition_matrix(
 
         diffusion_kernel = dists_emb.copy()
         diffusion_kernel.data = np.exp(
-            -0.5 * dists_emb.data ** 2 / scale_diffusion ** 2
+            -0.5 * dists_emb.data**2 / scale_diffusion**2
         )
         T = T.multiply(diffusion_kernel)  # combine velocity kernel & diffusion kernel
 
         if 0 < weight_diffusion < 1:  # add diffusion kernel (Brownian motion - like)
             diffusion_kernel.data = np.exp(
-                -0.5 * dists_emb.data ** 2 / (scale_diffusion / 2) ** 2
+                -0.5 * dists_emb.data**2 / (scale_diffusion / 2) ** 2
             )
             T = (1 - weight_diffusion) * T + weight_diffusion * diffusion_kernel
 

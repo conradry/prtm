@@ -4,37 +4,30 @@ Training script.
 Example usage: python ~/protdiff/bin/train.py ~/protdiff/config_jsons/full_run_canonical_angles_only_zero_centered_1000_timesteps_reduced_len.json
 """
 
-import os, sys
-import shutil
-import json
-import logging
-from pathlib import Path
-import multiprocessing
 import argparse
 import functools
+import json
+import logging
+import multiprocessing
+import os
+import shutil
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import *
 
 import numpy as np
-from matplotlib import pyplot as plt
-
+import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
+from foldingdiff import beta_schedules
+from foldingdiff import custom_metrics as cm
+from foldingdiff import datasets, losses, modelling, plotting, utils
+from matplotlib import pyplot as plt
+from pytorch_lightning.strategies.ddp import DDPStrategy
 from torch.utils.data import Dataset, Subset
 from torch.utils.data.dataloader import DataLoader
-import torch.nn.functional as F
-
-import pytorch_lightning as pl
-from pytorch_lightning.strategies.ddp import DDPStrategy
-
 from transformers import BertConfig
-
-from foldingdiff import datasets
-from foldingdiff import modelling
-from foldingdiff import losses
-from foldingdiff import beta_schedules
-from foldingdiff import plotting
-from foldingdiff import utils
-from foldingdiff import custom_metrics as cm
 
 assert torch.cuda.is_available(), "Requires CUDA to train"
 # reproducibility

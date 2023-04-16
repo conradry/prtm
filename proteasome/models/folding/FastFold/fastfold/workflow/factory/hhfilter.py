@@ -1,32 +1,31 @@
-import subprocess
 import logging
+import subprocess
 from typing import List
 
-import ray 
+import ray
+from fastfold.workflow.factory import TaskFactory
 from ray.dag.function_node import FunctionNode
 
-from fastfold.workflow.factory import TaskFactory
 
 class HHfilterFactory(TaskFactory):
+    keywords = ["binary_path"]
 
-    keywords = ['binary_path']
-
-    def gen_node(self, fasta_path: str, output_path: str, after: List[FunctionNode]=None) -> FunctionNode:
-        
+    def gen_node(
+        self, fasta_path: str, output_path: str, after: List[FunctionNode] = None
+    ) -> FunctionNode:
         self.isReady()
 
         # generate function node
         @ray.remote
         def hhfilter_node_func(after: List[FunctionNode]) -> None:
-            
             cmd = [
-                self.config.get('binary_path'),
+                self.config.get("binary_path"),
             ]
-            if 'id' in self.config:
-                cmd += ['-id', str(self.config.get('id'))]
-            if 'cov' in self.config:
-                cmd += ['-cov', str(self.config.get('cov'))]
-            cmd += ['-i', fasta_path, '-o', output_path]
+            if "id" in self.config:
+                cmd += ["-id", str(self.config.get("id"))]
+            if "cov" in self.config:
+                cmd += ["-cov", str(self.config.get("cov"))]
+            cmd += ["-i", fasta_path, "-o", output_path]
 
             subprocess.run(cmd, shell=True)
 

@@ -3,21 +3,20 @@ Contains source code for loading in data and creating requisite PyTorch
 data loader object
 """
 
-import json
-import pickle
-import hashlib
 import functools
+import glob
+import hashlib
+import json
+import logging
 import multiprocessing
 import os
-import glob
-import logging
+import pickle
 from pathlib import Path
 from typing import *
 
-from matplotlib import pyplot as plt
 import numpy as np
-
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
 from torch.utils.data import Dataset
 
@@ -30,14 +29,11 @@ ALPHAFOLD_DIR = LOCAL_DATA_DIR / "alphafold"
 
 
 from foldingdiff import beta_schedules
-from foldingdiff.angles_and_coords import (
-    canonical_distances_and_dihedrals,
-    EXHAUSTIVE_ANGLES,
-    EXHAUSTIVE_DISTS,
-    extract_backbone_coords,
-)
 from foldingdiff import custom_metrics as cm
 from foldingdiff import utils
+from foldingdiff.angles_and_coords import (EXHAUSTIVE_ANGLES, EXHAUSTIVE_DISTS,
+                                           canonical_distances_and_dihedrals,
+                                           extract_backbone_coords)
 
 TRIM_STRATEGIES = Literal["leftalign", "randomcrop", "discard"]
 

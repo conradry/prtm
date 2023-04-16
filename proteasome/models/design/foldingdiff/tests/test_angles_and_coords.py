@@ -4,7 +4,6 @@ import unittest
 
 import numpy as np
 from biotite.structure.io.pdb import PDBFile
-
 from foldingdiff import angles_and_coords as ac
 
 

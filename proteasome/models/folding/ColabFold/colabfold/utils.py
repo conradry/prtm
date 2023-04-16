@@ -19,14 +19,14 @@ If you're sure you want to run without a GPU, pass `--cpu`"""
 
 DEFAULT_API_SERVER = "https://api.colabfold.com"
 
-ACCEPT_DEFAULT_TERMS = \
-"""
+ACCEPT_DEFAULT_TERMS = """
 WARNING: You are welcome to use the default MSA server, however keep in mind that it's a
 limited shared resource only capable of processing a few thousand MSAs per day. Please
 submit jobs only from a single IP address. We reserve the right to limit access to the
 server case-by-case when usage exceeds fair use. If you require more MSAs: You can 
 precompute all MSAs with `colabfold_search` or host your own API and pass it to `--host-url`
 """
+
 
 class TqdmHandler(logging.StreamHandler):
     """https://stackoverflow.com/a/38895482/3549270"""
@@ -80,6 +80,7 @@ def get_commit() -> Optional[str]:
 # Original license BSD 3-clause
 
 import re
+
 from Bio.PDB import MMCIFIO
 from Bio.PDB.Polypeptide import standard_aa_names
 

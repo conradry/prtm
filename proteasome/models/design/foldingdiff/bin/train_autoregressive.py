@@ -2,27 +2,24 @@
 Train a baseline autoregressive model that uses a causal LM approach to generating
 series of angles
 """
-import os
-from pathlib import Path
-import json
 import argparse
-from datetime import datetime
+import json
 import logging
 import multiprocessing
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import *
 
 import numpy as np
-import torch
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from pytorch_lightning.strategies.ddp import DDPStrategy
-
-from transformers import BertConfig
-
-from foldingdiff import datasets, modelling, losses, plotting, utils
+import torch
 from foldingdiff import custom_metrics as cm
-
+from foldingdiff import datasets, losses, modelling, plotting, utils
+from pytorch_lightning.strategies.ddp import DDPStrategy
+from torch.utils.data import DataLoader
 from train import ANGLES_DEFINITIONS, build_callbacks, record_args_and_metadata
+from transformers import BertConfig
 
 
 def get_train_valid_test_sets(

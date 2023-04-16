@@ -20,18 +20,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 from colossalai.context.parallel_mode import ParallelMode
 from colossalai.core import global_context as gpc
+from fastfold.distributed import row_to_col, scatter
+from fastfold.distributed.comm import gather, row_to_col, scatter
+from fastfold.distributed.comm_async import (All_to_All_Async,
+                                             All_to_All_Async_Opp,
+                                             gather_async)
 from fastfold.model.fastnn.kernel import LayerNorm, bias_dropout_add
-from fastfold.model.fastnn.ops import (ChunkMSARowAttentionWithPairBias, ChunkTransition, 
-                                       SelfAttention, GlobalAttention, Transition, 
-                                       ChunkMSAColumnGlobalAttention, OutProductMean)
-from fastfold.distributed import scatter, row_to_col
-from fastfold.distributed.comm import gather, scatter, row_to_col, scatter
-from fastfold.distributed.comm_async import gather_async, All_to_All_Async, All_to_All_Async_Opp
+from fastfold.model.fastnn.ops import (ChunkMSAColumnGlobalAttention,
+                                       ChunkMSARowAttentionWithPairBias,
+                                       ChunkTransition, GlobalAttention,
+                                       OutProductMean, SelfAttention,
+                                       Transition)
 from fastfold.model.fastnn.triangle import PairCore
 
 
 class MSARowAttentionWithPairBias(nn.Module):
-
     def __init__(self, d_node, d_pair, c=32, n_head=8, p_drop=0.15):
         super(MSARowAttentionWithPairBias, self).__init__()
         self.d_node = d_node
@@ -43,18 +46,25 @@ class MSARowAttentionWithPairBias(nn.Module):
         self.layernormM = LayerNorm(d_node)
         self.layernormZ = LayerNorm(d_pair)
 
-        _init_weights = torch.nn.init.normal_(torch.zeros([n_head, d_pair]),
-                                              std=1.0 / math.sqrt(d_pair))
-        self.linear_b_weights = nn.parameter.Parameter(data=_init_weights, requires_grad=True)
+        _init_weights = torch.nn.init.normal_(
+            torch.zeros([n_head, d_pair]), std=1.0 / math.sqrt(d_pair)
+        )
+        self.linear_b_weights = nn.parameter.Parameter(
+            data=_init_weights, requires_grad=True
+        )
 
-        self.attention = SelfAttention(qkv_dim=d_node,
-                                       c=c,
-                                       n_head=n_head,
-                                       out_dim=d_node,
-                                       gating=True,
-                                       last_bias_fuse=True)
+        self.attention = SelfAttention(
+            qkv_dim=d_node,
+            c=c,
+            n_head=n_head,
+            out_dim=d_node,
+            gating=True,
+            last_bias_fuse=True,
+        )
 
-        self.out_bias = nn.parameter.Parameter(data=torch.zeros((d_node,)), requires_grad=True)
+        self.out_bias = nn.parameter.Parameter(
+            data=torch.zeros((d_node,)), requires_grad=True
+        )
 
     def forward(self, M_raw, Z, M_mask):
         ## Input projections
@@ -69,11 +79,17 @@ class MSARowAttentionWithPairBias(nn.Module):
         M = self.attention(M, M_mask, (b, work))
         dropout_mask = torch.ones_like(M[:, 0:1, :, :], device=M.device, dtype=M.dtype)
 
-        return bias_dropout_add(M, self.out_bias, dropout_mask, M_raw, prob=self.p_drop, training=self.training)
+        return bias_dropout_add(
+            M,
+            self.out_bias,
+            dropout_mask,
+            M_raw,
+            prob=self.p_drop,
+            training=self.training,
+        )
 
 
 class MSAColumnAttention(nn.Module):
-
     def __init__(self, d_node, c=32, n_head=8):
         super(MSAColumnAttention, self).__init__()
         self.d_node = d_node
@@ -81,11 +97,9 @@ class MSAColumnAttention(nn.Module):
         self.n_head = n_head
 
         self.layernormM = LayerNorm(d_node)
-        self.attention = SelfAttention(qkv_dim=d_node,
-                                       c=c,
-                                       n_head=n_head,
-                                       out_dim=d_node,
-                                       gating=True)
+        self.attention = SelfAttention(
+            qkv_dim=d_node, c=c, n_head=n_head, out_dim=d_node, gating=True
+        )
 
     def forward(self, M_raw, M_mask):
         M = M_raw.transpose(-2, -3)
@@ -126,13 +140,12 @@ class MSAColumnGlobalAttention(nn.Module):
 
 
 class MSACore(nn.Module):
-
     def __init__(self, d_node, d_pair, p_drop=0.15):
         super(MSACore, self).__init__()
 
-        self.MSARowAttentionWithPairBias = MSARowAttentionWithPairBias(d_node=d_node,
-                                                                       d_pair=d_pair,
-                                                                       p_drop=p_drop)
+        self.MSARowAttentionWithPairBias = MSARowAttentionWithPairBias(
+            d_node=d_node, d_pair=d_pair, p_drop=p_drop
+        )
 
         self.MSAColumnAttention = MSAColumnAttention(d_node=d_node)
         self.MSATransition = Transition(d=d_node)
@@ -185,7 +198,7 @@ class ExtraMSACore(nn.Module):
         node = self.MSATransition.inplace(node)
 
         return node
-    
+
 
 class ExtraMSABlock(nn.Module):
     def __init__(
@@ -210,7 +223,6 @@ class ExtraMSABlock(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         dap_size = gpc.get_world_size(ParallelMode.TENSOR)
 
         seq_cnt = msa_mask.size(-2)
@@ -258,7 +270,6 @@ class ExtraMSABlock(nn.Module):
             m = self.msa_stack(m, z_ori, msa_mask)
 
         if self.last_block:
-
             m = gather(m, dim=1) if not self.is_multimer else gather(m, dim=2)
             z = gather(z, dim=1)
 
@@ -279,7 +290,6 @@ class ExtraMSABlock(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         dap_size = gpc.get_world_size(ParallelMode.TENSOR)
 
         seq_cnt = msa_mask.size(-2)
@@ -298,7 +308,9 @@ class ExtraMSABlock(nn.Module):
                 z[0], (0, 0, 0, seq_len_padding_size, 0, seq_len_padding_size)
             )
 
-            m[0] = scatter(m[0], dim=1) if not self.is_multimer else scatter(m[0], dim=2)
+            m[0] = (
+                scatter(m[0], dim=1) if not self.is_multimer else scatter(m[0], dim=2)
+            )
             z[0] = scatter(z[0], dim=1)
 
         msa_mask = msa_mask.unsqueeze(0)
@@ -331,7 +343,6 @@ class ExtraMSABlock(nn.Module):
             z = self.pair_stack.inplace(z, pair_mask)
 
         if self.last_block:
-
             m[0] = gather(m[0], dim=1) if not self.is_multimer else gather(m[0], dim=2)
             z[0] = gather(z[0], dim=1)
 
@@ -349,7 +360,8 @@ class ExtraMSAStack(nn.Module):
     Implements Algorithm 18.
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         c_m: int,
         c_z: int,
         no_blocks: int,
@@ -358,7 +370,7 @@ class ExtraMSAStack(nn.Module):
         **kwargs,
     ):
         super(ExtraMSAStack, self).__init__()
-        
+
         self.clear_cache_between_blocks = clear_cache_between_blocks
         self.blocks = nn.ModuleList()
         for block_id in range(no_blocks):
@@ -371,7 +383,8 @@ class ExtraMSAStack(nn.Module):
             )
             self.blocks.append(block)
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         chunk_size: int,
@@ -391,19 +404,19 @@ class ExtraMSAStack(nn.Module):
                 Optional [*, N_res, N_res] pair mask
         Returns:
             [*, N_res, N_res, C_z] pair update
-        """ 
-        #checkpoint_fn = get_checkpoint_fn()
-        #blocks = [
+        """
+        # checkpoint_fn = get_checkpoint_fn()
+        # blocks = [
         #    partial(b, msa_mask=msa_mask, pair_mask=pair_mask, chunk_size=chunk_size, _chunk_logits=None) for b in self.blocks
-        #]
+        # ]
 
-        #def dodo(b, *args):
+        # def dodo(b, *args):
         #    torch.cuda.empty_cache()
         #    return b(*args)
 
-        #blocks = [partial(dodo, b) for b in blocks]
+        # blocks = [partial(dodo, b) for b in blocks]
 
-        #for b in blocks:
+        # for b in blocks:
         #    if(torch.is_grad_enabled()):
         #        m, z = checkpoint_fn(b, *(m, z))
         #    else:
@@ -412,12 +425,13 @@ class ExtraMSAStack(nn.Module):
         for b in self.blocks:
             m, z = b(m, z, msa_mask, pair_mask, chunk_size=chunk_size)
 
-            if(self.clear_cache_between_blocks):
+            if self.clear_cache_between_blocks:
                 torch.cuda.empty_cache()
 
         return z
 
-    def inplace(self,
+    def inplace(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         chunk_size: int,
@@ -437,19 +451,19 @@ class ExtraMSAStack(nn.Module):
                 Optional [*, N_res, N_res] pair mask
         Returns:
             [*, N_res, N_res, C_z] pair update
-        """ 
-        #checkpoint_fn = get_checkpoint_fn()
-        #blocks = [
+        """
+        # checkpoint_fn = get_checkpoint_fn()
+        # blocks = [
         #    partial(b, msa_mask=msa_mask, pair_mask=pair_mask, chunk_size=chunk_size, _chunk_logits=None) for b in self.blocks
-        #]
+        # ]
 
-        #def dodo(b, *args):
+        # def dodo(b, *args):
         #    torch.cuda.empty_cache()
         #    return b(*args)
 
-        #blocks = [partial(dodo, b) for b in blocks]
+        # blocks = [partial(dodo, b) for b in blocks]
 
-        #for b in blocks:
+        # for b in blocks:
         #    if(torch.is_grad_enabled()):
         #        m, z = checkpoint_fn(b, *(m, z))
         #    else:
@@ -458,7 +472,7 @@ class ExtraMSAStack(nn.Module):
         for b in self.blocks:
             m, z = b.inplace(m, z, msa_mask, pair_mask, chunk_size=chunk_size)
 
-            if(self.clear_cache_between_blocks):
+            if self.clear_cache_between_blocks:
                 torch.cuda.empty_cache()
 
         return z

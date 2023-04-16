@@ -13,9 +13,8 @@
 # limitations under the License.
 """Geometry Module."""
 
-from fastfold.utils.geometry import rigid_matrix_vector
-from fastfold.utils.geometry import rotation_matrix
-from fastfold.utils.geometry import vector
+from fastfold.utils.geometry import (rigid_matrix_vector, rotation_matrix,
+                                     vector)
 
 Rot3Array = rotation_matrix.Rot3Array
 Rigid3Array = rigid_matrix_vector.Rigid3Array

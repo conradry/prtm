@@ -29,7 +29,10 @@ from fastfold.model.hub import AlphaFold
 from fastfold.utils.inject_fastnn import inject_fastnn
 from fastfold.utils.tensor_utils import tensor_tree_map
 
-if int(torch.__version__.split(".")[0]) >= 1 and int(torch.__version__.split(".")[1]) > 11:
+if (
+    int(torch.__version__.split(".")[0]) >= 1
+    and int(torch.__version__.split(".")[1]) > 11
+):
     torch.backends.cuda.matmul.allow_tf32 = True
 
 
@@ -55,7 +58,9 @@ def random_extra_msa_feats(n_extra, n):
     b = []
     batch = {
         "extra_msa": np.random.randint(0, 22, (*b, n_extra, n)).astype(np.int64),
-        "extra_has_deletion": np.random.randint(0, 2, (*b, n_extra, n)).astype(np.float32),
+        "extra_has_deletion": np.random.randint(0, 2, (*b, n_extra, n)).astype(
+            np.float32
+        ),
         "extra_deletion_value": np.random.rand(*b, n_extra, n).astype(np.float32),
         "extra_msa_mask": np.random.randint(0, 2, (*b, n_extra, n)).astype(np.float32),
     }
@@ -76,7 +81,7 @@ def generate_batch(n_res):
     batch["msa_mask"] = torch.randint(low=0, high=2, size=(128, n_res)).float()
     batch["seq_mask"] = torch.randint(low=0, high=2, size=(n_res,)).float()
     batch.update(data_transforms.make_atom14_masks(batch))
-    batch["no_recycling_iters"] = torch.tensor(2.)
+    batch["no_recycling_iters"] = torch.tensor(2.0)
 
     add_recycling_dims = lambda t: (t.unsqueeze(-1).expand(*t.shape, 3))
     batch = tensor_tree_map(add_recycling_dims, batch)
@@ -85,9 +90,9 @@ def generate_batch(n_res):
 
 
 def inference_model(rank, world_size, result_q, batch, args):
-    os.environ['RANK'] = str(rank)
-    os.environ['LOCAL_RANK'] = str(rank)
-    os.environ['WORLD_SIZE'] = str(world_size)
+    os.environ["RANK"] = str(rank)
+    os.environ["LOCAL_RANK"] = str(rank)
+    os.environ["WORLD_SIZE"] = str(world_size)
     # init distributed for Dynamic Axial Parallelism
     fastfold.distributed.init_dap()
     torch.cuda.set_device(rank)
@@ -122,7 +127,9 @@ def inference_monomer_model(args):
     batch = generate_batch(args.n_res)
     manager = mp.Manager()
     result_q = manager.Queue()
-    torch.multiprocessing.spawn(inference_model, nprocs=args.gpus, args=(args.gpus, result_q, batch, args))
+    torch.multiprocessing.spawn(
+        inference_model, nprocs=args.gpus, args=(args.gpus, result_q, batch, args)
+    )
     out = result_q.get()
 
     # get unrelexed pdb and save
@@ -142,12 +149,21 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gpus", type=int, default=1, help="""Number of GPUs with which to run inference""")
-    parser.add_argument("--n_res", type=int, default=50, help="virtual residue number of random data")
-    parser.add_argument("--model_name", type=str, default="model_1", help="model name of alphafold")
-    parser.add_argument('--chunk_size', type=int, default=None)
-    parser.add_argument('--inplace', default=False, action='store_true')
+    parser.add_argument(
+        "--gpus",
+        type=int,
+        default=1,
+        help="""Number of GPUs with which to run inference""",
+    )
+    parser.add_argument(
+        "--n_res", type=int, default=50, help="virtual residue number of random data"
+    )
+    parser.add_argument(
+        "--model_name", type=str, default="model_1", help="model name of alphafold"
+    )
+    parser.add_argument("--chunk_size", type=int, default=None)
+    parser.add_argument("--inplace", default=False, action="store_true")
 
     args = parser.parse_args()
 
-    main(args) 
+    main(args)

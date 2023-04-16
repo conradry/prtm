@@ -2,22 +2,20 @@
 Code to convert from angles between residues to XYZ coordinates. 
 """
 import functools
-import gzip
-import os
-import logging
 import glob
-from collections import namedtuple, defaultdict
+import gzip
+import logging
+import os
+import warnings
+from collections import defaultdict, namedtuple
 from itertools import groupby
 from typing import *
-import warnings
-
-import numpy as np
-import pandas as pd
 
 import biotite.structure as struc
-from biotite.structure.io.pdb import PDBFile
+import numpy as np
+import pandas as pd
 from biotite.sequence import ProteinSequence
-
+from biotite.structure.io.pdb import PDBFile
 from foldingdiff import nerf
 
 EXHAUSTIVE_ANGLES = ["phi", "psi", "omega", "tau", "CA:C:1N", "C:1N:1CA"]
@@ -371,7 +369,9 @@ def build_aa_sidechain_dict(
             ref_file_counter += 1
         except ValueError:
             continue
-    logging.info(f"Built sidechain dictionary with {len(retval)} amino acids from {ref_file_counter} files")
+    logging.info(
+        f"Built sidechain dictionary with {len(retval)} amino acids from {ref_file_counter} files"
+    )
     return retval
 
 
@@ -432,6 +432,7 @@ def add_sidechains_to_backbone(
     sink.set_structure(struc.array(full_atoms))
     sink.write(out_fname)
     return out_fname
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

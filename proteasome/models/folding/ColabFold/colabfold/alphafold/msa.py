@@ -1,6 +1,6 @@
-from typing import Mapping, Any
-import numpy as np
+from typing import Any, Mapping
 
+import numpy as np
 from alphafold.model.features import FeatureDict
 from alphafold.model.tf import shape_placeholders
 
@@ -8,6 +8,7 @@ NUM_RES = shape_placeholders.NUM_RES
 NUM_MSA_SEQ = shape_placeholders.NUM_MSA_SEQ
 NUM_EXTRA_SEQ = shape_placeholders.NUM_EXTRA_SEQ
 NUM_TEMPLATES = shape_placeholders.NUM_TEMPLATES
+
 
 def make_fixed_size(
     feat: Mapping[str, Any],

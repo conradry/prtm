@@ -26,15 +26,15 @@ import os
 import sys
 import time
 
+import omegafold as of
 import torch
 
-import omegafold as of
 from . import pipeline
-
 
 # =============================================================================
 # Functions
 # =============================================================================
+
 
 @torch.no_grad()
 def main():
@@ -56,26 +56,22 @@ def main():
 
     logging.info(f"Reading {args.input_file}")
     for i, (input_data, save_path) in enumerate(
-            pipeline.fasta2inputs(
-                args.input_file,
-                num_pseudo_msa=args.num_pseudo_msa,
-                output_dir=args.output_dir,
-                device=args.device,
-                mask_rate=args.pseudo_msa_mask_rate,
-                num_cycle=args.num_cycle,
-            )
+        pipeline.fasta2inputs(
+            args.input_file,
+            num_pseudo_msa=args.num_pseudo_msa,
+            output_dir=args.output_dir,
+            device=args.device,
+            mask_rate=args.pseudo_msa_mask_rate,
+            num_cycle=args.num_cycle,
+        )
     ):
         logging.info(f"Predicting {i + 1}th chain in {args.input_file}")
-        logging.info(
-            f"{len(input_data[0]['p_msa'][0])} residues in this chain."
-        )
+        logging.info(f"{len(input_data[0]['p_msa'][0])} residues in this chain.")
         ts = time.time()
         try:
             output = model(
-                    input_data,
-                    predict_with_confidence=True,
-                    fwd_cfg=forward_config
-                )
+                input_data, predict_with_confidence=True, fwd_cfg=forward_config
+            )
         except RuntimeError as e:
             logging.info(f"Failed to generate {save_path} due to {e}")
             logging.info(f"Skipping...")
@@ -89,7 +85,7 @@ def main():
             sequence=input_data[0]["p_msa"][0],
             mask=input_data[0]["p_msa_mask"][0],
             save_path=save_path,
-            model=0
+            model=0,
         )
         logging.info(f"Saved")
         del output
@@ -101,5 +97,5 @@ def main():
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

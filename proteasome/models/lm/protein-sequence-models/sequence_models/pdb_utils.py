@@ -1,8 +1,8 @@
 import gzip
+
 import numpy as np
 import scipy
-from scipy.spatial.distance import squareform, pdist
-
+from scipy.spatial.distance import pdist, squareform
 from sequence_models.constants import IUPAC_CODES
 
 
@@ -41,7 +41,7 @@ def parse_PDB(x, atoms=["N", "CA", "C"], chain=None):
     output: (length, atoms, coords=(x,y,z)), sequence
     """
     xyz, seq, min_resn, max_resn = {}, {}, np.inf, -np.inf
-    open_func = gzip.open if x.endswith('.gz') else open
+    open_func = gzip.open if x.endswith(".gz") else open
     for line in open_func(x, "rb"):
         line = line.decode("utf-8", "ignore").rstrip()
 
@@ -101,9 +101,9 @@ def parse_PDB(x, atoms=["N", "CA", "C"], chain=None):
 
 
 def process_coords(coords):
-    N = np.array(coords['N'])
-    Ca = np.array(coords['CA'])
-    C = np.array(coords['C'])
+    N = np.array(coords["N"])
+    Ca = np.array(coords["CA"])
+    C = np.array(coords["C"])
 
     # recreate Cb given N,Ca,C
     nres = len(N)

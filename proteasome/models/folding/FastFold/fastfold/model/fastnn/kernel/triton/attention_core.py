@@ -1,29 +1,64 @@
 import math
 
 import torch
-from einops import rearrange
-
 import triton
 import triton.language as tl
+from einops import rearrange
 
 # CREDITS: Initially inspired by the Triton tutorial
 
 
 @triton.jit
-def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_qh, stride_qm,
-                    stride_qk, stride_kz, stride_kh, stride_kn, stride_kk, stride_vz, stride_vh,
-                    stride_vn, stride_vk, stride_oz, stride_oh, stride_om, stride_on, Z, H, N_CTX,
-                    BATCH, BLOCK_M: tl.constexpr, BLOCK_DMODEL: tl.constexpr, BLOCK_N: tl.constexpr,
-                    use_mask: tl.constexpr, use_bias: tl.constexpr):
+def _attention_core(
+    Q,
+    K,
+    V,
+    mask,
+    bias,
+    sm_scale,
+    TMP,
+    Out,
+    stride_qz,
+    stride_qh,
+    stride_qm,
+    stride_qk,
+    stride_kz,
+    stride_kh,
+    stride_kn,
+    stride_kk,
+    stride_vz,
+    stride_vh,
+    stride_vn,
+    stride_vk,
+    stride_oz,
+    stride_oh,
+    stride_om,
+    stride_on,
+    Z,
+    H,
+    N_CTX,
+    BATCH,
+    BLOCK_M: tl.constexpr,
+    BLOCK_DMODEL: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    use_mask: tl.constexpr,
+    use_bias: tl.constexpr,
+):
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
     # initialize offsets
     offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)
     offs_n = tl.arange(0, BLOCK_N)
     offs_d = tl.arange(0, BLOCK_DMODEL)
-    off_q = off_hz * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qk
-    off_k = off_hz * stride_qh + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk
-    off_v = off_hz * stride_qh + offs_n[:, None] * stride_qm + offs_d[None, :] * stride_qk
+    off_q = (
+        off_hz * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qk
+    )
+    off_k = (
+        off_hz * stride_qh + offs_n[:, None] * stride_kn + offs_d[None, :] * stride_kk
+    )
+    off_v = (
+        off_hz * stride_qh + offs_n[:, None] * stride_qm + offs_d[None, :] * stride_qk
+    )
     # Initialize pointers to Q, K, V
     q_ptrs = Q + off_q
     k_ptrs = K + off_k
@@ -33,10 +68,12 @@ def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_q
     if use_bias:
         batch_2 = Z // BATCH
         off_hz_bias = (off_hz // (batch_2 * H) * H) + (off_hz % H)
-        offs_base_bias = off_hz_bias * (N_CTX * N_CTX) + offs_m[:, None] * N_CTX + offs_n[None, :]
+        offs_base_bias = (
+            off_hz_bias * (N_CTX * N_CTX) + offs_m[:, None] * N_CTX + offs_n[None, :]
+        )
 
     if use_mask:
-        off_hz_mask = (off_hz // H)
+        off_hz_mask = off_hz // H
         offs_base_mask = off_hz_mask * N_CTX
 
     # initialize pointer to m and l
@@ -63,18 +100,22 @@ def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_q
 
         if use_bias:
             bias_load_mask = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float32)
-            bias_load_mask = tl.where(offs_m[:, None] >= N_CTX, 1., bias_load_mask)
-            bias_load_mask = tl.where((start_n + offs_n)[None, :] >= N_CTX, 1., bias_load_mask)
-            bias_data = tl.load(bias + offs_base_bias + start_n,
-                                mask=(bias_load_mask == 0.),
-                                other=0.)
+            bias_load_mask = tl.where(offs_m[:, None] >= N_CTX, 1.0, bias_load_mask)
+            bias_load_mask = tl.where(
+                (start_n + offs_n)[None, :] >= N_CTX, 1.0, bias_load_mask
+            )
+            bias_data = tl.load(
+                bias + offs_base_bias + start_n, mask=(bias_load_mask == 0.0), other=0.0
+            )
             qk += bias_data
 
         if use_mask:
-            mask_data = tl.load(mask + offs_base_mask + offs_n + start_n,
-                                mask=(start_n + offs_n) < N_CTX,
-                                other=0.)
-            qk = tl.where(mask_data[None, :] == 0., float("-1e20"), qk)
+            mask_data = tl.load(
+                mask + offs_base_mask + offs_n + start_n,
+                mask=(start_n + offs_n) < N_CTX,
+                other=0.0,
+            )
+            qk = tl.where(mask_data[None, :] == 0.0, float("-1e20"), qk)
 
         # -- compute m_ij, p, l_ij
         m_ij = tl.max(qk, 1)
@@ -92,13 +133,15 @@ def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_q
         # scale acc
         acc_scale = l_i / l_i_new * alpha
         tl.store(t_ptrs, acc_scale, mask=(offs_m < N_CTX))
-        acc_scale = tl.load(TMP + off_hz * N_CTX + start_m * BLOCK_M + tl.arange(0, BLOCK_M),
-                            mask=(start_m * BLOCK_M + tl.arange(0, BLOCK_M) < N_CTX),
-                            other=float(0.))  # BUG: have to store and immediately load
+        acc_scale = tl.load(
+            TMP + off_hz * N_CTX + start_m * BLOCK_M + tl.arange(0, BLOCK_M),
+            mask=(start_m * BLOCK_M + tl.arange(0, BLOCK_M) < N_CTX),
+            other=float(0.0),
+        )  # BUG: have to store and immediately load
         acc = acc * acc_scale[:, None]
         # update acc
         load_mask = (start_n + offs_n)[:, None] < N_CTX
-        v = tl.load(v_ptrs + start_n * stride_vn, mask=load_mask, other=0.)
+        v = tl.load(v_ptrs + start_n * stride_vn, mask=load_mask, other=0.0)
         p = p.to(Q.dtype.element_ty)
         acc += tl.dot(p, v)
         # update m_i and l_i
@@ -114,7 +157,9 @@ def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_q
     # tl.store(m_ptrs, m_i)
     # initialize pointers to output
     offs_n = tl.arange(0, BLOCK_DMODEL)
-    off_o = off_hz * stride_oh + offs_m[:, None] * stride_om + offs_n[None, :] * stride_on
+    off_o = (
+        off_hz * stride_oh + offs_m[:, None] * stride_om + offs_n[None, :] * stride_on
+    )
     out_ptrs = Out + off_o
 
     out_store_mask = offs_m[:, None] < N_CTX
@@ -122,19 +167,21 @@ def _attention_core(Q, K, V, mask, bias, sm_scale, TMP, Out, stride_qz, stride_q
 
 
 def attention_core_triton_kernel_wrapper(q, k, v, mask, bias):
-    assert (q.dtype in [torch.float16,
-                        torch.bfloat16]), "triton flash attention only support float16/bfloat16 now"
+    assert q.dtype in [
+        torch.float16,
+        torch.bfloat16,
+    ], "triton flash attention only support float16/bfloat16 now"
 
     q_ori_size = list(q.size())
 
     batch = q_ori_size[0]
 
     if len(q_ori_size) == 5:
-        q = rearrange(q, 'b1 b2 h n d -> (b1 b2) h n d')
-        k = rearrange(k, 'b1 b2 h n d -> (b1 b2) h n d')
-        v = rearrange(v, 'b1 b2 h n d -> (b1 b2) h n d')
+        q = rearrange(q, "b1 b2 h n d -> (b1 b2) h n d")
+        k = rearrange(k, "b1 b2 h n d -> (b1 b2) h n d")
+        v = rearrange(v, "b1 b2 h n d -> (b1 b2) h n d")
 
-    sm_scale = 1. / math.sqrt(q.size(-1))
+    sm_scale = 1.0 / math.sqrt(q.size(-1))
     # q *= sm_scale
     BLOCK = 128
     # shape constraints
@@ -143,7 +190,9 @@ def attention_core_triton_kernel_wrapper(q, k, v, mask, bias):
     assert Lk in {16, 32, 64, 128}
     o = torch.empty_like(q)
     grid = (triton.cdiv(q.shape[2], BLOCK), q.shape[0] * q.shape[1])
-    tmp = torch.empty((q.shape[0] * q.shape[1], q.shape[2]), device=q.device, dtype=torch.float32)
+    tmp = torch.empty(
+        (q.shape[0] * q.shape[1], q.shape[2]), device=q.device, dtype=torch.float32
+    )
     num_warps = 4 if Lk <= 64 else 8
 
     _attention_core[grid](
@@ -185,6 +234,6 @@ def attention_core_triton_kernel_wrapper(q, k, v, mask, bias):
     )
 
     if len(q_ori_size) == 5:
-        o = rearrange(o, '(b1 b2) h n d -> b1 b2 n (h d)', b1=batch)
+        o = rearrange(o, "(b1 b2) h n d -> b1 b2 n (h d)", b1=batch)
 
     return o

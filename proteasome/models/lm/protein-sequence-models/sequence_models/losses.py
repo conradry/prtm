@@ -1,7 +1,7 @@
-import torch.nn as nn
-import torch
-import torch.nn.functional as F
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MaskedCosineLoss(nn.Module):
@@ -30,7 +30,7 @@ class MaskedMSELoss(nn.MSELoss):
             - mask: (N, *) boolean
     """
 
-    def __init__(self, reduction='mean'):
+    def __init__(self, reduction="mean"):
         super().__init__(reduction=reduction)
 
     def forward(self, pred, tgt, mask):
@@ -45,17 +45,22 @@ class MaskedMSELoss(nn.MSELoss):
 
 
 class SequenceCrossEntropyLoss(nn.Module):
-    """Cross-entropy loss for sequences. """
+    """Cross-entropy loss for sequences."""
 
     def __init__(self, weight=None, ignore_index=-100):
         super(SequenceCrossEntropyLoss, self).__init__()
         self.class_weights = weight  # These are class weights
         self.ignore_index = ignore_index
 
-    def forward(self, prediction, tgt, reduction='mean'):
+    def forward(self, prediction, tgt, reduction="mean"):
         # Transpose because pytorch expects (N, C, ...) where C is number of classes
-        return F.cross_entropy(prediction.transpose(1, 2), tgt, weight=self.class_weights, reduction=reduction,
-                               ignore_index=self.ignore_index)
+        return F.cross_entropy(
+            prediction.transpose(1, 2),
+            tgt,
+            weight=self.class_weights,
+            reduction=reduction,
+            ignore_index=self.ignore_index,
+        )
 
 
 class MaskedCrossEntropyLoss(nn.CrossEntropyLoss):
@@ -71,7 +76,7 @@ class MaskedCrossEntropyLoss(nn.CrossEntropyLoss):
             - weight: (C, ): class weights for nn.CrossEntropyLoss
     """
 
-    def __init__(self, weight=None, reduction='mean'):
+    def __init__(self, weight=None, reduction="mean"):
         super().__init__(weight=weight, reduction=reduction)
 
     def forward(self, pred, tgt, mask):
@@ -114,9 +119,11 @@ class VAELoss(nn.Module):
         super(VAELoss, self).__init__()
         self.recon_loss = SequenceCrossEntropyLoss(weight=class_weights)
 
-    def forward(self, pre, tgt, mu, log_var, beta=1.0, sample_weights=None, reduction='mean'):
-        kld = -0.5 * (1 + log_var - mu ** 2 - log_var.exp())
-        r_loss = self.recon_loss(pre, tgt, reduction='none')
+    def forward(
+        self, pre, tgt, mu, log_var, beta=1.0, sample_weights=None, reduction="mean"
+    ):
+        kld = -0.5 * (1 + log_var - mu**2 - log_var.exp())
+        r_loss = self.recon_loss(pre, tgt, reduction="none")
         if sample_weights is None:
             kld = kld.sum(dim=1)
             r_loss = r_loss.sum(dim=1)
@@ -127,7 +134,7 @@ class VAELoss(nn.Module):
                 r_loss = r_loss.sum(dim=1) / self.recon_loss.class_weights[tgt].sum()
             else:
                 r_loss = r_loss.mean(dim=1)
-        if reduction == 'mean':
+        if reduction == "mean":
             kld = kld.mean()
             r_loss = r_loss.mean()
         return r_loss + beta * kld, r_loss, kld
@@ -144,7 +151,7 @@ class MaskedCrossEntropyLossMSA(nn.CrossEntropyLoss):
     """
 
     def __init__(self, ignore_index, reweight=True):
-        super().__init__(ignore_index=ignore_index, reduction='none')
+        super().__init__(ignore_index=ignore_index, reduction="none")
         self.reweight = reweight
 
     def forward(self, pred, tgt, mask, nonpad_mask):
@@ -161,7 +168,9 @@ class MaskedCrossEntropyLossMSA(nn.CrossEntropyLoss):
         # print(batch_size)
 
         # Create re-weighting array
-        num_masked_tokens = mask.sum(axis=(1, 2))  # D-t+1 masked tokens per MSA in each batch
+        num_masked_tokens = mask.sum(
+            axis=(1, 2)
+        )  # D-t+1 masked tokens per MSA in each batch
         num_nonpad_tokens = nonpad_mask.sum(axis=(1, 2))
 
         n = mask.sum()

@@ -13,23 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
 import math
-from typing import Optional, Callable, List, Tuple, Sequence
-import numpy as np
-
-import torch
-import torch.nn as nn
-from scipy.stats import truncnorm
-
-from fastfold.utils.checkpointing import get_checkpoint_fn
-from fastfold.utils.tensor_utils import (
-    permute_final_dims,
-    flatten_final_dims,
-    _chunk_slice,
-)
+from functools import partial
+from typing import Callable, List, Optional, Sequence, Tuple
 
 import fastfold.habana as habana
+import numpy as np
+import torch
+import torch.nn as nn
+from fastfold.utils.checkpointing import get_checkpoint_fn
+from fastfold.utils.tensor_utils import (_chunk_slice, flatten_final_dims,
+                                         permute_final_dims)
+from scipy.stats import truncnorm
+
 
 def _prod(nums):
     out = 1
@@ -168,7 +164,6 @@ class Linear(nn.Linear):
 
 
 class LayerNorm(nn.Module):
-
     def __init__(self, c_in, eps=1e-5):
         super(LayerNorm, self).__init__()
 
@@ -193,17 +188,21 @@ class LayerNorm(nn.Module):
 @torch.jit.ignore
 def softmax(t: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
-        Softmax, but without automatic casting to fp32 when the input is of
-        type bfloat16
+    Softmax, but without automatic casting to fp32 when the input is of
+    type bfloat16
     """
     s = torch.nn.functional.softmax(t, dim=dim)
 
     return s
 
 
-#@torch.jit.script
-def _attention(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
-               biases: List[torch.Tensor]) -> torch.Tensor:
+# @torch.jit.script
+def _attention(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    biases: List[torch.Tensor],
+) -> torch.Tensor:
     # [*, H, Q, C_hidden]
     query = permute_final_dims(query, (1, 0, 2))
 
@@ -216,7 +215,9 @@ def _attention(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
     # [*, H, Q, K]
     a = torch.matmul(query, key)
     if habana.is_habana():
-        from fastfold.habana.fastnn.custom_op import fused_softmax, fused_softmax_bias
+        from fastfold.habana.fastnn.custom_op import (fused_softmax,
+                                                      fused_softmax_bias)
+
         if len(biases) == 1:
             a = fused_softmax(a, biases[0], -1)
         else:
@@ -247,7 +248,7 @@ def _attention_chunked_trainable(
     chunk_dim,
     checkpoint,
 ):
-    if (checkpoint and len(biases) > 2):
+    if checkpoint and len(biases) > 2:
         raise ValueError("Checkpointed version permits only permits two bias terms")
 
     def _checkpointable_attention(q, k, v, b1, b2):
@@ -267,16 +268,25 @@ def _attention_chunked_trainable(
         v_chunk = value[idx_tup]
 
         def _slice_bias(b):
-            idx[chunk_dim] = (slice(start, end) if b.shape[chunk_dim] != 1 else slice(None))
+            idx[chunk_dim] = (
+                slice(start, end) if b.shape[chunk_dim] != 1 else slice(None)
+            )
             return b[tuple(idx)]
 
-        if (checkpoint):
+        if checkpoint:
             bias_1_chunk, bias_2_chunk = [
-                _slice_bias(b) if b is not None else None for b in (biases + [None, None])[:2]
+                _slice_bias(b) if b is not None else None
+                for b in (biases + [None, None])[:2]
             ]
 
-            o_chunk = checkpoint_fn(_checkpointable_attention, q_chunk, k_chunk, v_chunk,
-                                    bias_1_chunk, bias_2_chunk)
+            o_chunk = checkpoint_fn(
+                _checkpointable_attention,
+                q_chunk,
+                k_chunk,
+                v_chunk,
+                bias_1_chunk,
+                bias_2_chunk,
+            )
         else:
             bias_chunks = [_slice_bias(b) for b in biases]
 
@@ -330,19 +340,28 @@ class Attention(nn.Module):
         # DISCREPANCY: c_hidden is not the per-head channel dimension, as
         # stated in the supplement, but the overall channel dimension.
 
-        self.linear_q = Linear(self.c_q, self.c_hidden * self.no_heads, bias=False, init="glorot")
-        self.linear_k = Linear(self.c_k, self.c_hidden * self.no_heads, bias=False, init="glorot")
-        self.linear_v = Linear(self.c_v, self.c_hidden * self.no_heads, bias=False, init="glorot")
+        self.linear_q = Linear(
+            self.c_q, self.c_hidden * self.no_heads, bias=False, init="glorot"
+        )
+        self.linear_k = Linear(
+            self.c_k, self.c_hidden * self.no_heads, bias=False, init="glorot"
+        )
+        self.linear_v = Linear(
+            self.c_v, self.c_hidden * self.no_heads, bias=False, init="glorot"
+        )
         self.linear_o = Linear(self.c_hidden * self.no_heads, self.c_q, init="final")
 
         self.linear_g = None
         if self.gating:
-            self.linear_g = Linear(self.c_q, self.c_hidden * self.no_heads, init="gating")
+            self.linear_g = Linear(
+                self.c_q, self.c_hidden * self.no_heads, init="gating"
+            )
 
         self.sigmoid = nn.Sigmoid()
 
-    def _prep_qkv(self, q_x: torch.Tensor,
-                  kv_x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _prep_qkv(
+        self, q_x: torch.Tensor, kv_x: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # [*, Q/K/V, H * C_hidden]
         q = self.linear_q(q_x)
         k = self.linear_k(kv_x)
@@ -358,7 +377,7 @@ class Attention(nn.Module):
         return q, k, v
 
     def _wrap_up(self, o: torch.Tensor, q_x: torch.Tensor) -> torch.Tensor:
-        if (self.linear_g is not None):
+        if self.linear_g is not None:
             g = self.sigmoid(self.linear_g(q_x))
 
             # [*, Q, H, C_hidden]
@@ -399,16 +418,21 @@ class Attention(nn.Module):
         Returns
             [*, Q, C_q] attention update
         """
-        if (biases is None):
+        if biases is None:
             biases = []
-        if (use_lma and (q_chunk_size is None or kv_chunk_size is None)):
-            raise ValueError("If use_lma is specified, q_chunk_size and kv_chunk_size must "
-                             "be provided")
+        if use_lma and (q_chunk_size is None or kv_chunk_size is None):
+            raise ValueError(
+                "If use_lma is specified, q_chunk_size and kv_chunk_size must "
+                "be provided"
+            )
 
         q, k, v = self._prep_qkv(q_x, kv_x)
 
-        if (use_lma):
-            biases = [b.expand(b.shape[:-2] + (q_x.shape[-2],) + (kv_x.shape[-2],)) for b in biases]
+        if use_lma:
+            biases = [
+                b.expand(b.shape[:-2] + (q_x.shape[-2],) + (kv_x.shape[-2],))
+                for b in biases
+            ]
 
             o = _lma(q, k, v, biases, q_chunk_size, kv_chunk_size)
         else:
@@ -420,7 +444,6 @@ class Attention(nn.Module):
 
 
 class GlobalAttention(nn.Module):
-
     def __init__(self, c_in, c_hidden, no_heads, inf, eps):
         super(GlobalAttention, self).__init__()
 
@@ -451,12 +474,13 @@ class GlobalAttention(nn.Module):
 
     def forward(self, m: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # [*, N_res, C_in]
-        q = torch.sum(m * mask.unsqueeze(-1),
-                      dim=-2) / (torch.sum(mask, dim=-1)[..., None] + self.eps)
+        q = torch.sum(m * mask.unsqueeze(-1), dim=-2) / (
+            torch.sum(mask, dim=-1)[..., None] + self.eps
+        )
 
         # [*, N_res, H * C_hidden]
         q = self.linear_q(q)
-        q *= (self.c_hidden**(-0.5))
+        q *= self.c_hidden ** (-0.5)
 
         # [*, N_res, H, C_hidden]
         q = q.view(q.shape[:-1] + (self.no_heads, -1))
@@ -472,7 +496,9 @@ class GlobalAttention(nn.Module):
         )
         bias = (self.inf * (mask - 1))[..., :, None, :]
         if habana.is_habana():
-            from fastfold.habana.fastnn.custom_op import fused_softmax, fused_softmax_bias
+            from fastfold.habana.fastnn.custom_op import (fused_softmax,
+                                                          fused_softmax_bias)
+
             a = fused_softmax(a, bias, -1)
         else:
             a += bias
@@ -516,16 +542,18 @@ def _lma(
     # [*, Q, H, C_hidden]
     o = q.new_zeros(q.shape)
     for q_s in range(0, no_q, q_chunk_size):
-        q_chunk = q[..., q_s:q_s + q_chunk_size, :, :]
-        large_bias_chunks = [b[..., q_s:q_s + q_chunk_size, :] for b in biases]
+        q_chunk = q[..., q_s : q_s + q_chunk_size, :, :]
+        large_bias_chunks = [b[..., q_s : q_s + q_chunk_size, :] for b in biases]
 
         maxes = []
         weights = []
         values = []
         for kv_s in range(0, no_kv, kv_chunk_size):
-            k_chunk = k[..., kv_s:kv_s + kv_chunk_size, :, :]
-            v_chunk = v[..., kv_s:kv_s + kv_chunk_size, :, :]
-            small_bias_chunks = [b[..., kv_s:kv_s + kv_chunk_size] for b in large_bias_chunks]
+            k_chunk = k[..., kv_s : kv_s + kv_chunk_size, :, :]
+            v_chunk = v[..., kv_s : kv_s + kv_chunk_size, :, :]
+            small_bias_chunks = [
+                b[..., kv_s : kv_s + kv_chunk_size] for b in large_bias_chunks
+            ]
 
             a = torch.einsum(
                 "...qhd,...khd->...hqk",
@@ -560,6 +588,6 @@ def _lma(
 
         q_chunk_out = all_values / all_weights
 
-        o[..., q_s:q_s + q_chunk_size, :, :] = q_chunk_out
+        o[..., q_s : q_s + q_chunk_size, :, :] = q_chunk_out
 
     return o

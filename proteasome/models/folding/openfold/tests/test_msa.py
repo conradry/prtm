@@ -12,22 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
-from openfold.model.msa import (
-    MSARowAttentionWithPairBias,
-    MSAColumnAttention,
-    MSAColumnGlobalAttention,
-)
-from openfold.utils.tensor_utils import tree_map
+
+import numpy as np
 import tests.compare_utils as compare_utils
+import torch
+from openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
+                                MSARowAttentionWithPairBias)
+from openfold.utils.tensor_utils import tree_map
 from tests.config import consts
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestMSARowAttentionWithPairBias(unittest.TestCase):
@@ -81,9 +79,7 @@ class TestMSARowAttentionWithPairBias(unittest.TestCase):
         )
         params = tree_map(lambda n: n[0], params, jax.numpy.DeviceArray)
 
-        out_gt = f.apply(
-            params, None, msa_act, msa_mask, pair_act
-        ).block_until_ready()
+        out_gt = f.apply(params, None, msa_act, msa_mask, pair_act).block_until_ready()
         out_gt = torch.as_tensor(np.array(out_gt))
 
         model = compare_utils.get_global_pretrained_openfold()
@@ -214,7 +210,8 @@ class TestMSAColumnGlobalAttention(unittest.TestCase):
 
         model = compare_utils.get_global_pretrained_openfold()
         out_repro = (
-            model.extra_msa_stack.blocks[0].msa_att_col(
+            model.extra_msa_stack.blocks[0]
+            .msa_att_col(
                 torch.as_tensor(msa_act, dtype=torch.float32).cuda(),
                 chunk_size=4,
                 mask=torch.as_tensor(msa_mask, dtype=torch.float32).cuda(),

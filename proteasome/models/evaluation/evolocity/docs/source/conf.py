@@ -1,29 +1,29 @@
-import sys
-import os
 import inspect
 import logging
-from pathlib import Path
+import os
+import sys
 from datetime import datetime
-from typing import Optional, Union, Mapping
+from pathlib import Path
+from typing import Mapping, Optional, Union
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
 
 # remove PyCharm’s old six module
-if 'six' in sys.modules:
-    print(*sys.path, sep='\n')
+if "six" in sys.modules:
+    print(*sys.path, sep="\n")
     for pypath in list(sys.path):
-        if any(p in pypath for p in ['PyCharm', 'pycharm']) and 'helpers' in pypath:
+        if any(p in pypath for p in ["PyCharm", "pycharm"]) and "helpers" in pypath:
             sys.path.remove(pypath)
-    del sys.modules['six']
+    del sys.modules["six"]
 
 import matplotlib  # noqa
 
-matplotlib.use('agg')
+matplotlib.use("agg")
 
 HERE = Path(__file__).parent
-sys.path.insert(0, f'{HERE.parent.parent}')
-sys.path.insert(0, os.path.abspath('_ext'))
+sys.path.insert(0, f"{HERE.parent.parent}")
+sys.path.insert(0, os.path.abspath("_ext"))
 import evolocity
 
 logger = logging.getLogger(__name__)
@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 from urllib.request import urlretrieve
 
-notebooks_url = 'https://github.com/brianhie/evovdss/raw/master/'
+notebooks_url = "https://github.com/brianhie/evovdss/raw/master/"
 notebooks = [
-    'evolocity_nucleoprotein.ipynb',
-    'evolocity_cytochrome_c.ipynb',
+    "evolocity_nucleoprotein.ipynb",
+    "evolocity_cytochrome_c.ipynb",
 ]
 for nb in notebooks:
     try:
@@ -47,21 +47,21 @@ for nb in notebooks:
 
 # -- General configuration ------------------------------------------------
 
-needs_sphinx = '1.7'
+needs_sphinx = "1.7"
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.githubpages',
-    'sphinx_autodoc_typehints',
-    'nbsphinx',
-    'edit_on_github',
-    'ipython_genutils',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.githubpages",
+    "sphinx_autodoc_typehints",
+    "nbsphinx",
+    "edit_on_github",
+    "ipython_genutils",
 ]
 
 
@@ -71,35 +71,35 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = False
-napoleon_custom_sections = [('Params', 'Parameters')]
+napoleon_custom_sections = [("Params", "Parameters")]
 
 intersphinx_mapping = dict(
-    python=('https://docs.python.org/3', None),
-    anndata=('https://anndata.readthedocs.io/en/latest/', None),
-    scanpy=('https://scanpy.readthedocs.io/en/latest/', None),
-    cellrank=('https://cellrank.readthedocs.io/en/latest/', None),
+    python=("https://docs.python.org/3", None),
+    anndata=("https://anndata.readthedocs.io/en/latest/", None),
+    scanpy=("https://scanpy.readthedocs.io/en/latest/", None),
+    cellrank=("https://cellrank.readthedocs.io/en/latest/", None),
 )
 
-templates_path = ['_templates']
-source_suffix = ['.rst', '.ipynb']
-master_doc = 'index'
+templates_path = ["_templates"]
+source_suffix = [".rst", ".ipynb"]
+master_doc = "index"
 
 # General information about the project.
-project = 'evolocity'
-author = 'Brian Hie'
-title = 'Evolutionary velocity with protein language models'
-copyright = f'{datetime.now():%Y}, {author}'
+project = "evolocity"
+author = "Brian Hie"
+title = "Evolutionary velocity with protein language models"
+copyright = f"{datetime.now():%Y}, {author}"
 
-version = evolocity.__version__.replace('.dirty', '')
+version = evolocity.__version__.replace(".dirty", "")
 release = version
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-pygments_style = 'sphinx'
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+pygments_style = "sphinx"
 todo_include_todos = False
 
 # Add notebooks prolog to Google Colab and nbviewer
-#nbsphinx_prolog = r'''
-#{% set docname = 'github/theislab/scvelo_notebooks/blob/master/' + env.doc2path(env.docname, base=None) %}
-#.. raw:: html
+# nbsphinx_prolog = r'''
+# {% set docname = 'github/theislab/scvelo_notebooks/blob/master/' + env.doc2path(env.docname, base=None) %}
+# .. raw:: html
 #
 #    <div class='note'>
 #      <a href='https://colab.research.google.com/{{ docname|e }}' target='_parent'>
@@ -112,27 +112,28 @@ todo_include_todos = False
 # -- Options for HTML output ----------------------------------------------
 
 import sphinx_theme
-html_theme = 'stanford_theme'
+
+html_theme = "stanford_theme"
 html_theme_path = [sphinx_theme.get_html_theme_path(html_theme)]
 html_theme_options = dict(navigation_depth=1, titles_only=True)
-github_repo = 'evolocity'
-github_nb_repo = 'evovdss'
-html_static_path = ['_static']
+github_repo = "evolocity"
+github_nb_repo = "evovdss"
+html_static_path = ["_static"]
 
 
 def setup(app):
-    app.add_stylesheet('css/theme.css')
+    app.add_stylesheet("css/theme.css")
 
 
 # -- Options for other output ------------------------------------------
 
-htmlhelp_basename = 'evolocitydoc'
-title_doc = f'{project} documentation'
+htmlhelp_basename = "evolocitydoc"
+title_doc = f"{project} documentation"
 
-latex_documents = [(master_doc, f'{project}.tex', title_doc, author, 'manual')]
+latex_documents = [(master_doc, f"{project}.tex", title_doc, author, "manual")]
 man_pages = [(master_doc, project, title_doc, [author], 1)]
 texinfo_documents = [
-    (master_doc, project, title_doc, author, project, title, 'Miscellaneous')
+    (master_doc, project, title_doc, author, project, title, "Miscellaneous")
 ]
 
 
@@ -142,7 +143,7 @@ texinfo_documents = [
 def process_generate_options(app: Sphinx):
     genfiles = app.config.autosummary_generate
 
-    if genfiles and not hasattr(genfiles, '__len__'):
+    if genfiles and not hasattr(genfiles, "__len__"):
         env = app.builder.env
         genfiles = [
             env.doc2path(x, base=None)
@@ -156,7 +157,7 @@ def process_generate_options(app: Sphinx):
 
     ext = app.config.source_suffix
     genfiles = [
-        genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
+        genfile + (not genfile.endswith(tuple(ext)) and ext[0] or "")
         for genfile in genfiles
     ]
 
@@ -183,13 +184,13 @@ autosummary.process_generate_options = process_generate_options
 
 
 def get_obj_module(qualname):
-    '''Get a module/class/attribute and its original module by qualname'''
+    """Get a module/class/attribute and its original module by qualname"""
     modname = qualname
     classname = None
     attrname = None
     while modname not in sys.modules:
         attrname = classname
-        modname, classname = modname.rsplit('.', 1)
+        modname, classname = modname.rsplit(".", 1)
 
     # retrieve object and find original module name
     if classname:
@@ -203,7 +204,7 @@ def get_obj_module(qualname):
 
 
 def get_linenos(obj):
-    '''Get an object’s line numbers'''
+    """Get an object’s line numbers"""
     try:
         lines, start = inspect.getsourcelines(obj)
     except TypeError:
@@ -214,15 +215,15 @@ def get_linenos(obj):
 
 # set project_dir: project/docs/source/conf.py/../../.. → project/
 project_dir = Path(__file__).parent.parent.parent
-github_url_evolocity = 'https://github.com/brianhie/evolocity/tree/master'
-github_url_read_loom = 'https://github.com/theislab/anndata/tree/master/anndata'
-github_url_read = 'https://github.com/theislab/scanpy/tree/master'
-github_url_scanpy = 'https://github.com/theislab/scanpy/tree/master/scanpy'
+github_url_evolocity = "https://github.com/brianhie/evolocity/tree/master"
+github_url_read_loom = "https://github.com/theislab/anndata/tree/master/anndata"
+github_url_read = "https://github.com/theislab/scanpy/tree/master"
+github_url_scanpy = "https://github.com/theislab/scanpy/tree/master/scanpy"
 from pathlib import PurePosixPath
 
 
 def modurl(qualname):
-    '''Get the full GitHub URL for some object’s qualname.'''
+    """Get the full GitHub URL for some object’s qualname."""
     obj, module = get_obj_module(qualname)
     github_url = github_url_evolocity
     try:
@@ -231,24 +232,24 @@ def modurl(qualname):
         # trying to document something from another package
         github_url = (
             github_url_read_loom
-            if 'read_loom' in qualname
+            if "read_loom" in qualname
             else github_url_read
-            if 'read' in qualname
+            if "read" in qualname
             else github_url_scanpy
         )
-        path = '/'.join(module.__file__.split('/')[-2:])
+        path = "/".join(module.__file__.split("/")[-2:])
     start, end = get_linenos(obj)
-    fragment = f'#L{start}-L{end}' if start and end else ''
-    return f'{github_url}/{path}{fragment}'
+    fragment = f"#L{start}-L{end}" if start and end else ""
+    return f"{github_url}/{path}{fragment}"
 
 
 def api_image(qualname: str) -> Optional[str]:
-    path = Path(__file__).parent / f'{qualname}.png'
+    path = Path(__file__).parent / f"{qualname}.png"
     print(path, path.is_file())
     return (
-        f'.. image:: {path.name}\n   :width: 200\n   :align: right'
+        f".. image:: {path.name}\n   :width: 200\n   :align: right"
         if path.is_file()
-        else ''
+        else ""
     )
 
 
@@ -263,27 +264,27 @@ DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 import sphinx_autodoc_typehints
 
 qualname_overrides = {
-    'anndata.base.AnnData': 'anndata.AnnData',
+    "anndata.base.AnnData": "anndata.AnnData",
 }
 
 fa_orig = sphinx_autodoc_typehints.format_annotation
 
 
 def format_annotation(annotation):
-    if getattr(annotation, '__origin__', None) is Union or hasattr(
-        annotation, '__union_params__'
+    if getattr(annotation, "__origin__", None) is Union or hasattr(
+        annotation, "__union_params__"
     ):
-        params = getattr(annotation, '__union_params__', None) or getattr(
-            annotation, '__args__', None
+        params = getattr(annotation, "__union_params__", None) or getattr(
+            annotation, "__args__", None
         )
-        return ', '.join(map(format_annotation, params))
-    if getattr(annotation, '__origin__', None) is Mapping:
-        return ':class:`~typing.Mapping`'
+        return ", ".join(map(format_annotation, params))
+    if getattr(annotation, "__origin__", None) is Mapping:
+        return ":class:`~typing.Mapping`"
     if inspect.isclass(annotation):
-        full_name = f'{annotation.__module__}.{annotation.__qualname__}'
+        full_name = f"{annotation.__module__}.{annotation.__qualname__}"
         override = qualname_overrides.get(full_name)
         if override is not None:
-            return f':py:class:`~{qualname_overrides[full_name]}`'
+            return f":py:class:`~{qualname_overrides[full_name]}`"
     return fa_orig(annotation)
 
 
@@ -293,9 +294,10 @@ sphinx_autodoc_typehints.format_annotation = format_annotation
 # -- Prettier Param docs --------------------------------------------
 
 from typing import Dict, List, Tuple
+
 from docutils import nodes
 from sphinx import addnodes
-from sphinx.domains.python import PyTypedField, PyObject
+from sphinx.domains.python import PyObject, PyTypedField
 from sphinx.environment import BuildEnvironment
 
 
@@ -319,7 +321,7 @@ class PrettyTypedField(PyTypedField):
             head += makerefs(self.rolename, fieldarg, addnodes.literal_strong)
             fieldtype = types.pop(fieldarg, None)
             if fieldtype is not None:
-                head += nodes.Text(' : ')
+                head += nodes.Text(" : ")
                 if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
                     (text_node,) = fieldtype  # type: nodes.Text
                     head += makerefs(
@@ -328,12 +330,12 @@ class PrettyTypedField(PyTypedField):
                 else:
                     head += fieldtype
 
-            body_content = nodes.paragraph('', '', *content)
-            body = nodes.definition('', body_content)
+            body_content = nodes.paragraph("", "", *content)
+            body = nodes.definition("", body_content)
 
-            return nodes.definition_list_item('', head, body)
+            return nodes.definition_list_item("", head, body)
 
-        fieldname = nodes.field_name('', self.label)
+        fieldname = nodes.field_name("", self.label)
         if len(items) == 1 and self.can_collapse:
             fieldarg, content = items[0]
             bodynode = handle_item(fieldarg, content)
@@ -341,8 +343,8 @@ class PrettyTypedField(PyTypedField):
             bodynode = self.list_type()
             for fieldarg, content in items:
                 bodynode += handle_item(fieldarg, content)
-        fieldbody = nodes.field_body('', bodynode)
-        return nodes.field('', fieldname, fieldbody)
+        fieldbody = nodes.field_body("", bodynode)
+        return nodes.field("", fieldname, fieldbody)
 
 
 # replace matching field types with ours

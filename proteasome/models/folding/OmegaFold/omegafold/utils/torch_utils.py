@@ -51,10 +51,11 @@ def mask2bias(mask: torch.Tensor, *, inf: float = 1e9) -> torch.Tensor:
 
 
 def normalize(
-        inputs: torch.Tensor,
-        normalized_shape: typing.Optional[
-            typing.Union[int, typing.List[int], torch.Size]] = None,
-        in_place: bool = False
+    inputs: torch.Tensor,
+    normalized_shape: typing.Optional[
+        typing.Union[int, typing.List[int], torch.Size]
+    ] = None,
+    in_place: bool = False,
 ) -> torch.Tensor:
     """Layer normalization without a module (and weight)
 
@@ -74,7 +75,7 @@ def normalize(
 
     if in_place:
         # This seems to create small discrepancy in result
-        dim = list(range(len(inputs.shape))[-len(normalized_shape):])
+        dim = list(range(len(inputs.shape))[-len(normalized_shape) :])
         inputs -= inputs.mean(dim=dim, keepdim=True)
         inputs *= torch.rsqrt(inputs.var(dim=dim, keepdim=True) + 1e-5)
         return inputs
@@ -84,11 +85,11 @@ def normalize(
 
 
 def masked_mean(
-        values: torch.Tensor,
-        mask: torch.Tensor,
-        dim: typing.Union[int, typing.Sequence[int], None],
-        keepdim: typing.Optional[bool] = False,
-        eps: typing.Optional[float] = 4e-5
+    values: torch.Tensor,
+    mask: torch.Tensor,
+    dim: typing.Union[int, typing.Sequence[int], None],
+    keepdim: typing.Optional[bool] = False,
+    eps: typing.Optional[float] = 4e-5,
 ) -> torch.Tensor:
     """Mean operation with mask
 

@@ -6,23 +6,19 @@ import typing as T
 from dataclasses import dataclass
 from functools import partial
 
+import esm
 import torch
 import torch.nn as nn
-from torch import nn
-from torch.nn import LayerNorm
-
-import esm
 from esm import Alphabet
 from esm.esmfold.v1.categorical_mixture import categorical_lddt
-from esm.esmfold.v1.misc import (
-    batch_encode_sequences,
-    collate_dense_tensors,
-    output_to_pdb,
-)
+from esm.esmfold.v1.misc import (batch_encode_sequences, collate_dense_tensors,
+                                 output_to_pdb)
 from esm.esmfold.v1.trunk import FoldingTrunk, FoldingTrunkConfig
 from openfold.data.data_transforms import make_atom14_masks
 from openfold.np import residue_constants
 from openfold.utils.loss import compute_predicted_aligned_error, compute_tm
+from torch import nn
+from torch.nn import LayerNorm
 
 
 @dataclass

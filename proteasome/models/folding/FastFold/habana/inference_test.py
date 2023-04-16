@@ -1,21 +1,21 @@
 import pickle
 import time
 
+import fastfold.habana as habana
 import habana_frameworks.torch.core as htcore
 import torch
-
-import fastfold.habana as habana
 from fastfold.config import model_config
 from fastfold.habana.distributed import init_dist
 from fastfold.habana.fastnn.ops import set_chunk_size
 from fastfold.habana.inject_habana import inject_habana
 from fastfold.model.hub import AlphaFold
 
+
 def main():
     habana.enable_habana()
 
     init_dist()
-    batch = pickle.load(open('./test_batch.pkl', 'rb'))
+    batch = pickle.load(open("./test_batch.pkl", "rb"))
 
     model_name = "model_1"
     device = torch.device("hpu")
@@ -34,10 +34,13 @@ def main():
 
     if habana.is_hmp():
         from habana_frameworks.torch.hpex import hmp
-        hmp.convert(opt_level='O1',
-                    bf16_file_path='./habana/ops_bf16.txt',
-                    fp32_file_path='./habana/ops_fp32.txt',
-                    isVerbose=False)
+
+        hmp.convert(
+            opt_level="O1",
+            bf16_file_path="./habana/ops_bf16.txt",
+            fp32_file_path="./habana/ops_fp32.txt",
+            isVerbose=False,
+        )
         print("========= AMP ENABLED!!")
 
     with torch.no_grad():
@@ -51,5 +54,5 @@ def main():
             print(f"Inference time: {time.perf_counter() - t}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

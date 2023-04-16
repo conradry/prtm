@@ -1,16 +1,14 @@
-from fastfold.distributed.comm_async import gather_async
-
 import torch
 import torch.nn as nn
-from fastfold.model.fastnn.kernel import LayerNorm
 from fastfold.distributed.comm import col_to_row, row_to_col, scatter
-from fastfold.model.fastnn.kernel import bias_dropout_add, bias_ele_dropout_residual
-from fastfold.model.fastnn.ops import (Linear, SelfAttention, ChunkTransition, 
-                                       ChunkTriangleAttentionStartingNode,
-                                       ChunkTriangleAttentionEndingNode, 
-                                       AsyncChunkTriangleMultiplicationOutgoing, 
-                                       AsyncChunkTriangleMultiplicationIncoming)
-from fastfold.distributed.comm_async import gather_async_opp, gather_async
+from fastfold.distributed.comm_async import gather_async, gather_async_opp
+from fastfold.model.fastnn.kernel import (LayerNorm, bias_dropout_add,
+                                          bias_ele_dropout_residual)
+from fastfold.model.fastnn.ops import (
+    AsyncChunkTriangleMultiplicationIncoming,
+    AsyncChunkTriangleMultiplicationOutgoing, ChunkTransition,
+    ChunkTriangleAttentionEndingNode, ChunkTriangleAttentionStartingNode,
+    Linear, SelfAttention)
 
 
 def permute_final_dims(tensor, inds):
@@ -20,7 +18,6 @@ def permute_final_dims(tensor, inds):
 
 
 class TriangleMultiplicationOutgoing(nn.Module):
-
     def __init__(self, d_pair, p_drop, c=128):
         super(TriangleMultiplicationOutgoing, self).__init__()
         self.d_pair = d_pair
@@ -28,12 +25,16 @@ class TriangleMultiplicationOutgoing(nn.Module):
 
         self.layernorm1 = LayerNorm(d_pair)
         self.left_right_projection = Linear(d_pair, 2 * c)
-        self.left_right_gate = Linear(d_pair, 2 * c, initializer='zeros', bias_init=1.)
+        self.left_right_gate = Linear(d_pair, 2 * c, initializer="zeros", bias_init=1.0)
 
-        self.output_gate = Linear(d_pair, d_pair, initializer='zeros', bias_init=1.)
+        self.output_gate = Linear(d_pair, d_pair, initializer="zeros", bias_init=1.0)
         self.layernorm2 = LayerNorm(c)
-        self.output_projection = Linear(d_pair, d_pair, initializer='zeros', use_bias=False)
-        self.output_bias = nn.parameter.Parameter(data=torch.zeros((d_pair,)), requires_grad=True)
+        self.output_projection = Linear(
+            d_pair, d_pair, initializer="zeros", use_bias=False
+        )
+        self.output_bias = nn.parameter.Parameter(
+            data=torch.zeros((d_pair,)), requires_grad=True
+        )
 
         self.p_drop = p_drop
 
@@ -64,17 +65,18 @@ class TriangleMultiplicationOutgoing(nn.Module):
         # ab = torch.einsum('bikd,bjkd->bijd', left_proj_act, right_proj_act)
         ab = self.output_projection(self.layernorm2(ab))
         dropout_mask = torch.ones_like(Z[:, 0:1, :, :], device=Z.device, dtype=Z.dtype)
-        return bias_ele_dropout_residual(ab,
-                                         self.output_bias,
-                                         g,
-                                         dropout_mask,
-                                         Z_raw,
-                                         prob=self.p_drop,
-                                         training=self.training)
+        return bias_ele_dropout_residual(
+            ab,
+            self.output_bias,
+            g,
+            dropout_mask,
+            Z_raw,
+            prob=self.p_drop,
+            training=self.training,
+        )
 
 
 class TriangleMultiplicationIncoming(nn.Module):
-
     def __init__(self, d_pair, p_drop, c=128):
         super(TriangleMultiplicationIncoming, self).__init__()
         self.d_pair = d_pair
@@ -82,12 +84,16 @@ class TriangleMultiplicationIncoming(nn.Module):
 
         self.layernorm1 = LayerNorm(d_pair)
         self.left_right_projection = Linear(d_pair, 2 * c)
-        self.left_right_gate = Linear(d_pair, 2 * c, initializer='zeros', bias_init=1.)
+        self.left_right_gate = Linear(d_pair, 2 * c, initializer="zeros", bias_init=1.0)
 
-        self.output_gate = Linear(d_pair, d_pair, initializer='zeros', bias_init=1.)
+        self.output_gate = Linear(d_pair, d_pair, initializer="zeros", bias_init=1.0)
         self.layernorm2 = LayerNorm(c)
-        self.output_projection = Linear(d_pair, d_pair, initializer='zeros', use_bias=False)
-        self.output_bias = nn.parameter.Parameter(data=torch.zeros((d_pair,)), requires_grad=True)
+        self.output_projection = Linear(
+            d_pair, d_pair, initializer="zeros", use_bias=False
+        )
+        self.output_bias = nn.parameter.Parameter(
+            data=torch.zeros((d_pair,)), requires_grad=True
+        )
 
         self.p_drop = p_drop
 
@@ -114,17 +120,18 @@ class TriangleMultiplicationIncoming(nn.Module):
         # ab = torch.einsum('bkid,bkjd->bijd', left_proj_act, right_proj_act)
         ab = self.output_projection(self.layernorm2(ab))
         dropout_mask = torch.ones_like(Z[:, 0:1, :, :], device=Z.device, dtype=Z.dtype)
-        return bias_ele_dropout_residual(ab,
-                                         self.output_bias,
-                                         g,
-                                         dropout_mask,
-                                         Z_raw,
-                                         prob=self.p_drop,
-                                         training=self.training)
+        return bias_ele_dropout_residual(
+            ab,
+            self.output_bias,
+            g,
+            dropout_mask,
+            Z_raw,
+            prob=self.p_drop,
+            training=self.training,
+        )
 
 
 class TriangleAttentionStartingNode(nn.Module):
-
     def __init__(self, d_pair, p_drop, c=32, n_head=4):
         super(TriangleAttentionStartingNode, self).__init__()
         self.d_pair = d_pair
@@ -137,15 +144,19 @@ class TriangleAttentionStartingNode(nn.Module):
         #                                       std=1.0 / math.sqrt(d_pair))
         # self.linear_b_weights = nn.parameter.Parameter(data=_init_weights)
 
-        self.linear_b = Linear(d_pair, n_head, initializer='linear', use_bias=False)
-        self.attention = SelfAttention(qkv_dim=d_pair,
-                                       c=c,
-                                       n_head=n_head,
-                                       out_dim=d_pair,
-                                       gating=True,
-                                       last_bias_fuse=True)
+        self.linear_b = Linear(d_pair, n_head, initializer="linear", use_bias=False)
+        self.attention = SelfAttention(
+            qkv_dim=d_pair,
+            c=c,
+            n_head=n_head,
+            out_dim=d_pair,
+            gating=True,
+            last_bias_fuse=True,
+        )
 
-        self.out_bias = nn.parameter.Parameter(data=torch.zeros((d_pair,)), requires_grad=True)
+        self.out_bias = nn.parameter.Parameter(
+            data=torch.zeros((d_pair,)), requires_grad=True
+        )
 
     def forward(self, Z_raw, Z_mask):
         Z = self.layernorm1(Z_raw)
@@ -159,16 +170,17 @@ class TriangleAttentionStartingNode(nn.Module):
         Z = self.attention(Z, Z_mask, (b, work))
 
         dropout_mask = torch.ones_like(Z[:, 0:1, :, :], device=Z.device, dtype=Z.dtype)
-        return bias_dropout_add(Z,
-                                self.out_bias,
-                                dropout_mask,
-                                Z_raw,
-                                prob=self.p_drop,
-                                training=self.training)
+        return bias_dropout_add(
+            Z,
+            self.out_bias,
+            dropout_mask,
+            Z_raw,
+            prob=self.p_drop,
+            training=self.training,
+        )
 
 
 class TriangleAttentionEndingNode(nn.Module):
-
     def __init__(self, d_pair, p_drop, c=32, n_head=4):
         super(TriangleAttentionEndingNode, self).__init__()
         self.d_pair = d_pair
@@ -181,15 +193,19 @@ class TriangleAttentionEndingNode(nn.Module):
         #                                       std=1.0 / math.sqrt(d_pair))
         # self.linear_b_weights = nn.parameter.Parameter(data=_init_weights)
 
-        self.linear_b = Linear(d_pair, n_head, initializer='linear', use_bias=False)
-        self.attention = SelfAttention(qkv_dim=d_pair,
-                                       c=c,
-                                       n_head=n_head,
-                                       out_dim=d_pair,
-                                       gating=True,
-                                       last_bias_fuse=True)
+        self.linear_b = Linear(d_pair, n_head, initializer="linear", use_bias=False)
+        self.attention = SelfAttention(
+            qkv_dim=d_pair,
+            c=c,
+            n_head=n_head,
+            out_dim=d_pair,
+            gating=True,
+            last_bias_fuse=True,
+        )
 
-        self.out_bias = nn.parameter.Parameter(data=torch.zeros((d_pair,)), requires_grad=True)
+        self.out_bias = nn.parameter.Parameter(
+            data=torch.zeros((d_pair,)), requires_grad=True
+        )
 
     def forward(self, Z_raw, Z_mask):
         Z = Z_raw.transpose(-2, -3)
@@ -205,16 +221,17 @@ class TriangleAttentionEndingNode(nn.Module):
 
         Z = Z.transpose(-2, -3)
         dropout_mask = torch.ones_like(Z[:, :, 0:1, :], device=Z.device, dtype=Z.dtype)
-        return bias_dropout_add(Z,
-                                self.out_bias,
-                                dropout_mask,
-                                Z_raw,
-                                prob=self.p_drop,
-                                training=self.training)
+        return bias_dropout_add(
+            Z,
+            self.out_bias,
+            dropout_mask,
+            Z_raw,
+            prob=self.p_drop,
+            training=self.training,
+        )
 
 
 class PairCore(nn.Module):
-
     def __init__(self, d_pair, p_drop=0.25):
         super(PairCore, self).__init__()
 
@@ -222,20 +239,18 @@ class PairCore(nn.Module):
         self.n_head = 4
         self.hidden_c = int(d_pair / self.n_head)
 
-        self.TriangleMultiplicationOutgoing = AsyncChunkTriangleMultiplicationOutgoing(d_pair,
-                                                                                       p_drop=p_drop,
-                                                                                       c=d_pair)
-        self.TriangleMultiplicationIncoming = AsyncChunkTriangleMultiplicationIncoming(d_pair,
-                                                                                       p_drop=p_drop,
-                                                                                       c=d_pair)
-        self.TriangleAttentionStartingNode = ChunkTriangleAttentionStartingNode(d_pair,
-                                                                                p_drop=p_drop,
-                                                                                c=self.hidden_c,
-                                                                                n_head=self.n_head)
-        self.TriangleAttentionEndingNode = ChunkTriangleAttentionEndingNode(d_pair,
-                                                                            p_drop=p_drop,
-                                                                            c=self.hidden_c,
-                                                                            n_head=self.n_head)
+        self.TriangleMultiplicationOutgoing = AsyncChunkTriangleMultiplicationOutgoing(
+            d_pair, p_drop=p_drop, c=d_pair
+        )
+        self.TriangleMultiplicationIncoming = AsyncChunkTriangleMultiplicationIncoming(
+            d_pair, p_drop=p_drop, c=d_pair
+        )
+        self.TriangleAttentionStartingNode = ChunkTriangleAttentionStartingNode(
+            d_pair, p_drop=p_drop, c=self.hidden_c, n_head=self.n_head
+        )
+        self.TriangleAttentionEndingNode = ChunkTriangleAttentionEndingNode(
+            d_pair, p_drop=p_drop, c=self.hidden_c, n_head=self.n_head
+        )
         self.PairTransition = ChunkTransition(d=d_pair)
 
     def forward(self, pair, pair_mask):
@@ -255,16 +270,16 @@ class PairCore(nn.Module):
     def inplace(self, pair, pair_mask):
         pair_mask_row = scatter(pair_mask, dim=1)
         pair_mask_col = scatter(pair_mask, dim=2)
-        
+
         pair[0] = self.TriangleMultiplicationOutgoing(pair[0], pair_mask_row)
         pair[0] = row_to_col(pair[0])
         pair[0] = self.TriangleMultiplicationIncoming(pair[0], pair_mask_col)
         pair[0] = col_to_row(pair[0])
-        
+
         pair = self.TriangleAttentionStartingNode.inplace(pair, pair_mask_row)
         pair[0] = row_to_col(pair[0])
         pair = self.TriangleAttentionEndingNode.inplace(pair, pair_mask_col)
-        
+
         pair = self.PairTransition.inplace(pair)
         pair[0] = col_to_row(pair[0])
 

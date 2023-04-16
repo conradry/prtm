@@ -1,7 +1,7 @@
 # Adapted from OpenFold
 # Copyright 2021 AlQuraishi Laboratory
 # Copyright 2021 DeepMind Technologies Limited
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,43 +15,43 @@
 # limitations under the License.
 
 import torch
-from torch import nn
-
 from genie.model.modules.primitives import Linear
-from genie.utils.affine_utils import T, quat_to_rot 
+from genie.utils.affine_utils import T, quat_to_rot
+from torch import nn
 
 
 class BackboneUpdate(nn.Module):
     """
-        Implements Algorithm 23.
+    Implements Algorithm 23.
     """
+
     def __init__(self, c_s):
         """
-            Args:
-                c_s:
-                    Single representation channel dimension
+        Args:
+            c_s:
+                Single representation channel dimension
         """
         super(BackboneUpdate, self).__init__()
 
         self.c_s = c_s
 
-        self.linear = Linear(self.c_s, 6) #, init="final")
+        self.linear = Linear(self.c_s, 6)  # , init="final")
 
     def forward(self, s):
         """
-            Args:
-                [*, N_res, C_s] single representation
-            Returns:
-                [*, N_res] affine transformation object
+        Args:
+            [*, N_res, C_s] single representation
+        Returns:
+            [*, N_res] affine transformation object
         """
         # [*, 6]
         params = self.linear(s)
 
         # [*, 3]
-        quats, trans = params[...,:3], params[...,3:]
+        quats, trans = params[..., :3], params[..., 3:]
 
         # [*]
-        norm_denom = torch.sqrt(torch.sum(quats ** 2, dim=-1) + 1)
+        norm_denom = torch.sqrt(torch.sum(quats**2, dim=-1) + 1)
 
         # As many ones as there are dimensions in quats
         ones = s.new_ones((1,) * len(quats.shape))

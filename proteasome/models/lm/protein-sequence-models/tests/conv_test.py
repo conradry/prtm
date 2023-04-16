@@ -1,12 +1,14 @@
 import numpy as np
 import torch
-from sequence_models.convolutional import ByteNetBlock, ByteNet, ConditionedByteNetDecoder, \
-    HierarchicalCausalConv1d, MaskedCausalConv1d
+from sequence_models.convolutional import (ByteNet, ByteNetBlock,
+                                           ConditionedByteNetDecoder,
+                                           HierarchicalCausalConv1d,
+                                           MaskedCausalConv1d)
 
 if torch.cuda.is_available():
-    device = torch.device('cuda')
+    device = torch.device("cuda")
 else:
-    device = torch.device('cpu')
+    device = torch.device("cpu")
 b = 5
 
 d = 8

@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 def _test_esm1b(alphabet):
     import torch
 
@@ -62,8 +63,8 @@ def test_esm1v_alphabet():
 
 
 def test_esm1_msa1b_alphabet():
-    import torch
     import esm
+    import torch
 
     # Load ESM-1b model
     _, alphabet = esm.pretrained.esm_msa1b_t12_100M_UR50S()

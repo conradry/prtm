@@ -14,15 +14,13 @@
 # limitations under the License.
 
 import copy
-from typing import Mapping, Tuple, List, Optional, Dict, Sequence
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+import fastfold.habana as habana
 import ml_collections
 import numpy as np
 import torch
-
-import fastfold.habana as habana
 from fastfold.data import input_pipeline, input_pipeline_multimer
-
 
 FeatureDict = Mapping[str, np.ndarray]
 TensorDict = Dict[str, torch.Tensor]
@@ -42,9 +40,7 @@ def np_to_tensor_dict(
         A dictionary of features mapping feature names to features. Only the given
         features are returned, all other ones are filtered out.
     """
-    tensor_dict = {
-        k: torch.tensor(v) for k, v in np_example.items() if k in features
-    }
+    tensor_dict = {k: torch.tensor(v) for k, v in np_example.items() if k in features}
     return tensor_dict
 
 
@@ -84,13 +80,11 @@ def np_example_to_features(
     cfg, feature_names = make_data_config(config, mode=mode, num_res=num_res)
 
     if "deletion_matrix_int" in np_example:
-        np_example["deletion_matrix"] = np_example.pop(
-            "deletion_matrix_int"
-        ).astype(np.float32)
+        np_example["deletion_matrix"] = np_example.pop("deletion_matrix_int").astype(
+            np.float32
+        )
 
-    tensor_dict = np_to_tensor_dict(
-        np_example=np_example, features=feature_names
-    )
+    tensor_dict = np_to_tensor_dict(np_example=np_example, features=feature_names)
 
     if is_multimer:
         input_pipeline_fn = input_pipeline_multimer.process_tensors_from_config
@@ -99,6 +93,7 @@ def np_example_to_features(
 
     if habana.is_habana():
         from habana_frameworks.torch.hpex import hmp
+
         with torch.no_grad(), hmp.disable_casts():
             features = input_pipeline_fn(tensor_dict, cfg.common, cfg[mode])
     else:

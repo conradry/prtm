@@ -24,10 +24,8 @@ import argparse
 import typing
 
 import torch
-from torch import nn
-
 from omegafold import modules, utils
-
+from torch import nn
 
 # =============================================================================
 # Constants
@@ -53,7 +51,7 @@ class GeoFormerBlock(modules.OFModule):
             d_edge=cfg.edge_dim,
             n_head=cfg.attn_n_head,
             attn_gating=cfg.gating,
-            attn_c=cfg.attn_c
+            attn_c=cfg.attn_c,
         )
         self.column_attention = modules.Attention(
             q_dim=cfg.node_dim,
@@ -62,37 +60,33 @@ class GeoFormerBlock(modules.OFModule):
             n_head=cfg.attn_n_head,
             c=cfg.attn_c,
             out_dim=cfg.node_dim,
-            n_axis=1
+            n_axis=1,
         )
         self.node_transition = modules.Transition(
-            d=cfg.node_dim,
-            n=cfg.transition_multiplier,
-            activation=cfg.activation
+            d=cfg.node_dim, n=cfg.transition_multiplier, activation=cfg.activation
         )
         self.out_product = modules.Node2Edge(
             in_dim=cfg.node_dim, out_dim=cfg.edge_dim, proj_dim=cfg.opm_dim
         )
         self.geometric_attention = nn.ModuleList(
-            [modules.GeometricAttention(
-                d_edge=cfg.edge_dim,
-                n_axis=2,
-                c=cfg.geom_c,
-                n_head=cfg.geom_head
-            ) for _ in range(cfg.geom_count)]
+            [
+                modules.GeometricAttention(
+                    d_edge=cfg.edge_dim, n_axis=2, c=cfg.geom_c, n_head=cfg.geom_head
+                )
+                for _ in range(cfg.geom_count)
+            ]
         )
         self.edge_transition = modules.Transition(
-            d=cfg.edge_dim,
-            n=cfg.transition_multiplier,
-            activation=cfg.activation
+            d=cfg.edge_dim, n=cfg.transition_multiplier, activation=cfg.activation
         )
 
     def forward(
-            self,
-            node_repr: torch.Tensor,
-            edge_repr: torch.Tensor,
-            mask: torch.Tensor,
-            *,
-            fwd_cfg: typing.Optional[argparse.Namespace] = None
+        self,
+        node_repr: torch.Tensor,
+        edge_repr: torch.Tensor,
+        mask: torch.Tensor,
+        *,
+        fwd_cfg: typing.Optional[argparse.Namespace] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
 
@@ -106,15 +100,11 @@ class GeoFormerBlock(modules.OFModule):
 
         """
         node_repr += self.attention_w_edge_bias(
-            node_repr,
-            edge_repr,
-            mask,
-            fwd_cfg=fwd_cfg
+            node_repr, edge_repr, mask, fwd_cfg=fwd_cfg
         )
         node_repr = self._column_attention(node_repr, mask, fwd_cfg=fwd_cfg)
         node_repr += self.node_transition(
-            node_repr,
-            subbatch_size=fwd_cfg.subbatch_size
+            node_repr, subbatch_size=fwd_cfg.subbatch_size
         )
 
         edge_repr += self.out_product(node_repr, mask)
@@ -131,7 +121,7 @@ class GeoFormerBlock(modules.OFModule):
             node_repr_col,
             node_repr_col,
             bias=utils.mask2bias(mask.T[..., None, None, :]),
-            fwd_cfg=fwd_cfg
+            fwd_cfg=fwd_cfg,
         )
         node_repr += node_repr_col.transpose(-2, -3)
         return node_repr
@@ -146,12 +136,12 @@ class GeoFormer(modules.OFModule):
         self.node_final_proj = nn.Linear(cfg.node_dim, cfg.struct.node_dim)
 
     def forward(
-            self,
-            node_repr: torch.Tensor,
-            edge_repr: torch.Tensor,
-            mask: torch.Tensor,
-            *,
-            fwd_cfg: typing.Optional[argparse.Namespace] = None
+        self,
+        node_repr: torch.Tensor,
+        edge_repr: torch.Tensor,
+        mask: torch.Tensor,
+        *,
+        fwd_cfg: typing.Optional[argparse.Namespace] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
 
@@ -172,9 +162,7 @@ class GeoFormer(modules.OFModule):
         """
 
         for block in self.blocks:
-            node_repr, edge_repr = block(
-                node_repr, edge_repr, mask, fwd_cfg=fwd_cfg
-            )
+            node_repr, edge_repr = block(node_repr, edge_repr, mask, fwd_cfg=fwd_cfg)
 
         final_node = self.node_final_proj(node_repr)
         return node_repr, edge_repr, final_node
@@ -183,5 +171,5 @@ class GeoFormer(modules.OFModule):
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

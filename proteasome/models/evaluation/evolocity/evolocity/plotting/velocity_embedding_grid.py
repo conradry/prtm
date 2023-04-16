@@ -1,27 +1,27 @@
-from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
-from ..tools.utils import groups_to_bool
-from .utils import *
-from .scatter import scatter
-from .docs import doc_scatter, doc_params
-
-from sklearn.neighbors import NearestNeighbors
-from scipy.stats import norm as normal
-from matplotlib import rcParams
 import matplotlib.pyplot as pl
 import numpy as np
+from matplotlib import rcParams
+from scipy.stats import norm as normal
+from sklearn.neighbors import NearestNeighbors
+
+from ..tools.utils import groups_to_bool
+from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
+from .docs import doc_params, doc_scatter
+from .scatter import scatter
+from .utils import *
 
 
 def compute_velocity_on_grid(
-        X_emb,
-        V_emb,
-        density=None,
-        smooth=None,
-        n_neighbors=None,
-        min_mass=None,
-        autoscale=True,
-        adjust_for_stream=False,
-        cutoff_perc=None,
-        return_mesh=False,
+    X_emb,
+    V_emb,
+    density=None,
+    smooth=None,
+    n_neighbors=None,
+    min_mass=None,
+    autoscale=True,
+    adjust_for_stream=False,
+    cutoff_perc=None,
+    return_mesh=False,
 ):
     # remove invalid nodes
     idx_valid = np.isfinite(X_emb.sum(1) + V_emb.sum(1))
@@ -65,7 +65,7 @@ def compute_velocity_on_grid(
         ns = int(np.sqrt(len(V_grid[:, 0])))
         V_grid = V_grid.T.reshape(2, ns, ns)
 
-        mass = np.sqrt((V_grid ** 2).sum(0))
+        mass = np.sqrt((V_grid**2).sum(0))
         min_mass = 10 ** (min_mass - 6)  # default min_mass = 1e-5
         min_mass = np.clip(min_mass, None, np.max(mass) * 0.9)
         cutoff = mass.reshape(V_grid[0].shape) < min_mass

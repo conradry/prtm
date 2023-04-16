@@ -37,7 +37,7 @@ def model_config(name, train=False, low_prec=False):
         c.data.common.max_extra_msa = 5120
         c.data.train.crop_size = 384
         c.data.train.max_msa_clusters = 512
-        c.loss.violation.weight = 1.
+        c.loss.violation.weight = 1.0
     elif name == "model_1":
         # AF2 Suppl. Table 5, Model 1.1.1
         c.data.common.max_extra_msa = 5120
@@ -191,24 +191,38 @@ config = mlc.ConfigDict(
                     "template_aatype": [NUM_TEMPLATES, NUM_RES],
                     "template_all_atom_mask": [NUM_TEMPLATES, NUM_RES, None],
                     "template_all_atom_positions": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_alt_torsion_angles_sin_cos": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_backbone_rigid_mask": [NUM_TEMPLATES, NUM_RES],
                     "template_backbone_rigid_tensor": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_mask": [NUM_TEMPLATES],
                     "template_pseudo_beta": [NUM_TEMPLATES, NUM_RES, None],
                     "template_pseudo_beta_mask": [NUM_TEMPLATES, NUM_RES],
                     "template_sum_probs": [NUM_TEMPLATES, None],
                     "template_torsion_angles_mask": [
-                        NUM_TEMPLATES, NUM_RES, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
                     ],
                     "template_torsion_angles_sin_cos": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "true_msa": [NUM_MSA_SEQ, NUM_RES],
                     "use_clamped_fape": [],

@@ -1,8 +1,9 @@
+from functools import partialmethod, wraps
 from pathlib import Path
-from functools import wraps, partialmethod
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
+
 import haiku
-from alphafold.model import model, config, data
+from alphafold.model import config, data, model
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
@@ -25,7 +26,6 @@ def load_models_and_params(
     use_bfloat16: bool = True,
     use_dropout: bool = False,
     save_all: bool = False,
-
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -47,14 +47,15 @@ def load_models_and_params(
     else:
         # only models 1,2 use templates
         models_need_compilation = [1, 3] if use_templates else [3]
-    
+
     model_runner_and_params_build_order: [Tuple[str, model.RunModel, haiku.Params]] = []
     model_runner = None
     for model_number in model_build_order:
         if model_number in models_need_compilation:
-
             # get configurations
-            model_config = config.model_config("model_" + str(model_number) + model_suffix)
+            model_config = config.model_config(
+                "model_" + str(model_number) + model_suffix
+            )
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.rank_by = rank_by
 
@@ -63,24 +64,34 @@ def load_models_and_params(
 
             # set bfloat options
             model_config.model.global_config.bfloat16 = use_bfloat16
-            
+
             # set fuse options
-            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
-            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
-            if "multimer" in model_suffix or model_number in [1,2]:
-                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
-                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
-                        
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = (
+                use_fuse
+            )
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = (
+                use_fuse
+            )
+            if "multimer" in model_suffix or model_number in [1, 2]:
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = (
+                    use_fuse
+                )
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = (
+                    use_fuse
+                )
+
             # set number of sequences options
             if max_seq is not None:
                 if "multimer" in model_suffix:
                     model_config.model.embeddings_and_evoformer.num_msa = max_seq
                 else:
                     model_config.data.eval.max_msa_clusters = max_seq
-            
+
             if max_extra_seq is not None:
                 if "multimer" in model_suffix:
-                    model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_seq
+                    model_config.model.embeddings_and_evoformer.num_extra_msa = (
+                        max_extra_seq
+                    )
                 else:
                     model_config.data.common.max_extra_msa = max_extra_seq
 
@@ -90,11 +101,13 @@ def load_models_and_params(
                 model_config.model.heads.masked_msa.weight = 0.0
                 model_config.model.heads.experimentally_resolved.weight = 0.0
 
-            # set number of recycles and ensembles            
+            # set number of recycles and ensembles
             if "multimer" in model_suffix:
                 if num_recycles is not None:
                     model_config.model.num_recycle = num_recycles
-                model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
+                model_config.model.embeddings_and_evoformer.use_cluster_profile = (
+                    use_cluster_profile
+                )
                 model_config.model.num_ensemble_eval = num_ensemble
             else:
                 if num_recycles is not None:
@@ -102,22 +115,27 @@ def load_models_and_params(
                     model_config.model.num_recycle = num_recycles
                 model_config.data.eval.num_ensemble = num_ensemble
 
-
             if recycle_early_stop_tolerance is not None:
-                model_config.model.recycle_early_stop_tolerance = recycle_early_stop_tolerance
-            
+                model_config.model.recycle_early_stop_tolerance = (
+                    recycle_early_stop_tolerance
+                )
+
             # get model runner
             params = data.get_model_haiku_params(
                 model_name="model_" + str(model_number) + model_suffix,
-                data_dir=str(data_dir), fuse=use_fuse)
+                data_dir=str(data_dir),
+                fuse=use_fuse,
+            )
             model_runner = model.RunModel(
                 model_config,
                 params,
             )
-        
+
         model_name = f"model_{model_number}"
         params = data.get_model_haiku_params(
-            model_name=model_name + model_suffix, data_dir=str(data_dir), fuse=use_fuse,
+            model_name=model_name + model_suffix,
+            data_dir=str(data_dir),
+            fuse=use_fuse,
         )
         # keep only parameters of compiled model
         params_subset = {}

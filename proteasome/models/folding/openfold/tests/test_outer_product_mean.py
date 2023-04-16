@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
+
+import numpy as np
+import tests.compare_utils as compare_utils
+import torch
 from openfold.model.outer_product_mean import OuterProductMean
 from openfold.utils.tensor_utils import tree_map
-import tests.compare_utils as compare_utils
 from tests.config import consts
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestOuterProductMean(unittest.TestCase):
@@ -32,17 +33,12 @@ class TestOuterProductMean(unittest.TestCase):
 
         opm = OuterProductMean(consts.c_m, consts.c_z, c)
 
-        m = torch.rand(
-            (consts.batch_size, consts.n_seq, consts.n_res, consts.c_m)
-        )
-        mask = torch.randint(
-            0, 2, size=(consts.batch_size, consts.n_seq, consts.n_res)
-        )
+        m = torch.rand((consts.batch_size, consts.n_seq, consts.n_res, consts.c_m))
+        mask = torch.randint(0, 2, size=(consts.batch_size, consts.n_seq, consts.n_res))
         m = opm(m, mask=mask, chunk_size=None)
 
         self.assertTrue(
-            m.shape == 
-            (consts.batch_size, consts.n_res, consts.n_res, consts.c_z)
+            m.shape == (consts.batch_size, consts.n_res, consts.n_res, consts.c_z)
         )
 
     @compare_utils.skip_unless_alphafold_installed()
@@ -81,8 +77,8 @@ class TestOuterProductMean(unittest.TestCase):
 
         model = compare_utils.get_global_pretrained_openfold()
         out_repro = (
-            model.evoformer.blocks[0].core
-            .outer_product_mean(
+            model.evoformer.blocks[0]
+            .core.outer_product_mean(
                 torch.as_tensor(msa_act).cuda(),
                 chunk_size=4,
                 mask=torch.as_tensor(msa_mask).cuda(),

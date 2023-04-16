@@ -3,9 +3,9 @@
 import argparse
 
 import pandas as pd
-
 from proteinbert.shared_utils.util import get_parser_file_type
-from proteinbert.uniref_dataset import UnirefToSqliteParser, parse_go_annotations_meta
+from proteinbert.uniref_dataset import (UnirefToSqliteParser,
+                                        parse_go_annotations_meta)
 
 if __name__ == '__main__':
 

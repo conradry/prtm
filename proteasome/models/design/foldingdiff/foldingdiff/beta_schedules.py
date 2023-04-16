@@ -1,15 +1,14 @@
 """
 Describe beta schedules
 """
-import os
 import logging
+import os
 from typing import Dict, Literal, get_args
 
 import numpy as np
-from matplotlib import pyplot as plt
-
 import torch
 import torch.nn.functional as F
+from matplotlib import pyplot as plt
 
 SCHEDULES = Literal["linear", "cosine", "quadratic"]
 

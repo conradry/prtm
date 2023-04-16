@@ -80,20 +80,16 @@ class HHSearch:
 
         for database_path in self.databases:
             if not glob.glob(database_path + "_*"):
-                logging.error(
-                    "Could not find HHsearch database %s", database_path
-                )
-                raise ValueError(
-                    f"Could not find HHsearch database {database_path}"
-                )
-                
+                logging.error("Could not find HHsearch database %s", database_path)
+                raise ValueError(f"Could not find HHsearch database {database_path}")
+
     @property
     def output_format(self) -> str:
-        return 'hhr'
+        return "hhr"
 
     @property
     def input_format(self) -> str:
-        return 'a3m'
+        return "a3m"
 
     def query(self, a3m: str, gen_atab: bool = False) -> Union[str, tuple]:
         """Queries the database using HHsearch using a given a3m."""

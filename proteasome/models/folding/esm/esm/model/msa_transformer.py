@@ -6,16 +6,10 @@
 import torch
 import torch.nn as nn
 
-from ..modules import (
-    AxialTransformerLayer,
-    LearnedPositionalEmbedding,
-    RobertaLMHead,
-    ESM1bLayerNorm,
-    ContactPredictionHead,
-)
-
-from ..axial_attention import RowSelfAttention, ColumnSelfAttention
-
+from ..axial_attention import ColumnSelfAttention, RowSelfAttention
+from ..modules import (AxialTransformerLayer, ContactPredictionHead,
+                       ESM1bLayerNorm, LearnedPositionalEmbedding,
+                       RobertaLMHead)
 
 
 class MSATransformer(nn.Module):
@@ -143,7 +137,9 @@ class MSATransformer(nn.Module):
             weight=self.embed_tokens.weight,
         )
 
-    def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
+    def forward(
+        self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False
+    ):
         if return_contacts:
             need_head_weights = True
 
@@ -154,7 +150,9 @@ class MSATransformer(nn.Module):
             padding_mask = None
 
         x = self.embed_tokens(tokens)
-        x += self.embed_positions(tokens.view(batch_size * num_alignments, seqlen)).view(x.size())
+        x += self.embed_positions(
+            tokens.view(batch_size * num_alignments, seqlen)
+        ).view(x.size())
         if self.msa_position_embedding is not None:
             if x.size(1) > 1024:
                 raise RuntimeError(

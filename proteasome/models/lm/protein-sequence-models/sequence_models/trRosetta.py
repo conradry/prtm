@@ -1,11 +1,12 @@
-import os, sys
+import os
+import sys
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from sequence_models.trRosetta_utils import *
 from sequence_models.constants import WEIGHTS_DIR
 from sequence_models.layers import MaskedInstanceNorm2d
+from sequence_models.trRosetta_utils import *
 
 
 def pad_size(d, k, s):
@@ -13,11 +14,9 @@ def pad_size(d, k, s):
 
 
 class trRosettaBlock(nn.Module):
-        
     def __init__(self, dilation, p_dropout=0.0):
-        
         """Simple convolution block
-        
+
         Parameters:
         -----------
         dilation : int
@@ -25,11 +24,25 @@ class trRosettaBlock(nn.Module):
         """
 
         super(trRosettaBlock, self).__init__()
-        self.conv1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, dilation=dilation, padding=pad_size(dilation, 3, 1))
+        self.conv1 = nn.Conv2d(
+            64,
+            64,
+            kernel_size=3,
+            stride=1,
+            dilation=dilation,
+            padding=pad_size(dilation, 3, 1),
+        )
         self.instnorm1 = MaskedInstanceNorm2d(64, eps=1e-06, affine=True)
         self.instnorm2 = MaskedInstanceNorm2d(64, eps=1e-06, affine=True)
         self.dropout1 = nn.Dropout2d(p_dropout)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, dilation=dilation, padding=pad_size(dilation, 3, 1))
+        self.conv2 = nn.Conv2d(
+            64,
+            64,
+            kernel_size=3,
+            stride=1,
+            dilation=dilation,
+            padding=pad_size(dilation, 3, 1),
+        )
 
     def forward(self, x, input_mask=None, last_elu=True):
         """
@@ -37,10 +50,10 @@ class trRosettaBlock(nn.Module):
         -----------
         x : torch.Tensor()
             input tensor
-            
+
         old_elu : torch.Tensor()
             copy of x
-        
+
         Returns:
         --------
         x : torch.Tensor
@@ -62,24 +75,28 @@ class trRosettaBlock(nn.Module):
 
 
 class trRosetta(nn.Module):
-    
+
     """trRosetta for single model"""
 
-    def __init__(self, d_init=526, n2d_layers=61, model_id='a', decoder=True, p_dropout=0.0):
+    def __init__(
+        self, d_init=526, n2d_layers=61, model_id="a", decoder=True, p_dropout=0.0
+    ):
         """
         Parameters:
         -----------
         model_id : str
             pretrained models a, b, c, d and/or e.
-    
+
         decoder : bool
-            whether to run the last layers to produce distance 
+            whether to run the last layers to produce distance
             and angle outputs
 
         """
         super(trRosetta, self).__init__()
 
-        self.conv0 = nn.Conv2d(d_init, 64, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
+        self.conv0 = nn.Conv2d(
+            d_init, 64, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
         self.instnorm0 = MaskedInstanceNorm2d(64, eps=1e-06, affine=True)
 
         dilation = 1
@@ -94,11 +111,21 @@ class trRosetta(nn.Module):
         self.decoder = decoder
         if decoder:
             self.softmax = nn.Softmax(dim=1)
-            self.conv_theta = nn.Conv2d(64, 25, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-            self.conv_phi = nn.Conv2d(64, 13, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-            self.conv_dist = nn.Conv2d(64, 37, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-            self.conv_bb = nn.Conv2d(64, 3, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-            self.conv_omega = nn.Conv2d(64, 25, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
+            self.conv_theta = nn.Conv2d(
+                64, 25, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
+            self.conv_phi = nn.Conv2d(
+                64, 13, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
+            self.conv_dist = nn.Conv2d(
+                64, 37, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
+            self.conv_bb = nn.Conv2d(
+                64, 3, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
+            self.conv_omega = nn.Conv2d(
+                64, 25, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
         if model_id is not None:
             self.load_weights(model_id)
 
@@ -108,21 +135,21 @@ class trRosetta(nn.Module):
         -----------
         x : torch.Tensor, (batch, 526, len(sequence), len(sequence))
             inputs after trRosettaPreprocessing
-    
+
         Returns:
         --------
         dist_probs : torch.Tensor
             distance map probabilities
-            
+
         theta_probs : torch.Tensor
             theta angle map probabilities
-            
+
         phi_probs : torch.Tensor
             phi angle map probabilities
-        
+
         omega_probs: torch..Tensor
             omega angle map probabilities
-        
+
         x : torch.Tensor
             outputs before calculating final layers
         """
@@ -163,7 +190,6 @@ class trRosetta(nn.Module):
             return h
 
     def load_weights(self, model_id):
-        
         """
         Parameters:
         -----------
@@ -171,22 +197,36 @@ class trRosetta(nn.Module):
             pretrained models a, b, c, d and/or e.
         """
 
-        path = WEIGHTS_DIR + 'trrosetta_pytorch_weights/' + model_id + '.pt'
+        path = WEIGHTS_DIR + "trrosetta_pytorch_weights/" + model_id + ".pt"
 
         # check to see if pytorch weights exist, if not -> generate
         if not os.path.exists(path):
             tf_to_pytorch_weights(self.named_parameters(), model_id)
-        self.load_state_dict(torch.load(path, ), strict=False)
+        self.load_state_dict(
+            torch.load(
+                path,
+            ),
+            strict=False,
+        )
 
 
 class trRosettaRegressor(trRosetta):
-
-    def __init__(self, model_id='a', p_dropout=0.0):
-        super(trRosettaRegressor, self).__init__(n2d_layers=61, model_id=model_id, decoder=False, p_dropout=p_dropout)
-        self.dist_layer = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-        self.theta_layer = nn.Conv2d(64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-        self.phi_layer =  nn.Conv2d(64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
-        self.omega_layer = nn.Conv2d(64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
+    def __init__(self, model_id="a", p_dropout=0.0):
+        super(trRosettaRegressor, self).__init__(
+            n2d_layers=61, model_id=model_id, decoder=False, p_dropout=p_dropout
+        )
+        self.dist_layer = nn.Conv2d(
+            64, 1, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
+        self.theta_layer = nn.Conv2d(
+            64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
+        self.phi_layer = nn.Conv2d(
+            64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
+        self.omega_layer = nn.Conv2d(
+            64, 2, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
         self.relu = nn.ReLU()
         self.tanh = nn.Hardtanh()
 
@@ -205,28 +245,29 @@ class trRosettaRegressor(trRosetta):
 
 class trRosettaEnsemble(nn.Module):
     """trRosetta ensemble"""
-    def __init__(self, model, n2d_layers=61, model_ids='abcde', decoder=True):
+
+    def __init__(self, model, n2d_layers=61, model_ids="abcde", decoder=True):
         """
         Parameters:
         -----------
-        model : class 
+        model : class
             base model to use in ensemble
-        
-        n2d_layers : int 
+
+        n2d_layers : int
             number of layers of the conv block to use for each base model
-        
+
         model_ids: str
-            pretrained models to use in the ensemble a, b, c, d and/or e. 
-            
+            pretrained models to use in the ensemble a, b, c, d and/or e.
+
         decoder : bool
             if True, return dist, omega, phi, theta; else return layer prior decoder
-        
+
         """
 
         super(trRosettaEnsemble, self).__init__()
         self.model_list = nn.ModuleList()
         for i in list(model_ids):
-            params = {'model_id': i, 'n2d_layers': n2d_layers, 'decoder': decoder}
+            params = {"model_id": i, "n2d_layers": n2d_layers, "decoder": decoder}
             self.model_list.append(model(**params))
 
     def forward(self, x, input_mask=None, softmax=True):
@@ -236,11 +277,14 @@ class trRosettaEnsemble(nn.Module):
         x : torch.Tensor, (1, 526, len(sequence), len(sequence))
             inputs after trRosettaPreprocessing
         """
-        return [mod(x, input_mask=input_mask, softmax=softmax) for mod in self.model_list]
+        return [
+            mod(x, input_mask=input_mask, softmax=softmax) for mod in self.model_list
+        ]
 
 
 class trRosettaDist(nn.Module):
     """trRosetta for distance only, does not use pretrained weights"""
+
     def __init__(self, n2d_layers=61, hdim=128, decoder=True, d_out=1):
         """
         Args:
@@ -253,7 +297,9 @@ class trRosettaDist(nn.Module):
         """
         super(trRosettaDist, self).__init__()
 
-        self.conv0 = nn.Conv2d(hdim * 2, 64, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
+        self.conv0 = nn.Conv2d(
+            hdim * 2, 64, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+        )
         self.instnorm0 = nn.InstanceNorm2d(64, eps=1e-06, affine=True)
 
         dilation = 1
@@ -268,9 +314,14 @@ class trRosettaDist(nn.Module):
         self.decoder = decoder
 
         if decoder:
-            self.conv_dist = nn.Conv2d(64, d_out, kernel_size=1, stride=1, padding=pad_size(1, 1, 1))
+            self.conv_dist = nn.Conv2d(
+                64, d_out, kernel_size=1, stride=1, padding=pad_size(1, 1, 1)
+            )
 
-    def forward(self, x, ):
+    def forward(
+        self,
+        x,
+    ):
         """
         Args:
             x: torch.tensor (N, L, hdim)
@@ -301,10 +352,11 @@ class trRosettaDist(nn.Module):
         else:
             return x
 
+
 # EXAMPLE
-# filename = 'example/T1001.a3m' 
+# filename = 'example/T1001.a3m'
 # seqs = parse_a3m(filename) # grab seqs
-# tokenizer = Tokenizer(PROTEIN_ALPHABET) 
+# tokenizer = Tokenizer(PROTEIN_ALPHABET)
 # seqs = [tokenizer.tokenize(i) for i in seqs] # ohe into our order
 
 # base_model = trRosetta

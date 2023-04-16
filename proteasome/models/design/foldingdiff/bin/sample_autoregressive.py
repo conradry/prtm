@@ -2,19 +2,18 @@
 Code to sample from an autoregressive transformer model
 """
 
-import os, sys
-import logging
-from pathlib import Path
 import argparse
+import logging
+import os
+import sys
+from pathlib import Path
 
-from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
 import torch
-
-
-from foldingdiff import modelling, utils
 from foldingdiff import angles_and_coords as ac
+from foldingdiff import modelling, utils
+from tqdm.auto import tqdm
 
 
 def sample_initial_angles(
@@ -152,7 +151,9 @@ def main() -> None:
         )
 
     # Write the sampled angles and resulting PDB files out
-    for i, s in tqdm(enumerate(sampled_angles), desc="Writing sampled angles and PDB structures"):
+    for i, s in tqdm(
+        enumerate(sampled_angles), desc="Writing sampled angles and PDB structures"
+    ):
         s.to_csv(sampled_angles_dir / f"generated_{i}.csv.gz")
         fname = ac.create_new_chain_nerf(str(sampled_pdb_dir / f"generated_{i}.pdb"), s)
         assert fname

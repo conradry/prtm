@@ -8,8 +8,8 @@ import argparse
 import pathlib
 
 import torch
-
-from esm import Alphabet, FastaBatchedDataset, ProteinBertModel, pretrained, MSATransformer
+from esm import (Alphabet, FastaBatchedDataset, MSATransformer,
+                 ProteinBertModel, pretrained)
 
 
 def create_parser():
@@ -33,7 +33,9 @@ def create_parser():
         help="output directory for extracted representations",
     )
 
-    parser.add_argument("--toks_per_batch", type=int, default=4096, help="maximum batch size")
+    parser.add_argument(
+        "--toks_per_batch", type=int, default=4096, help="maximum batch size"
+    )
     parser.add_argument(
         "--repr_layers",
         type=int,
@@ -56,7 +58,9 @@ def create_parser():
         help="truncate sequences longer than the given value",
     )
 
-    parser.add_argument("--nogpu", action="store_true", help="Do not use GPU even if available")
+    parser.add_argument(
+        "--nogpu", action="store_true", help="Do not use GPU even if available"
+    )
     return parser
 
 
@@ -74,15 +78,21 @@ def run(args):
     dataset = FastaBatchedDataset.from_file(args.fasta_file)
     batches = dataset.get_batch_indices(args.toks_per_batch, extra_toks_per_seq=1)
     data_loader = torch.utils.data.DataLoader(
-        dataset, collate_fn=alphabet.get_batch_converter(args.truncation_seq_length), batch_sampler=batches
+        dataset,
+        collate_fn=alphabet.get_batch_converter(args.truncation_seq_length),
+        batch_sampler=batches,
     )
     print(f"Read {args.fasta_file} with {len(dataset)} sequences")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     return_contacts = "contacts" in args.include
 
-    assert all(-(model.num_layers + 1) <= i <= model.num_layers for i in args.repr_layers)
-    repr_layers = [(i + model.num_layers + 1) % (model.num_layers + 1) for i in args.repr_layers]
+    assert all(
+        -(model.num_layers + 1) <= i <= model.num_layers for i in args.repr_layers
+    )
+    repr_layers = [
+        (i + model.num_layers + 1) % (model.num_layers + 1) for i in args.repr_layers
+    ]
 
     with torch.no_grad():
         for batch_idx, (labels, strs, toks) in enumerate(data_loader):
@@ -123,7 +133,9 @@ def run(args):
                         layer: t[i, 0].clone() for layer, t in representations.items()
                     }
                 if return_contacts:
-                    result["contacts"] = contacts[i, : truncate_len, : truncate_len].clone()
+                    result["contacts"] = contacts[
+                        i, :truncate_len, :truncate_len
+                    ].clone()
 
                 torch.save(
                     result,
@@ -135,6 +147,7 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     run(args)
+
 
 if __name__ == "__main__":
     main()

@@ -1,19 +1,15 @@
 from functools import partial
+from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict
-
-from fastfold.utils import all_atom_multimer
+from fastfold.model.fastnn.ops import LayerNorm, Linear
+from fastfold.model.fastnn.template import (TemplatePairStack,
+                                            TemplatePointwiseAttention)
+from fastfold.utils import all_atom_multimer, geometry
 from fastfold.utils.feats import dgram_from_positions
+from fastfold.utils.tensor_utils import dict_multimap, one_hot, tensor_tree_map
 
-from fastfold.model.fastnn.ops import Linear, LayerNorm
-from fastfold.model.fastnn.template import (
-    TemplatePairStack,
-    TemplatePointwiseAttention,
-)
-from fastfold.utils import geometry
-from fastfold.utils.tensor_utils import one_hot, tensor_tree_map, dict_multimap
 
 class InputEmbedderMultimer(nn.Module):
     """
@@ -158,7 +154,8 @@ class InputEmbedderMultimer(nn.Module):
 
 
 class TemplatePairEmbedderMultimer(nn.Module):
-    def __init__(self,
+    def __init__(
+        self,
         c_z: int,
         c_out: int,
         c_dgram: int,
@@ -171,14 +168,15 @@ class TemplatePairEmbedderMultimer(nn.Module):
         self.aatype_linear_2 = Linear(c_aatype, c_out)
         self.query_embedding_layer_norm = LayerNorm(c_z)
         self.query_embedding_linear = Linear(c_z, c_out)
-        
+
         self.pseudo_beta_mask_linear = Linear(1, c_out)
         self.x_linear = Linear(1, c_out)
         self.y_linear = Linear(1, c_out)
         self.z_linear = Linear(1, c_out)
         self.backbone_mask_linear = Linear(1, c_out)
 
-    def forward(self,
+    def forward(
+        self,
         template_dgram: torch.Tensor,
         aatype_one_hot: torch.Tensor,
         query_embedding: torch.Tensor,
@@ -187,7 +185,7 @@ class TemplatePairEmbedderMultimer(nn.Module):
         multichain_mask_2d: torch.Tensor,
         unit_vector: geometry.Vec3Array,
     ) -> torch.Tensor:
-        act = 0.
+        act = 0.0
 
         pseudo_beta_mask_2d = (
             pseudo_beta_mask[..., None] * pseudo_beta_mask[..., None, :]
@@ -196,21 +194,19 @@ class TemplatePairEmbedderMultimer(nn.Module):
         template_dgram *= pseudo_beta_mask_2d[..., None]
         act += self.dgram_linear(template_dgram)
         act += self.pseudo_beta_mask_linear(pseudo_beta_mask_2d[..., None])
-       
+
         aatype_one_hot = aatype_one_hot.to(template_dgram.dtype)
         act += self.aatype_linear_1(aatype_one_hot[..., None, :, :])
         act += self.aatype_linear_2(aatype_one_hot[..., None, :])
 
-        backbone_mask_2d = (
-            backbone_mask[..., None] * backbone_mask[..., None, :]
-        )
+        backbone_mask_2d = backbone_mask[..., None] * backbone_mask[..., None, :]
         backbone_mask_2d *= multichain_mask_2d
         x, y, z = [coord * backbone_mask_2d for coord in unit_vector]
         act += self.x_linear(x[..., None])
         act += self.y_linear(y[..., None])
         act += self.z_linear(z[..., None])
-       
-        act += self.backbone_mask_linear(backbone_mask_2d[..., None]) 
+
+        act += self.backbone_mask_linear(backbone_mask_2d[..., None])
 
         query_embedding = self.query_embedding_layer_norm(query_embedding)
         act += self.query_embedding_linear(query_embedding)
@@ -219,27 +215,27 @@ class TemplatePairEmbedderMultimer(nn.Module):
 
 
 class TemplateSingleEmbedderMultimer(nn.Module):
-    def __init__(self,
+    def __init__(
+        self,
         c_in: int,
         c_m: int,
     ):
         super().__init__()
         self.template_single_embedder = Linear(c_in, c_m)
         self.template_projector = Linear(c_m, c_m)
-    
-    def forward(self,
+
+    def forward(
+        self,
         batch,
         atom_pos,
         aatype_one_hot,
     ):
         out = {}
 
-        template_chi_angles, template_chi_mask = (
-            all_atom_multimer.compute_chi_angles(
-                atom_pos,
-                batch["template_all_atom_mask"],
-                batch["template_aatype"],
-            )
+        template_chi_angles, template_chi_mask = all_atom_multimer.compute_chi_angles(
+            atom_pos,
+            batch["template_all_atom_mask"],
+            batch["template_aatype"],
         )
 
         template_features = torch.cat(
@@ -254,28 +250,22 @@ class TemplateSingleEmbedderMultimer(nn.Module):
 
         template_mask = template_chi_mask[..., 0]
 
-        template_features = self.template_single_embedder(
-            template_features
-        )
-        template_features = torch.nn.functional.relu(
-            template_features
-        )
+        template_features = self.template_single_embedder(template_features)
+        template_features = torch.nn.functional.relu(template_features)
         template_features = self.template_projector(
             template_features,
         )
 
-        out["template_single_embedding"] = (
-            template_features
-        )
+        out["template_single_embedding"] = template_features
         out["template_mask"] = template_mask
 
-        return out 
+        return out
 
 
 class TemplateEmbedderMultimer(nn.Module):
     def __init__(self, config):
         super(TemplateEmbedderMultimer, self).__init__()
-        
+
         self.config = config
         self.template_pair_embedder = TemplatePairEmbedderMultimer(
             **config["template_pair_embedder"],
@@ -288,19 +278,22 @@ class TemplateEmbedderMultimer(nn.Module):
         )
 
         self.linear_t = Linear(config.c_t, config.c_z)
-    
-    def forward(self, 
-        batch, 
-        z, 
-        padding_mask_2d, 
+
+    def forward(
+        self,
+        batch,
+        z,
+        padding_mask_2d,
         templ_dim,
         chunk_size,
         multichain_mask_2d,
-        inplace
+        inplace,
     ):
         template_embeds = []
         n_templ = batch["template_aatype"].shape[templ_dim]
-        template_pair_embeddings = torch.zeros((z.shape[0], z.shape[1], 64), dtype=z.dtype, device=z.device)
+        template_pair_embeddings = torch.zeros(
+            (z.shape[0], z.shape[1], 64), dtype=z.dtype, device=z.device
+        )
         for i in range(n_templ):
             idx = batch["template_aatype"].new_tensor(i)
             single_template_feats = tensor_tree_map(
@@ -322,11 +315,12 @@ class TemplateEmbedderMultimer(nn.Module):
             )
 
             aatype_one_hot = torch.nn.functional.one_hot(
-                single_template_feats["template_aatype"], 22,
+                single_template_feats["template_aatype"],
+                22,
             )
-            
+
             raw_atom_pos = single_template_feats["template_all_atom_positions"]
-            
+
             atom_pos = geometry.Vec3Array.from_array(raw_atom_pos)
             rigid, backbone_mask = all_atom_multimer.make_backbone_affine(
                 atom_pos,
@@ -346,24 +340,27 @@ class TemplateEmbedderMultimer(nn.Module):
                 multichain_mask_2d,
                 unit_vector,
             )
-            
+
             if not inplace:
                 # [*, S_t, N, N, C_z]
-                template_pair_embeddings = template_pair_embeddings + self.template_pair_stack(
-                    pair_embedding, 
-                    padding_mask_2d.unsqueeze(-3).to(dtype=z.dtype), 
-                    chunk_size=chunk_size,
-                    _mask_trans=False,
-                ).squeeze(0)
+                template_pair_embeddings = (
+                    template_pair_embeddings
+                    + self.template_pair_stack(
+                        pair_embedding,
+                        padding_mask_2d.unsqueeze(-3).to(dtype=z.dtype),
+                        chunk_size=chunk_size,
+                        _mask_trans=False,
+                    ).squeeze(0)
+                )
             else:
                 # [*, S_t, N, N, C_z]
                 template_pair_embeddings += self.template_pair_stack.inplace(
-                    [pair_embedding], 
-                    padding_mask_2d.unsqueeze(-3).to(dtype=z.dtype), 
+                    [pair_embedding],
+                    padding_mask_2d.unsqueeze(-3).to(dtype=z.dtype),
                     chunk_size=chunk_size,
                     _mask_trans=False,
                 )[0].squeeze(0)
-            
+
             single_template_embeds.update(
                 self.template_single_embedder(
                     single_template_feats,
@@ -382,6 +379,6 @@ class TemplateEmbedderMultimer(nn.Module):
         template_pair_embeddings = template_pair_embeddings / n_templ
         template_pair_embeddings = torch.nn.functional.relu(template_pair_embeddings)
         template_pair_embeddings = self.linear_t(template_pair_embeddings)
-        
+
         template_embeds["template_pair_embedding"] = template_pair_embeddings
         return template_embeds

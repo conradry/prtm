@@ -13,22 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import torch.nn as nn
+from functools import partial
 from typing import Tuple
 
-from functools import partial
-from fastfold.utils.feats import (
-    build_template_angle_feat,
-    build_template_pair_feat,
-)
+import torch
+import torch.nn as nn
 from fastfold.model.fastnn.ops import Linear
-from fastfold.utils.tensor_utils import one_hot
-from fastfold.model.fastnn.template import (
-    TemplatePairStack,
-    TemplatePointwiseAttention,
-)
-from fastfold.utils.tensor_utils import one_hot, tensor_tree_map, dict_multimap
+from fastfold.model.fastnn.template import (TemplatePairStack,
+                                            TemplatePointwiseAttention)
+from fastfold.utils.feats import (build_template_angle_feat,
+                                  build_template_pair_feat)
+from fastfold.utils.tensor_utils import dict_multimap, one_hot, tensor_tree_map
 
 
 class InputEmbedder(nn.Module):
@@ -139,7 +134,7 @@ class InputEmbedder(nn.Module):
 class TemplateEmbedder(nn.Module):
     def __init__(self, config):
         super(TemplateEmbedder, self).__init__()
-        
+
         self.config = config
         self.template_angle_embedder = TemplateAngleEmbedder(
             **config["template_angle_embedder"],
@@ -154,24 +149,28 @@ class TemplateEmbedder(nn.Module):
             **config["template_pointwise_attention"],
         )
 
-    
-    def forward(self, 
-        batch, 
-        z, 
-        pair_mask, 
-        templ_dim, 
-        chunk_size, 
+    def forward(
+        self,
+        batch,
+        z,
+        pair_mask,
+        templ_dim,
+        chunk_size,
         _mask_trans=True,
-        inplace=False
+        inplace=False,
     ):
         # Embed the templates one at a time (with a poor man's vmap)
         template_embeds = []
         n_templ = batch["template_aatype"].shape[templ_dim]
 
         if isinstance(chunk_size, int) and 1 <= chunk_size <= 4:
-            t = torch.empty((n_templ, z.shape[0], z.shape[1], 64), dtype=z.dtype, device='cpu')
+            t = torch.empty(
+                (n_templ, z.shape[0], z.shape[1], 64), dtype=z.dtype, device="cpu"
+            )
         else:
-            t = torch.empty((n_templ, z.shape[0], z.shape[1], 64), dtype=z.dtype, device=z.device)
+            t = torch.empty(
+                (n_templ, z.shape[0], z.shape[1], 64), dtype=z.dtype, device=z.device
+            )
 
         for i in range(n_templ):
             idx = batch["template_aatype"].new_tensor(i)
@@ -192,14 +191,18 @@ class TemplateEmbedder(nn.Module):
                 single_template_embeds["angle"] = a
 
             # [*, S_t, N, N, C_t]
-            tt = build_template_pair_feat(
-                single_template_feats,
-                use_unit_vector=self.config.use_unit_vector,
-                inf=self.config.inf,
-                chunk=chunk_size,
-                eps=self.config.eps,
-                **self.config.distogram,
-            ).to(z.dtype).to(z.device)
+            tt = (
+                build_template_pair_feat(
+                    single_template_feats,
+                    use_unit_vector=self.config.use_unit_vector,
+                    inf=self.config.inf,
+                    chunk=chunk_size,
+                    eps=self.config.eps,
+                    **self.config.distogram,
+                )
+                .to(z.dtype)
+                .to(z.device)
+            )
 
             tt = self.template_pair_embedder(tt)
             # single_template_embeds.update({"pair": t})
@@ -210,15 +213,15 @@ class TemplateEmbedder(nn.Module):
             if inplace:
                 tt = [tt]
                 t[i] = self.template_pair_stack.inplace(
-                    tt, 
-                    pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+                    tt,
+                    pair_mask.unsqueeze(-3).to(dtype=z.dtype),
                     chunk_size=chunk_size,
                     _mask_trans=_mask_trans,
                 )[0].to(t.device)
             else:
                 t[i] = self.template_pair_stack(
-                    tt, 
-                    pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+                    tt,
+                    pair_mask.unsqueeze(-3).to(dtype=z.dtype),
                     chunk_size=chunk_size,
                     _mask_trans=_mask_trans,
                 ).to(t.device)

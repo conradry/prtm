@@ -1,7 +1,7 @@
+import common.atoms
+import seq_des.util.data as data
 import torch
 import torch.nn as nn
-import seq_des.util.data as data
-import common.atoms
 
 
 def init_ortho_weights(self):
@@ -68,7 +68,9 @@ class seqPred(nn.Module):
             nn.BatchNorm1d(nf * 4, momentum=momentum),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
-            nn.Conv1d(nf * 4, len(common.atoms.label_res_dict.keys()), 3, 1, 1, bias=False),
+            nn.Conv1d(
+                nf * 4, len(common.atoms.label_res_dict.keys()), 3, 1, 1, bias=False
+            ),
         )
 
         # chi feat vec -- condition on residue and env feature vector
@@ -98,7 +100,9 @@ class seqPred(nn.Module):
 
         # chi 2 pred -- condition on chi 1 and chi feat vec
         self.chi_2_out = nn.Sequential(
-            nn.Conv1d(nf * 4 + 1 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False),
+            nn.Conv1d(
+                nf * 4 + 1 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False
+            ),
             nn.BatchNorm1d(nf * 4, momentum=momentum),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
@@ -111,7 +115,9 @@ class seqPred(nn.Module):
 
         # chi 3 pred -- condition on chi 1, chi 2, and chi feat vec
         self.chi_3_out = nn.Sequential(
-            nn.Conv1d(nf * 4 + 2 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False),
+            nn.Conv1d(
+                nf * 4 + 2 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False
+            ),
             nn.BatchNorm1d(nf * 4, momentum=momentum),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
@@ -124,7 +130,9 @@ class seqPred(nn.Module):
 
         # chi 4 pred -- condition on chi 1, chi 2, chi 3, and chi feat vec
         self.chi_4_out = nn.Sequential(
-            nn.Conv1d(nf * 4 + 3 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False),
+            nn.Conv1d(
+                nf * 4 + 3 * (len(data.CHI_BINS) - 1), nf * 4, 3, 1, 1, bias=False
+            ),
             nn.BatchNorm1d(nf * 4, momentum=momentum),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
@@ -151,17 +159,29 @@ class seqPred(nn.Module):
         return chi_1_pred
 
     def get_chi_2(self, chi_feat, chi_1_onehot):
-        chi_2_pred = self.chi_2_out(torch.cat([chi_feat, chi_1_onehot[..., None]], 1)).view(chi_feat.size()[0], -1)
+        chi_2_pred = self.chi_2_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None]], 1)
+        ).view(chi_feat.size()[0], -1)
         return chi_2_pred
 
     def get_chi_3(self, chi_feat, chi_1_onehot, chi_2_onehot):
-        chi_3_pred = self.chi_3_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)).view(chi_feat.size()[0], -1)
+        chi_3_pred = self.chi_3_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)
+        ).view(chi_feat.size()[0], -1)
         return chi_3_pred
 
     def get_chi_4(self, chi_feat, chi_1_onehot, chi_2_onehot, chi_3_onehot):
-        chi_4_pred = self.chi_4_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None], chi_3_onehot[..., None]], 1)).view(
-            chi_feat.size()[0], -1
-        )
+        chi_4_pred = self.chi_4_out(
+            torch.cat(
+                [
+                    chi_feat,
+                    chi_1_onehot[..., None],
+                    chi_2_onehot[..., None],
+                    chi_3_onehot[..., None],
+                ],
+                1,
+            )
+        ).view(chi_feat.size()[0], -1)
         return chi_4_pred
 
     def get_feat(self, input, res_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot):
@@ -175,11 +195,24 @@ class seqPred(nn.Module):
 
         # condition on true residue type and previous ground-truth rotamer angles
         chi_1_pred = self.chi_1_out(chi_feat).view(bs, -1)
-        chi_2_pred = self.chi_2_out(torch.cat([chi_feat, chi_1_onehot[..., None]], 1)).view(bs, -1)
-        chi_3_pred = self.chi_3_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)).view(bs, -1)
-        chi_4_pred = self.chi_4_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None], chi_3_onehot[..., None]], 1)).view(bs, -1)
+        chi_2_pred = self.chi_2_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None]], 1)
+        ).view(bs, -1)
+        chi_3_pred = self.chi_3_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)
+        ).view(bs, -1)
+        chi_4_pred = self.chi_4_out(
+            torch.cat(
+                [
+                    chi_feat,
+                    chi_1_onehot[..., None],
+                    chi_2_onehot[..., None],
+                    chi_3_onehot[..., None],
+                ],
+                1,
+            )
+        ).view(bs, -1)
         return feat, res_pred, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred
-
 
     def forward(self, input, res_onehot, chi_1_onehot, chi_2_onehot, chi_3_onehot):
         bs = input.size()[0]
@@ -192,8 +225,22 @@ class seqPred(nn.Module):
 
         # condition on true residue type and previous ground-truth rotamer angles
         chi_1_pred = self.chi_1_out(chi_feat).view(bs, -1)
-        chi_2_pred = self.chi_2_out(torch.cat([chi_feat, chi_1_onehot[..., None]], 1)).view(bs, -1)
-        chi_3_pred = self.chi_3_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)).view(bs, -1)
-        chi_4_pred = self.chi_4_out(torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None], chi_3_onehot[..., None]], 1)).view(bs, -1)
+        chi_2_pred = self.chi_2_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None]], 1)
+        ).view(bs, -1)
+        chi_3_pred = self.chi_3_out(
+            torch.cat([chi_feat, chi_1_onehot[..., None], chi_2_onehot[..., None]], 1)
+        ).view(bs, -1)
+        chi_4_pred = self.chi_4_out(
+            torch.cat(
+                [
+                    chi_feat,
+                    chi_1_onehot[..., None],
+                    chi_2_onehot[..., None],
+                    chi_3_onehot[..., None],
+                ],
+                1,
+            )
+        ).view(bs, -1)
 
         return res_pred, chi_1_pred, chi_2_pred, chi_3_pred, chi_4_pred

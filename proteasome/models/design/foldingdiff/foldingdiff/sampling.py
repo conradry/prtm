@@ -2,26 +2,24 @@
 Code for sampling from diffusion models
 """
 import json
-import os
-import multiprocessing as mp
-from pathlib import Path
-import tempfile
 import logging
+import multiprocessing as mp
+import os
+import tempfile
+from pathlib import Path
 from typing import *
-
-from tqdm.auto import tqdm
 
 import numpy as np
 import pandas as pd
-
 import torch
+from foldingdiff import angles_and_coords as ac
+from foldingdiff import beta_schedules
+from foldingdiff import datasets as dsets
+from foldingdiff import modelling, sampling, tmalign, utils
+from huggingface_hub import snapshot_download
 from torch import nn
 from torch.utils.data import default_collate
-from huggingface_hub import snapshot_download
-
-from foldingdiff import datasets as dsets
-from foldingdiff import beta_schedules, modelling, utils, sampling, tmalign
-from foldingdiff import angles_and_coords as ac
+from tqdm.auto import tqdm
 
 
 @torch.no_grad()
@@ -255,7 +253,7 @@ def sample_simple(
 
 
 def _score_angles(
-    reconst_angles:pd.DataFrame, truth_angles:pd.DataFrame, truth_coords_pdb: str
+    reconst_angles: pd.DataFrame, truth_angles: pd.DataFrame, truth_coords_pdb: str
 ) -> Tuple[float, float]:
     """
     Helper function to scores sets of angles

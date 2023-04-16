@@ -13,24 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+from typing import Dict, Tuple
+
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict
+from fastfold.model.nn.primitives import LayerNorm, Linear
+from fastfold.model.nn.template import (TemplatePairStack,
+                                        TemplatePointwiseAttention)
+from fastfold.utils import all_atom_multimer, geometry
+from fastfold.utils.feats import (build_template_angle_feat,
+                                  build_template_pair_feat)
+from fastfold.utils.tensor_utils import dict_multimap, one_hot, tensor_tree_map
 
-from functools import partial
-from fastfold.utils import all_atom_multimer
-from fastfold.utils.feats import (
-    build_template_angle_feat,
-    build_template_pair_feat,
-)
-from fastfold.model.nn.primitives import Linear, LayerNorm
-from fastfold.utils.tensor_utils import one_hot
-from fastfold.model.nn.template import (
-    TemplatePairStack,
-    TemplatePointwiseAttention,
-)
-from fastfold.utils import geometry
-from fastfold.utils.tensor_utils import one_hot, tensor_tree_map, dict_multimap
 
 class InputEmbedder(nn.Module):
     """
@@ -215,7 +210,7 @@ class RecyclingEmbedder(nn.Module):
         # This squared method might become problematic in FP16 mode.
         # I'm using it because my homegrown method had a stubborn discrepancy I
         # couldn't find in time.
-        squared_bins = bins ** 2
+        squared_bins = bins**2
         upper = torch.cat(
             [squared_bins[1:], squared_bins.new_tensor([self.inf])], dim=-1
         )
@@ -232,10 +227,11 @@ class RecyclingEmbedder(nn.Module):
 
         return m_update, z_update
 
+
 class TemplateEmbedder(nn.Module):
     def __init__(self, config):
         super(TemplateEmbedder, self).__init__()
-        
+
         self.config = config
         self.template_angle_embedder = TemplateAngleEmbedder(
             **config["template_angle_embedder"],
@@ -249,15 +245,8 @@ class TemplateEmbedder(nn.Module):
         self.template_pointwise_att = TemplatePointwiseAttention(
             **config["template_pointwise_attention"],
         )
-    
-    def forward(self, 
-        batch, 
-        z, 
-        pair_mask, 
-        templ_dim, 
-        chunk_size, 
-        _mask_trans=True
-    ):
+
+    def forward(self, batch, z, pair_mask, templ_dim, chunk_size, _mask_trans=True):
         # Embed the templates one at a time (with a poor man's vmap)
         template_embeds = []
         n_templ = batch["template_aatype"].shape[templ_dim]
@@ -300,16 +289,16 @@ class TemplateEmbedder(nn.Module):
 
         # [*, S_t, N, N, C_z]
         t = self.template_pair_stack(
-            template_embeds["pair"], 
-            pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+            template_embeds["pair"],
+            pair_mask.unsqueeze(-3).to(dtype=z.dtype),
             chunk_size=chunk_size,
             _mask_trans=_mask_trans,
         )
 
         # [*, N, N, C_z]
         t = self.template_pointwise_att(
-            t, 
-            z, 
+            t,
+            z,
             template_mask=batch["template_mask"].to(dtype=z.dtype),
             chunk_size=chunk_size,
         )

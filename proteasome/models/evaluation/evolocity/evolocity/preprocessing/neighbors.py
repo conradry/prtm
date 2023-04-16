@@ -1,20 +1,21 @@
 import warnings
+
 import numpy as np
 from anndata import AnnData
 from scanpy import Neighbors
 from scanpy.preprocessing import pca
-from scipy.sparse import issparse, coo_matrix
+from scipy.sparse import coo_matrix, issparse
 
-from .utils import get_initial_size
 from .. import logging as logg
 from .. import settings
+from .utils import get_initial_size
 
 
 def neighbors(
     adata,
     n_neighbors=50,
     n_pcs=None,
-    use_rep='X',
+    use_rep="X",
     use_highly_variable=True,
     knn=True,
     random_state=0,

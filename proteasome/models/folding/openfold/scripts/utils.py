@@ -1,47 +1,48 @@
 import argparse
 import ctypes
-from datetime import date
 import sys
+from datetime import date
 
 
 def add_data_args(parser: argparse.ArgumentParser):
     parser.add_argument(
-        '--uniref90_database_path', type=str, default=None,
+        "--uniref90_database_path",
+        type=str,
+        default=None,
     )
     parser.add_argument(
-        '--mgnify_database_path', type=str, default=None,
+        "--mgnify_database_path",
+        type=str,
+        default=None,
     )
     parser.add_argument(
-        '--pdb70_database_path', type=str, default=None,
+        "--pdb70_database_path",
+        type=str,
+        default=None,
     )
     parser.add_argument(
-        '--uniclust30_database_path', type=str, default=None,
+        "--uniclust30_database_path",
+        type=str,
+        default=None,
     )
     parser.add_argument(
-        '--bfd_database_path', type=str, default=None,
+        "--bfd_database_path",
+        type=str,
+        default=None,
     )
     parser.add_argument(
-        '--jackhmmer_binary_path', type=str, default='/usr/bin/jackhmmer'
+        "--jackhmmer_binary_path", type=str, default="/usr/bin/jackhmmer"
     )
+    parser.add_argument("--hhblits_binary_path", type=str, default="/usr/bin/hhblits")
+    parser.add_argument("--hhsearch_binary_path", type=str, default="/usr/bin/hhsearch")
+    parser.add_argument("--kalign_binary_path", type=str, default="/usr/bin/kalign")
     parser.add_argument(
-        '--hhblits_binary_path', type=str, default='/usr/bin/hhblits'
-    )
-    parser.add_argument(
-        '--hhsearch_binary_path', type=str, default='/usr/bin/hhsearch'
-    )
-    parser.add_argument(
-        '--kalign_binary_path', type=str, default='/usr/bin/kalign'
-    )
-    parser.add_argument(
-        '--max_template_date', type=str,
+        "--max_template_date",
+        type=str,
         default=date.today().strftime("%Y-%m-%d"),
     )
-    parser.add_argument(
-        '--obsolete_pdbs_path', type=str, default=None
-    )
-    parser.add_argument(
-        '--release_dates_path', type=str, default=None
-    )
+    parser.add_argument("--obsolete_pdbs_path", type=str, default=None)
+    parser.add_argument("--release_dates_path", type=str, default=None)
 
 
 def get_nvidia_cc():
@@ -56,10 +57,10 @@ def get_nvidia_cc():
     CUDA_SUCCESS = 0
 
     libnames = [
-        'libcuda.so', 
-        'libcuda.dylib', 
-        'cuda.dll',
-        '/usr/local/cuda/compat/libcuda.so', # For Docker
+        "libcuda.so",
+        "libcuda.dylib",
+        "cuda.dll",
+        "/usr/local/cuda/compat/libcuda.so",  # For Docker
     ]
     for libname in libnames:
         try:
@@ -69,7 +70,7 @@ def get_nvidia_cc():
         else:
             break
     else:
-        return None, "Could not load any of: " + ' '.join(libnames)
+        return None, "Could not load any of: " + " ".join(libnames)
 
     nGpus = ctypes.c_int()
     cc_major = ctypes.c_int()
@@ -99,7 +100,12 @@ def get_nvidia_cc():
         cuda.cuGetErrorString(result, ctypes.byref(error_str))
         return None, error_str.value.decode()
 
-    if cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device) != CUDA_SUCCESS:
+    if (
+        cuda.cuDeviceComputeCapability(
+            ctypes.byref(cc_major), ctypes.byref(cc_minor), device
+        )
+        != CUDA_SUCCESS
+    ):
         return None, "Compute Capability not found"
 
     major = cc_major.value

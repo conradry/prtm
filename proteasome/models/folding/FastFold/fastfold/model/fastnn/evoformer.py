@@ -1,22 +1,27 @@
-from typing import Optional, Tuple
 from functools import partial
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-
 from colossalai.context.parallel_mode import ParallelMode
 from colossalai.core import global_context as gpc
-
+from fastfold.distributed.comm import col_to_row, gather, scatter
+from fastfold.distributed.comm_async import (All_to_All_Async,
+                                             All_to_All_Async_Opp)
 from fastfold.model.fastnn import MSACore, OutProductMean, PairCore
 from fastfold.model.fastnn.ops import Linear
-from fastfold.distributed.comm import gather, scatter, col_to_row
-from fastfold.distributed.comm_async import All_to_All_Async, All_to_All_Async_Opp
 from fastfold.utils.checkpointing import checkpoint_blocks
 
 
 class Evoformer(nn.Module):
-
-    def __init__(self, c_m: int, c_z: int, first_block: bool, last_block: bool, is_multimer: bool=False):
+    def __init__(
+        self,
+        c_m: int,
+        c_z: int,
+        first_block: bool,
+        last_block: bool,
+        is_multimer: bool = False,
+    ):
         super(Evoformer, self).__init__()
 
         self.first_block = first_block
@@ -25,7 +30,7 @@ class Evoformer(nn.Module):
         self.msa = MSACore(c_m, c_z, p_drop=0.15)
         self.communication = OutProductMean(n_feat=c_m, n_feat_out=c_z, n_feat_proj=32)
         self.pair = PairCore(d_pair=c_z)
-        self.is_multimer = is_multimer 
+        self.is_multimer = is_multimer
 
     def forward(
         self,
@@ -36,7 +41,6 @@ class Evoformer(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         dap_size = gpc.get_world_size(ParallelMode.TENSOR)
 
         seq_length = pair_mask.size(-1)
@@ -59,7 +63,9 @@ class Evoformer(nn.Module):
         pair_mask = pair_mask.unsqueeze(0)
 
         msa_mask = torch.nn.functional.pad(msa_mask, (0, padding_size))
-        pair_mask = torch.nn.functional.pad(pair_mask, (0, padding_size, 0, padding_size))
+        pair_mask = torch.nn.functional.pad(
+            pair_mask, (0, padding_size, 0, padding_size)
+        )
 
         if not self.is_multimer:
             m = self.msa(m, z, msa_mask)
@@ -99,7 +105,6 @@ class Evoformer(nn.Module):
         chunk_size: Optional[int] = None,
         _mask_trans: bool = True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         dap_size = gpc.get_world_size(ParallelMode.TENSOR)
 
         seq_length = pair_mask.size(-1)
@@ -110,7 +115,9 @@ class Evoformer(nn.Module):
             z[0] = z[0].unsqueeze(0)
 
             m[0] = torch.nn.functional.pad(m[0], (0, 0, 0, padding_size))
-            z[0] = torch.nn.functional.pad(z[0], (0, 0, 0, padding_size, 0, padding_size))
+            z[0] = torch.nn.functional.pad(
+                z[0], (0, 0, 0, padding_size, 0, padding_size)
+            )
 
             if self.is_multimer:
                 m[0] = scatter(m[0], dim=2)
@@ -122,7 +129,9 @@ class Evoformer(nn.Module):
         pair_mask = pair_mask.unsqueeze(0)
 
         msa_mask = torch.nn.functional.pad(msa_mask, (0, padding_size))
-        pair_mask = torch.nn.functional.pad(pair_mask, (0, padding_size, 0, padding_size))
+        pair_mask = torch.nn.functional.pad(
+            pair_mask, (0, padding_size, 0, padding_size)
+        )
 
         if not self.is_multimer:
             m[0] = self.msa(m[0], z[0], msa_mask)
@@ -165,7 +174,7 @@ class EvoformerStack(nn.Module):
         c_s: int,
         no_blocks: int,
         blocks_per_ckpt: int,
-        clear_cache_between_blocks: bool = False, 
+        clear_cache_between_blocks: bool = False,
         is_multimer: bool = False,
         **kwargs,
     ):
@@ -223,7 +232,8 @@ class EvoformerStack(nn.Module):
 
         self.linear = Linear(c_m, c_s)
 
-    def forward(self,
+    def forward(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         msa_mask: torch.Tensor,
@@ -260,7 +270,8 @@ class EvoformerStack(nn.Module):
             for b in self.blocks
         ]
 
-        if(self.clear_cache_between_blocks):
+        if self.clear_cache_between_blocks:
+
             def block_with_cache_clear(block, *args):
                 torch.cuda.empty_cache()
                 return block(*args)
@@ -274,10 +285,11 @@ class EvoformerStack(nn.Module):
         )
 
         s = self.linear(m[..., 0, :, :])
-        
+
         return m, z, s
 
-    def inplace(self,
+    def inplace(
+        self,
         m: torch.Tensor,
         z: torch.Tensor,
         msa_mask: torch.Tensor,
@@ -314,7 +326,8 @@ class EvoformerStack(nn.Module):
             for b in self.blocks
         ]
 
-        if(self.clear_cache_between_blocks):
+        if self.clear_cache_between_blocks:
+
             def block_with_cache_clear(block, *args):
                 torch.cuda.empty_cache()
                 return block(*args)
@@ -328,5 +341,5 @@ class EvoformerStack(nn.Module):
         )
 
         s = self.linear(m[0][..., 0, :, :])
-        
+
         return m, z, s

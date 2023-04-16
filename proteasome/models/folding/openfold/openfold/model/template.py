@@ -12,49 +12,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import partial
 import math
 import sys
-from typing import Optional, List
+from functools import partial
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
-
-from openfold.model.primitives import Linear, LayerNorm, Attention
-from openfold.model.dropout import (
-    DropoutRowwise,
-    DropoutColumnwise,
-)
+from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
 from openfold.model.pair_transition import PairTransition
-from openfold.model.triangular_attention import (
-    TriangleAttentionStartingNode,
-    TriangleAttentionEndingNode,
-)
+from openfold.model.primitives import Attention, LayerNorm, Linear
+from openfold.model.triangular_attention import (TriangleAttentionEndingNode,
+                                                 TriangleAttentionStartingNode)
 from openfold.model.triangular_multiplicative_update import (
-    TriangleMultiplicationOutgoing,
-    TriangleMultiplicationIncoming,
-)
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 from openfold.utils.checkpointing import checkpoint_blocks
-from openfold.utils.chunk_utils import (
-    chunk_layer,
-    ChunkSizeTuner,
-)
-from openfold.utils.feats import (
-    build_template_angle_feat,
-    build_template_pair_feat,
-)
-from openfold.utils.tensor_utils import (
-    add,
-    permute_final_dims,
-    flatten_final_dims,
-    tensor_tree_map,
-)
+from openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
+from openfold.utils.feats import (build_template_angle_feat,
+                                  build_template_pair_feat)
+from openfold.utils.tensor_utils import (add, flatten_final_dims,
+                                         permute_final_dims, tensor_tree_map)
 
 
 class TemplatePointwiseAttention(nn.Module):
     """
     Implements Algorithm 17.
     """
+
     def __init__(self, c_t, c_z, c_hidden, no_heads, inf, **kwargs):
         """
         Args:
@@ -82,7 +66,8 @@ class TemplatePointwiseAttention(nn.Module):
             gating=False,
         )
 
-    def _chunk(self,
+    def _chunk(
+        self,
         z: torch.Tensor,
         t: torch.Tensor,
         biases: List[torch.Tensor],
@@ -101,10 +86,10 @@ class TemplatePointwiseAttention(nn.Module):
             no_batch_dims=len(z.shape[:-2]),
         )
 
-
-    def forward(self, 
-        t: torch.Tensor, 
-        z: torch.Tensor, 
+    def forward(
+        self,
+        t: torch.Tensor,
+        z: torch.Tensor,
         template_mask: Optional[torch.Tensor] = None,
         # This module suffers greatly from a small chunk size
         chunk_size: Optional[int] = 256,
@@ -197,30 +182,28 @@ class TemplatePairStackBlock(nn.Module):
             self.pair_transition_n,
         )
 
-    def forward(self, 
-        z: torch.Tensor, 
-        mask: torch.Tensor, 
-        chunk_size: Optional[int] = None, 
+    def forward(
+        self,
+        z: torch.Tensor,
+        mask: torch.Tensor,
+        chunk_size: Optional[int] = None,
         use_lma: bool = False,
         inplace_safe: bool = False,
         _mask_trans: bool = True,
         _attn_chunk_size: Optional[int] = None,
     ):
-        if(_attn_chunk_size is None):
+        if _attn_chunk_size is None:
             _attn_chunk_size = chunk_size
 
-        single_templates = [
-            t.unsqueeze(-4) for t in torch.unbind(z, dim=-4)
-        ]
-        single_templates_masks = [
-            m.unsqueeze(-3) for m in torch.unbind(mask, dim=-3)
-        ]
+        single_templates = [t.unsqueeze(-4) for t in torch.unbind(z, dim=-4)]
+        single_templates_masks = [m.unsqueeze(-3) for m in torch.unbind(mask, dim=-3)]
 
         for i in range(len(single_templates)):
             single = single_templates[i]
             single_mask = single_templates_masks[i]
-            
-            single = add(single,
+
+            single = add(
+                single,
                 self.dropout_row(
                     self.tri_att_start(
                         single,
@@ -233,7 +216,8 @@ class TemplatePairStackBlock(nn.Module):
                 inplace_safe,
             )
 
-            single = add(single,
+            single = add(
+                single,
                 self.dropout_col(
                     self.tri_att_end(
                         single,
@@ -252,11 +236,11 @@ class TemplatePairStackBlock(nn.Module):
                 inplace_safe=inplace_safe,
                 _add_with_inplace=True,
             )
-            if(not inplace_safe):
+            if not inplace_safe:
                 single = single + self.dropout_row(tmu_update)
             else:
                 single = tmu_update
-            
+
             del tmu_update
 
             tmu_update = self.tri_mul_in(
@@ -265,14 +249,15 @@ class TemplatePairStackBlock(nn.Module):
                 inplace_safe=inplace_safe,
                 _add_with_inplace=True,
             )
-            if(not inplace_safe):
+            if not inplace_safe:
                 single = single + self.dropout_row(tmu_update)
             else:
                 single = tmu_update
-            
+
             del tmu_update
-      
-            single = add(single,
+
+            single = add(
+                single,
                 self.pair_transition(
                     single,
                     mask=single_mask if _mask_trans else None,
@@ -281,10 +266,10 @@ class TemplatePairStackBlock(nn.Module):
                 inplace_safe,
             )
 
-            if(not inplace_safe):
+            if not inplace_safe:
                 single_templates[i] = single
 
-        if(not inplace_safe):
+        if not inplace_safe:
             z = torch.cat(single_templates, dim=-4)
 
         return z
@@ -294,6 +279,7 @@ class TemplatePairStack(nn.Module):
     """
     Implements Algorithm 16.
     """
+
     def __init__(
         self,
         c_t,
@@ -347,7 +333,7 @@ class TemplatePairStack(nn.Module):
 
         self.tune_chunk_size = tune_chunk_size
         self.chunk_size_tuner = None
-        if(tune_chunk_size):
+        if tune_chunk_size:
             self.chunk_size_tuner = ChunkSizeTuner()
 
     def forward(
@@ -368,7 +354,7 @@ class TemplatePairStack(nn.Module):
         Returns:
             [*, N_templ, N_res, N_res, C_t] template embedding update
         """
-        if(mask.shape[-3] == 1):
+        if mask.shape[-3] == 1:
             expand_idx = list(mask.shape)
             expand_idx[-3] = t.shape[-4]
             mask = mask.expand(*expand_idx)
@@ -385,21 +371,23 @@ class TemplatePairStack(nn.Module):
             for b in self.blocks
         ]
 
-        if(chunk_size is not None and self.chunk_size_tuner is not None):
-            assert(not self.training)
+        if chunk_size is not None and self.chunk_size_tuner is not None:
+            assert not self.training
             tuned_chunk_size = self.chunk_size_tuner.tune_chunk_size(
                 representative_fn=blocks[0],
                 args=(t.clone(),),
                 min_chunk_size=chunk_size,
             )
             blocks = [
-                partial(b, 
+                partial(
+                    b,
                     chunk_size=tuned_chunk_size,
                     _attn_chunk_size=max(chunk_size, tuned_chunk_size // 4),
-                ) for b in blocks
+                )
+                for b in blocks
             ]
 
-        t, = checkpoint_blocks(
+        (t,) = checkpoint_blocks(
             blocks=blocks,
             args=(t,),
             blocks_per_ckpt=self.blocks_per_ckpt if self.training else None,
@@ -411,35 +399,35 @@ class TemplatePairStack(nn.Module):
 
 
 def embed_templates_offload(
-    model, 
-    batch, 
-    z, 
-    pair_mask, 
-    templ_dim, 
+    model,
+    batch,
+    z,
+    pair_mask,
+    templ_dim,
     template_chunk_size=256,
     inplace_safe=False,
 ):
     """
     Args:
-        model: 
+        model:
             An AlphaFold model object
-        batch: 
+        batch:
             An AlphaFold input batch. See documentation of AlphaFold.
-        z: 
+        z:
             A [*, N, N, C_z] pair embedding
-        pair_mask: 
+        pair_mask:
             A [*, N, N] pair mask
-        templ_dim: 
+        templ_dim:
             The template dimension of the template tensors in batch
-        template_chunk_size: 
+        template_chunk_size:
             Integer value controlling how quickly the offloaded pair embedding
             tensor is brought back into GPU memory. In dire straits, can be
             lowered to reduce memory consumption of this function even more.
     Returns:
         A dictionary of template pair and angle embeddings.
-    
+
     A version of the "embed_templates" method of the AlphaFold class that
-    offloads the large template pair tensor to CPU. Slower but more frugal 
+    offloads the large template pair tensor to CPU. Slower but more frugal
     with GPU memory than the original. Useful for long-sequence inference.
     """
     # Embed the templates one at a time (with a poor man's vmap)
@@ -466,13 +454,13 @@ def embed_templates_offload(
         # [*, 1, N, N, C_z]
         t = model.template_pair_stack(
             t.unsqueeze(templ_dim),
-            pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+            pair_mask.unsqueeze(-3).to(dtype=z.dtype),
             chunk_size=model.globals.chunk_size,
             use_lma=model.globals.use_lma,
             _mask_trans=model.config._mask_trans,
         )
 
-        assert(sys.getrefcount(t) == 2)
+        assert sys.getrefcount(t) == 2
 
         pair_embeds_cpu.append(t.cpu())
 
@@ -483,10 +471,10 @@ def embed_templates_offload(
 
     for i in range(0, n, template_chunk_size):
         pair_chunks = [
-            p[..., i: i + template_chunk_size, :, :] for p in pair_embeds_cpu
+            p[..., i : i + template_chunk_size, :, :] for p in pair_embeds_cpu
         ]
         pair_chunk = torch.cat(pair_chunks, dim=templ_dim).to(device=z.device)
-        z_chunk = z[..., i: i + template_chunk_size, :, :]
+        z_chunk = z[..., i : i + template_chunk_size, :, :]
         att_chunk = model.template_pointwise_att(
             pair_chunk,
             z_chunk,
@@ -494,14 +482,14 @@ def embed_templates_offload(
             use_lma=model.globals.use_lma,
         )
 
-        t[..., i: i + template_chunk_size, :, :] = att_chunk
-    
+        t[..., i : i + template_chunk_size, :, :] = att_chunk
+
     del pair_chunks
 
-    if(inplace_safe):
+    if inplace_safe:
         t = t * (torch.sum(batch["template_mask"], dim=-1) > 0)
     else:
-        t *= (torch.sum(batch["template_mask"], dim=-1) > 0)
+        t *= torch.sum(batch["template_mask"], dim=-1) > 0
 
     ret = {}
     if model.config.template.embed_angles:
@@ -511,8 +499,8 @@ def embed_templates_offload(
 
         # [*, N, C_m]
         a = model.template_angle_embedder(template_angle_feat)
- 
-        ret["template_angle_embedding"] = a 
+
+        ret["template_angle_embedding"] = a
 
     ret.update({"template_pair_embedding": t})
 
@@ -520,51 +508,52 @@ def embed_templates_offload(
 
 
 def embed_templates_average(
-    model, 
-    batch, 
-    z, 
-    pair_mask, 
+    model,
+    batch,
+    z,
+    pair_mask,
     templ_dim,
     templ_group_size=2,
     inplace_safe=False,
 ):
     """
     Args:
-        model: 
+        model:
             An AlphaFold model object
-        batch: 
+        batch:
             An AlphaFold input batch. See documentation of AlphaFold.
-        z: 
+        z:
             A [*, N, N, C_z] pair embedding
-        pair_mask: 
+        pair_mask:
             A [*, N, N] pair mask
-        templ_dim: 
+        templ_dim:
             The template dimension of the template tensors in batch
-        templ_group_size: 
-            Granularity of the approximation. Larger values trade memory for 
+        templ_group_size:
+            Granularity of the approximation. Larger values trade memory for
             greater proximity to the original function
     Returns:
         A dictionary of template pair and angle embeddings.
 
-    A memory-efficient approximation of the "embed_templates" method of the 
-    AlphaFold class. Instead of running pointwise attention over pair 
-    embeddings for all of the templates at the same time, it splits templates 
-    into groups of size templ_group_size, computes embeddings for each group 
-    normally, and then averages the group embeddings. In our experiments, this 
-    approximation has a minimal effect on the quality of the resulting 
-    embedding, while its low memory footprint allows the number of templates 
+    A memory-efficient approximation of the "embed_templates" method of the
+    AlphaFold class. Instead of running pointwise attention over pair
+    embeddings for all of the templates at the same time, it splits templates
+    into groups of size templ_group_size, computes embeddings for each group
+    normally, and then averages the group embeddings. In our experiments, this
+    approximation has a minimal effect on the quality of the resulting
+    embedding, while its low memory footprint allows the number of templates
     to scale almost indefinitely.
     """
     # Embed the templates one at a time (with a poor man's vmap)
     n = z.shape[-2]
     n_templ = batch["template_aatype"].shape[templ_dim]
     out_tensor = z.new_zeros(z.shape)
-    for i in range(0, n_templ, templ_group_size): 
+    for i in range(0, n_templ, templ_group_size):
+
         def slice_template_tensor(t):
             s = [slice(None) for _ in t.shape]
             s[templ_dim] = slice(i, i + templ_group_size)
             return t[s]
-        
+
         template_feats = tensor_tree_map(
             slice_template_tensor,
             batch,
@@ -582,8 +571,8 @@ def embed_templates_average(
         # [*, S_t, N, N, C_z]
         t = model.template_pair_embedder(t)
         t = model.template_pair_stack(
-            t, 
-            pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+            t,
+            pair_mask.unsqueeze(-3).to(dtype=z.dtype),
             chunk_size=model.globals.chunk_size,
             use_lma=model.globals.use_lma,
             _mask_trans=model.config._mask_trans,
@@ -597,20 +586,20 @@ def embed_templates_average(
         )
 
         denom = math.ceil(n_templ / templ_group_size)
-        if(inplace_safe):
+        if inplace_safe:
             t /= denom
         else:
             t = t / denom
 
-        if(inplace_safe):
+        if inplace_safe:
             out_tensor += t
         else:
             out_tensor = out_tensor + t
 
         del t
 
-    if(inplace_safe):
-        out_tensor *= (torch.sum(batch["template_mask"], dim=-1) > 0)
+    if inplace_safe:
+        out_tensor *= torch.sum(batch["template_mask"], dim=-1) > 0
     else:
         out_tensor = out_tensor * (torch.sum(batch["template_mask"], dim=-1) > 0)
 
@@ -622,8 +611,8 @@ def embed_templates_average(
 
         # [*, N, C_m]
         a = model.template_angle_embedder(template_angle_feat)
- 
-        ret["template_angle_embedding"] = a 
+
+        ret["template_angle_embedding"] = a
 
     ret.update({"template_pair_embedding": out_tensor})
 

@@ -15,11 +15,11 @@
 
 """Library to run Jackhmmer from Python."""
 
-from concurrent import futures
 import glob
 import logging
 import os
 import subprocess
+from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
@@ -72,14 +72,9 @@ class Jackhmmer:
         self.database_path = database_path
         self.num_streamed_chunks = num_streamed_chunks
 
-        if (
-            not os.path.exists(self.database_path)
-            and num_streamed_chunks is None
-        ):
+        if not os.path.exists(self.database_path) and num_streamed_chunks is None:
             logging.error("Could not find Jackhmmer database %s", database_path)
-            raise ValueError(
-                f"Could not find Jackhmmer database {database_path}"
-            )
+            raise ValueError(f"Could not find Jackhmmer database {database_path}")
 
         self.n_cpu = n_cpu
         self.n_iter = n_iter
@@ -94,10 +89,10 @@ class Jackhmmer:
         self.streaming_callback = streaming_callback
 
     def _query_chunk(
-        self, 
-        input_fasta_path: str, 
+        self,
+        input_fasta_path: str,
         database_path: str,
-        max_sequences: Optional[int] = None
+        max_sequences: Optional[int] = None,
     ) -> Mapping[str, Any]:
         """Queries the database chunk using Jackhmmer."""
         with utils.tmpdir_manager(base_dir="/tmp") as query_tmp_dir:
@@ -144,19 +139,13 @@ class Jackhmmer:
             if self.incdom_e is not None:
                 cmd_flags.extend(["--incdomE", str(self.incdom_e)])
 
-            cmd = (
-                [self.binary_path]
-                + cmd_flags
-                + [input_fasta_path, database_path]
-            )
+            cmd = [self.binary_path] + cmd_flags + [input_fasta_path, database_path]
 
             logging.info('Launching subprocess "%s"', " ".join(cmd))
             process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-            with utils.timing(
-                f"Jackhmmer ({os.path.basename(database_path)}) query"
-            ):
+            with utils.timing(f"Jackhmmer ({os.path.basename(database_path)}) query"):
                 _, stderr = process.communicate()
                 retcode = process.wait()
 
@@ -171,7 +160,7 @@ class Jackhmmer:
                 with open(tblout_path) as f:
                     tbl = f.read()
 
-            if(max_sequences is None):
+            if max_sequences is None:
                 with open(sto_path) as f:
                     sto = f.read()
             else:
@@ -187,14 +176,15 @@ class Jackhmmer:
 
         return raw_output
 
-    def query(self,
-    input_fasta_path: str, 
-    max_sequences: Optional[int] = None
+    def query(
+        self, input_fasta_path: str, max_sequences: Optional[int] = None
     ) -> Sequence[Mapping[str, Any]]:
         """Queries the database using Jackhmmer."""
         if self.num_streamed_chunks is None:
             single_chunk_result = self._query_chunk(
-                input_fasta_path, self.database_path, max_sequences,
+                input_fasta_path,
+                self.database_path,
+                max_sequences,
             )
             return [single_chunk_result]
 
@@ -231,9 +221,7 @@ class Jackhmmer:
                 future.result()
                 chunked_output.append(
                     self._query_chunk(
-                        input_fasta_path, 
-                        db_local_chunk(i), 
-                        max_sequences
+                        input_fasta_path, db_local_chunk(i), max_sequences
                     )
                 )
 
@@ -242,7 +230,7 @@ class Jackhmmer:
                 future = next_future
                 # Do not set next_future for the last chunk so that this works
                 # even for databases with only 1 chunk
-                if(i < self.num_streamed_chunks):
+                if i < self.num_streamed_chunks:
                     future = next_future
                 if self.streaming_callback:
                     self.streaming_callback(i)

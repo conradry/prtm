@@ -1,12 +1,10 @@
-import os
-
 import importlib
+import os
 import pkgutil
 import sys
 import unittest
 
 import numpy as np
-
 from openfold.config import model_config
 from openfold.model.model import AlphaFold
 from openfold.utils.import_weights import import_jax_weights_

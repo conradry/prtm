@@ -4,27 +4,24 @@ Script for calculating self consistency TM scores
 
 import argparse
 import functools
-from glob import glob
-import os
-import logging
-from pathlib import Path
-import multiprocessing as mp
 import json
+import logging
+import multiprocessing as mp
+import os
+from glob import glob
+from pathlib import Path
 from typing import *
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 import seaborn as sns
-from scipy import stats
-
+from annot_secondary_structures import count_structures_in_pdb
 from biotite import structure as struc
 from biotite.structure.io.pdb import PDBFile
-
-from annot_secondary_structures import count_structures_in_pdb
-
 from foldingdiff import tmalign
 from foldingdiff.angles_and_coords import get_pdb_length
+from matplotlib import pyplot as plt
+from scipy import stats
 
 
 def get_sctm_score(orig_pdb: Path, folded_dirname: Path) -> Tuple[float, str]:

@@ -14,14 +14,12 @@
 """Rigid3Array Transformations represented by a Matrix and a Vector."""
 
 from __future__ import annotations
+
 import dataclasses
-from typing import Union, List
+from typing import List, Union
 
 import torch
-
-from fastfold.utils.geometry import rotation_matrix
-from fastfold.utils.geometry import vector
-
+from fastfold.utils.geometry import rotation_matrix, vector
 
 Float = Union[float, torch.Tensor]
 
@@ -34,7 +32,7 @@ class Rigid3Array:
     translation: vector.Vec3Array
 
     def __matmul__(self, other: Rigid3Array) -> Rigid3Array:
-        new_rotation = self.rotation @ other.rotation # __matmul__
+        new_rotation = self.rotation @ other.rotation  # __matmul__
         new_translation = self.apply_to_point(other.translation)
         return Rigid3Array(new_rotation, new_translation)
 
@@ -104,19 +102,15 @@ class Rigid3Array:
         """Return identity Rigid3Array of given shape."""
         return cls(
             rotation_matrix.Rot3Array.identity(shape, device),
-            vector.Vec3Array.zeros(shape, device)
+            vector.Vec3Array.zeros(shape, device),
         )
 
     @classmethod
     def cat(cls, rigids: List[Rigid3Array], dim: int) -> Rigid3Array:
         return cls(
-            rotation_matrix.Rot3Array.cat(
-                [r.rotation for r in rigids], dim=dim
-            ),
-            vector.Vec3Array.cat(
-                [r.translation for r in rigids], dim=dim
-            ),
-        ) 
+            rotation_matrix.Rot3Array.cat([r.rotation for r in rigids], dim=dim),
+            vector.Vec3Array.cat([r.translation for r in rigids], dim=dim),
+        )
 
     def scale_translation(self, factor: Float) -> Rigid3Array:
         """Scale translation in Rigid3Array by 'factor'."""
@@ -126,13 +120,13 @@ class Rigid3Array:
         rot_array = self.rotation.to_tensor()
         vec_array = self.translation.to_tensor()
         array = torch.zeros(
-            rot_array.shape[:-2] + (4, 4), 
-            device=rot_array.device, 
-            dtype=rot_array.dtype
+            rot_array.shape[:-2] + (4, 4),
+            device=rot_array.device,
+            dtype=rot_array.dtype,
         )
         array[..., :3, :3] = rot_array
         array[..., :3, 3] = vec_array
-        array[..., 3, 3] = 1.
+        array[..., 3, 3] = 1.0
         return array
 
     def to_tensor_4x4(self) -> torch.Tensor:
@@ -165,9 +159,15 @@ class Rigid3Array:
     def from_array4x4(cls, array: torch.tensor) -> Rigid3Array:
         """Construct Rigid3Array from homogeneous 4x4 array."""
         rotation = rotation_matrix.Rot3Array(
-            array[..., 0, 0], array[..., 0, 1], array[..., 0, 2],
-            array[..., 1, 0], array[..., 1, 1], array[..., 1, 2],
-            array[..., 2, 0], array[..., 2, 1], array[..., 2, 2]
+            array[..., 0, 0],
+            array[..., 0, 1],
+            array[..., 0, 2],
+            array[..., 1, 0],
+            array[..., 1, 1],
+            array[..., 1, 2],
+            array[..., 2, 0],
+            array[..., 2, 1],
+            array[..., 2, 2],
         )
         translation = vector.Vec3Array(
             array[..., 0, 3], array[..., 1, 3], array[..., 2, 3]

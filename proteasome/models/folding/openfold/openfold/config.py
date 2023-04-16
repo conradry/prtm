@@ -1,5 +1,6 @@
 import copy
 import importlib
+
 import ml_collections as mlc
 
 
@@ -13,7 +14,7 @@ def set_inf(c, inf):
 
 def enforce_config_constraints(config):
     def string_to_setting(s):
-        path = s.split('.')
+        path = s.split(".")
         setting = config
         for p in path:
             setting = setting[p]
@@ -21,10 +22,7 @@ def enforce_config_constraints(config):
         return setting
 
     mutually_exclusive_bools = [
-        (
-            "model.template.average_templates", 
-            "model.template.offload_templates"
-        ),
+        ("model.template.average_templates", "model.template.offload_templates"),
         (
             "globals.use_lma",
             "globals.use_flash",
@@ -34,26 +32,18 @@ def enforce_config_constraints(config):
     for s1, s2 in mutually_exclusive_bools:
         s1_setting = string_to_setting(s1)
         s2_setting = string_to_setting(s2)
-        if(s1_setting and s2_setting):
+        if s1_setting and s2_setting:
             raise ValueError(f"Only one of {s1} and {s2} may be set at a time")
 
     fa_is_installed = importlib.util.find_spec("flash_attn") is not None
-    if(config.globals.use_flash and not fa_is_installed):
+    if config.globals.use_flash and not fa_is_installed:
         raise ValueError("use_flash requires that FlashAttention is installed")
 
-    if(
-        config.globals.offload_inference and 
-        not config.model.template.average_templates
-    ):
+    if config.globals.offload_inference and not config.model.template.average_templates:
         config.model.template.offload_templates = True
 
 
-def model_config(
-    name, 
-    train=False, 
-    low_prec=False, 
-    long_sequence_inference=False
-):
+def model_config(name, train=False, low_prec=False, long_sequence_inference=False):
     c = copy.deepcopy(config)
     # TRAINING PRESETS
     if name == "initial_training":
@@ -64,13 +54,13 @@ def model_config(
         c.data.train.crop_size = 384
         c.data.train.max_extra_msa = 5120
         c.data.train.max_msa_clusters = 512
-        c.loss.violation.weight = 1.
+        c.loss.violation.weight = 1.0
         c.loss.experimentally_resolved.weight = 0.01
     elif name == "finetuning_ptm":
         c.data.train.max_extra_msa = 5120
         c.data.train.crop_size = 384
         c.data.train.max_msa_clusters = 512
-        c.loss.violation.weight = 1.
+        c.loss.violation.weight = 1.0
         c.loss.experimentally_resolved.weight = 0.01
         c.model.heads.tm.enabled = True
         c.loss.tm.weight = 0.1
@@ -80,7 +70,7 @@ def model_config(
         c.data.train.max_extra_msa = 5120
         c.data.train.max_msa_clusters = 512
         c.model.template.enabled = False
-        c.loss.violation.weight = 1.
+        c.loss.violation.weight = 1.0
         c.loss.experimentally_resolved.weight = 0.01
     elif name == "finetuning_no_templ_ptm":
         # AF2 Suppl. Table 4, "finetuning" setting
@@ -88,7 +78,7 @@ def model_config(
         c.data.train.max_extra_msa = 5120
         c.data.train.max_msa_clusters = 512
         c.model.template.enabled = False
-        c.loss.violation.weight = 1.
+        c.loss.violation.weight = 1.0
         c.loss.experimentally_resolved.weight = 0.01
         c.model.heads.tm.enabled = True
         c.loss.tm.weight = 0.1
@@ -122,7 +112,7 @@ def model_config(
         c.model.template.enabled = False
     elif name == "model_1_ptm":
         c.data.train.max_extra_msa = 5120
-        c.data.predict.max_extra_msa = 5120 
+        c.data.predict.max_extra_msa = 5120
         c.data.common.reduce_max_clusters_by_max_templates = True
         c.data.common.use_templates = True
         c.data.common.use_template_torsion_angles = True
@@ -156,7 +146,7 @@ def model_config(
         raise ValueError("Invalid model name")
 
     if long_sequence_inference:
-        assert(not train)
+        assert not train
         c.globals.offload_inference = True
         c.globals.use_lma = True
         c.globals.use_flash = False
@@ -164,7 +154,7 @@ def model_config(
         c.model.template.template_pair_stack.tune_chunk_size = False
         c.model.extra_msa.extra_msa_stack.tune_chunk_size = False
         c.model.evoformer_stack.tune_chunk_size = False
-    
+
     if train:
         c.globals.blocks_per_ckpt = 1
         c.globals.chunk_size = None
@@ -172,7 +162,7 @@ def model_config(
         c.globals.offload_inference = False
         c.model.template.average_templates = False
         c.model.template.offload_templates = False
-    
+
     if low_prec:
         c.globals.eps = 1e-4
         # If we want exact numerical parity with the original, inf can't be
@@ -251,24 +241,38 @@ config = mlc.ConfigDict(
                     "template_aatype": [NUM_TEMPLATES, NUM_RES],
                     "template_all_atom_mask": [NUM_TEMPLATES, NUM_RES, None],
                     "template_all_atom_positions": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_alt_torsion_angles_sin_cos": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_backbone_rigid_mask": [NUM_TEMPLATES, NUM_RES],
                     "template_backbone_rigid_tensor": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "template_mask": [NUM_TEMPLATES],
                     "template_pseudo_beta": [NUM_TEMPLATES, NUM_RES, None],
                     "template_pseudo_beta_mask": [NUM_TEMPLATES, NUM_RES],
                     "template_sum_probs": [NUM_TEMPLATES, None],
                     "template_torsion_angles_mask": [
-                        NUM_TEMPLATES, NUM_RES, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
                     ],
                     "template_torsion_angles_sin_cos": [
-                        NUM_TEMPLATES, NUM_RES, None, None,
+                        NUM_TEMPLATES,
+                        NUM_RES,
+                        None,
+                        None,
                     ],
                     "true_msa": [NUM_MSA_SEQ, NUM_RES],
                     "use_clamped_fape": [],
@@ -370,7 +374,7 @@ config = mlc.ConfigDict(
             # Use Staats & Rabe's low-memory attention algorithm. Mutually
             # exclusive with use_flash.
             "use_lma": False,
-            # Use FlashAttention in selected modules. Mutually exclusive with 
+            # Use FlashAttention in selected modules. Mutually exclusive with
             # use_lma. Doesn't work that well on long sequences (>1000 residues).
             "use_flash": False,
             "offload_inference": False,
@@ -606,7 +610,7 @@ config = mlc.ConfigDict(
                 "min_resolution": 0.1,
                 "max_resolution": 3.0,
                 "eps": eps,  # 1e-8,
-                "weight": 0.,
+                "weight": 0.0,
                 "enabled": tm_enabled,
             },
             "eps": eps,

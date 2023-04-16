@@ -1,15 +1,18 @@
 #! /usr/bin/env python3
 
+import argparse
+import json
 import os
 import re
-import json
-import argparse
 from datetime import timedelta
 
+from proteinbert.pretraining import (AutoSaveManager, EpochGenerator,
+                                     run_pretraining)
+from proteinbert.shared_utils.util import (get_parser_directory_type,
+                                           get_parser_file_type, load_object,
+                                           log)
 from tensorflow import keras
 
-from proteinbert.shared_utils.util import log, load_object, get_parser_file_type, get_parser_directory_type
-from proteinbert.pretraining import run_pretraining, EpochGenerator, AutoSaveManager
 
 class FixedReduceLROnPlateau(keras.callbacks.ReduceLROnPlateau):
     def on_train_begin(self, logs = None):

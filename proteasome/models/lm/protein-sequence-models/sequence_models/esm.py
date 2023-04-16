@@ -1,10 +1,10 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+from esm.modules import (AxialTransformerLayer, ESM1bLayerNorm,
+                         LearnedPositionalEmbedding, TransformerLayer)
+from sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET
 from torch.utils.checkpoint import checkpoint
-
-from esm.modules import TransformerLayer, LearnedPositionalEmbedding, ESM1bLayerNorm, AxialTransformerLayer
-from sequence_models.constants import PROTEIN_ALPHABET, PAD, MASK
 
 
 class RobertaLMHead(nn.Module):
@@ -25,6 +25,7 @@ class RobertaLMHead(nn.Module):
         x = F.linear(x, self.weight) + self.bias
         return x
 
+
 class ESM1b(nn.Module):
     """
     Args:
@@ -36,19 +37,27 @@ class ESM1b(nn.Module):
            number of layers
        n_heads: int,
            number of attention heads
-   """
+    """
 
-    def __init__(self, d_model, d_hidden, n_layers, n_heads, n_tokens=len(PROTEIN_ALPHABET),
-                 padding_idx=PROTEIN_ALPHABET.index(PAD), mask_idx=PROTEIN_ALPHABET.index(MASK),
-                 max_positions=1024):
+    def __init__(
+        self,
+        d_model,
+        d_hidden,
+        n_layers,
+        n_heads,
+        n_tokens=len(PROTEIN_ALPHABET),
+        padding_idx=PROTEIN_ALPHABET.index(PAD),
+        mask_idx=PROTEIN_ALPHABET.index(MASK),
+        max_positions=1024,
+    ):
         super(ESM1b, self).__init__()
-        self.embed_tokens = nn.Embedding(
-            n_tokens, d_model, padding_idx=mask_idx
-        )
+        self.embed_tokens = nn.Embedding(n_tokens, d_model, padding_idx=mask_idx)
         self.layers = nn.ModuleList(
             [
                 TransformerLayer(
-                    d_model, d_hidden, n_heads,
+                    d_model,
+                    d_hidden,
+                    n_heads,
                     add_bias_kv=False,
                     use_esm1b_layer_norm=True,
                 )
@@ -57,17 +66,16 @@ class ESM1b(nn.Module):
         )
         self.padding_idx = padding_idx
 
-        self.embed_positions = LearnedPositionalEmbedding(max_positions, d_model, padding_idx)
+        self.embed_positions = LearnedPositionalEmbedding(
+            max_positions, d_model, padding_idx
+        )
         self.emb_layer_norm_before = ESM1bLayerNorm(d_model)
         self.emb_layer_norm_after = ESM1bLayerNorm(d_model)
         self.lm_head = RobertaLMHead(
-            embed_dim=d_model,
-            output_dim=n_tokens,
-            weight=self.embed_tokens.weight
+            embed_dim=d_model, output_dim=n_tokens, weight=self.embed_tokens.weight
         )
 
     def forward(self, tokens):
-
         assert tokens.ndim == 2
         padding_mask = tokens.eq(self.padding_idx)  # B, T
 
@@ -93,7 +101,9 @@ class ESM1b(nn.Module):
             padding_mask = None
 
         for layer_idx, layer in enumerate(self.layers):
-            x, attn = layer(x, self_attn_padding_mask=padding_mask, need_head_weights=False)
+            x, attn = layer(
+                x, self_attn_padding_mask=padding_mask, need_head_weights=False
+            )
 
         x = self.emb_layer_norm_after(x)
         x = x.transpose(0, 1)  # (T, B, E) => (B, T, E)
@@ -115,33 +125,35 @@ class MSATransformer(nn.Module):
            number of layers
        n_heads: int,
            number of attention heads
-   """
+    """
 
-    def __init__(self, d_model, d_hidden, n_layers, n_heads, use_ckpt=False, n_tokens=len(PROTEIN_ALPHABET),
-                 padding_idx=PROTEIN_ALPHABET.index(PAD), mask_idx=PROTEIN_ALPHABET.index(MASK),
-                 max_positions=1024):
+    def __init__(
+        self,
+        d_model,
+        d_hidden,
+        n_layers,
+        n_heads,
+        use_ckpt=False,
+        n_tokens=len(PROTEIN_ALPHABET),
+        padding_idx=PROTEIN_ALPHABET.index(PAD),
+        mask_idx=PROTEIN_ALPHABET.index(MASK),
+        max_positions=1024,
+    ):
         super(MSATransformer, self).__init__()
-        self.embed_tokens = nn.Embedding(
-            n_tokens, d_model, padding_idx=mask_idx
-        )
+        self.embed_tokens = nn.Embedding(n_tokens, d_model, padding_idx=mask_idx)
         self.layers = nn.ModuleList(
-            [
-                AxialTransformerLayer(
-                    d_model, d_hidden, n_heads
-                )
-                for _ in range(n_layers)
-            ]
+            [AxialTransformerLayer(d_model, d_hidden, n_heads) for _ in range(n_layers)]
         )
         self.padding_idx = padding_idx
 
         # self.contact_head = ContactPredictionHead()
-        self.embed_positions = LearnedPositionalEmbedding(max_positions, d_model, padding_idx)
+        self.embed_positions = LearnedPositionalEmbedding(
+            max_positions, d_model, padding_idx
+        )
         self.emb_layer_norm_before = nn.LayerNorm(d_model)
         self.emb_layer_norm_after = nn.LayerNorm(d_model)
         self.lm_head = RobertaLMHead(
-            embed_dim=d_model,
-            output_dim=n_tokens,
-            weight=self.embed_tokens.weight
+            embed_dim=d_model, output_dim=n_tokens, weight=self.embed_tokens.weight
         )
 
         self.use_ckpt = use_ckpt
@@ -152,7 +164,9 @@ class MSATransformer(nn.Module):
         padding_mask = tokens.eq(self.padding_idx)  # B, R, C
 
         x = self.embed_tokens(tokens)
-        x = x + self.embed_positions(tokens.view(batch_size * num_alignments, seqlen)).view(x.size())
+        x = x + self.embed_positions(
+            tokens.view(batch_size * num_alignments, seqlen)
+        ).view(x.size())
 
         x = self.emb_layer_norm_before(x)
         x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))

@@ -14,34 +14,24 @@
 # limitations under the License.
 
 from functools import partial
+
+import fastfold.common.residue_constants as residue_constants
+import fastfold.habana as habana
 import torch
 import torch.nn as nn
-
 from fastfold.data import data_transforms_multimer
-from fastfold.utils.feats import (
-    pseudo_beta_fn,
-    build_extra_msa_feat,
-    build_template_angle_feat,
-    build_template_pair_feat,
-    atom14_to_atom37,
-)
-from fastfold.model.nn.embedders import (
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateEmbedder,
-    ExtraMSAEmbedder,
-)
-from fastfold.model.nn.embedders_multimer import TemplateEmbedderMultimer, InputEmbedderMultimer
+from fastfold.model.nn.embedders import (ExtraMSAEmbedder, InputEmbedder,
+                                         RecyclingEmbedder, TemplateEmbedder)
+from fastfold.model.nn.embedders_multimer import (InputEmbedderMultimer,
+                                                  TemplateEmbedderMultimer)
 from fastfold.model.nn.evoformer import EvoformerStack, ExtraMSAStack
 from fastfold.model.nn.heads import AuxiliaryHeads
-import fastfold.common.residue_constants as residue_constants
 from fastfold.model.nn.structure_module import StructureModule
-from fastfold.utils.tensor_utils import (
-    dict_multimap,
-    tensor_tree_map,
-)
+from fastfold.utils.feats import (atom14_to_atom37, build_extra_msa_feat,
+                                  build_template_angle_feat,
+                                  build_template_pair_feat, pseudo_beta_fn)
+from fastfold.utils.tensor_utils import dict_multimap, tensor_tree_map
 
-import fastfold.habana as habana
 
 class AlphaFold(nn.Module):
     """
@@ -71,7 +61,7 @@ class AlphaFold(nn.Module):
             self.template_embedder = TemplateEmbedderMultimer(
                 template_config,
             )
-        else:   
+        else:
             self.input_embedder = InputEmbedder(
                 **config["input_embedder"],
             )
@@ -104,7 +94,7 @@ class AlphaFold(nn.Module):
 
         self.config = config
 
-    def embed_templates(self, batch, z, pair_mask, templ_dim): 
+    def embed_templates(self, batch, z, pair_mask, templ_dim):
         # Embed the templates one at a time (with a poor man's vmap)
         template_embeds = []
         n_templ = batch["template_aatype"].shape[templ_dim]
@@ -147,16 +137,16 @@ class AlphaFold(nn.Module):
 
         # [*, S_t, N, N, C_z]
         t = self.template_pair_stack(
-            template_embeds["pair"], 
-            pair_mask.unsqueeze(-3).to(dtype=z.dtype), 
+            template_embeds["pair"],
+            pair_mask.unsqueeze(-3).to(dtype=z.dtype),
             chunk_size=self.globals.chunk_size,
             _mask_trans=self.config._mask_trans,
         )
 
         # [*, N, N, C_z]
         t = self.template_pointwise_att(
-            t, 
-            z, 
+            t,
+            z,
             template_mask=batch["template_mask"].to(dtype=z.dtype),
             chunk_size=self.globals.chunk_size,
         )
@@ -176,10 +166,11 @@ class AlphaFold(nn.Module):
 
         if habana.is_habana():
             from habana.hpuhelper import hpu_perf
+
             perf = hpu_perf("iteration", sync=False)
         dtype = next(self.parameters()).dtype
         for k in feats:
-            if(feats[k].dtype == torch.float32):
+            if feats[k].dtype == torch.float32:
                 feats[k] = feats[k].to(dtype=dtype)
 
         # Grab some data about the input
@@ -244,7 +235,7 @@ class AlphaFold(nn.Module):
         # altogether. We zero them this way instead of computing them
         # conditionally to avoid leaving parameters unused, which has annoying
         # implications for DDP training.
-        if(not _recycle):
+        if not _recycle:
             m_1_prev *= 0
             z_prev *= 0
 
@@ -274,11 +265,9 @@ class AlphaFold(nn.Module):
                     no_batch_dims,
                     chunk_size=self.globals.chunk_size,
                     multichain_mask_2d=multichain_mask_2d,
-                    inplace=self.globals.inplace
+                    inplace=self.globals.inplace,
                 )
-                feats["template_torsion_angles_mask"] = (
-                    template_embeds["template_mask"]
-                )
+                feats["template_torsion_angles_mask"] = template_embeds["template_mask"]
                 # [*, N, N, C_z]
                 z = z + template_embeds["template_pair_embedding"]
             else:
@@ -289,7 +278,7 @@ class AlphaFold(nn.Module):
                         pair_mask.to(dtype=z.dtype),
                         no_batch_dims,
                         self.globals.chunk_size,
-                        inplace=self.globals.inplace
+                        inplace=self.globals.inplace,
                     )
                     z = template_embeds["template_pair_embedding"]
                 else:
@@ -301,22 +290,17 @@ class AlphaFold(nn.Module):
                         self.globals.chunk_size,
                     )
                     z = z + template_embeds["template_pair_embedding"]
-            if(
-                self.config.template.embed_angles or 
-                (self.globals.is_multimer and self.config.template.enabled)
+            if self.config.template.embed_angles or (
+                self.globals.is_multimer and self.config.template.enabled
             ):
                 # [*, S = S_c + S_t, N, C_m]
-                m = torch.cat(
-                    [m, template_embeds["template_single_embedding"]], 
-                    dim=-3
-                )
+                m = torch.cat([m, template_embeds["template_single_embedding"]], dim=-3)
 
                 # [*, S, N]
-                if(not self.globals.is_multimer):
+                if not self.globals.is_multimer:
                     torsion_angles_mask = feats["template_torsion_angles_mask"]
                     msa_mask = torch.cat(
-                        [feats["msa_mask"], torsion_angles_mask[..., 2]], 
-                        dim=-2
+                        [feats["msa_mask"], torsion_angles_mask[..., 2]], dim=-2
                     )
                     del torsion_angles_mask
                 else:
@@ -327,9 +311,11 @@ class AlphaFold(nn.Module):
             del template_feats, template_embeds
 
         if habana.is_habana():
-            perf.checkahead("3: Embed extra MSA features + merge with pairwise embeddings")
+            perf.checkahead(
+                "3: Embed extra MSA features + merge with pairwise embeddings"
+            )
         if self.config.extra_msa.enabled:
-            if(self.globals.is_multimer):
+            if self.globals.is_multimer:
                 extra_msa_fn = data_transforms_multimer.build_extra_msa_feat
             else:
                 extra_msa_fn = build_extra_msa_feat
@@ -362,7 +348,9 @@ class AlphaFold(nn.Module):
             del extra_msa_feat, extra_msa_fn
 
         if habana.is_habana():
-            perf.checkahead("4: Run MSA + pair embeddings through the trunk of the network")
+            perf.checkahead(
+                "4: Run MSA + pair embeddings through the trunk of the network"
+            )
         # m: [*, S, N, C_m]
         # z: [*, N, N, C_z]
         # s: [*, N, C_s]
@@ -434,9 +422,7 @@ class AlphaFold(nn.Module):
         self.template_embedder.template_pair_stack.blocks_per_ckpt = (
             self.config.template.template_pair_stack.blocks_per_ckpt
         )
-        self.evoformer.blocks_per_ckpt = (
-            self.config.evoformer_stack.blocks_per_ckpt
-        )
+        self.evoformer.blocks_per_ckpt = self.config.evoformer_stack.blocks_per_ckpt
 
         for b in self.extra_msa_stack.blocks:
             b.ckpt = self.config.extra_msa.extra_msa_stack.ckpt
@@ -504,6 +490,7 @@ class AlphaFold(nn.Module):
         for cycle_no in range(num_iters):
             if habana.is_habana():
                 from habana.hpuhelper import hpu_perf
+
                 perf = hpu_perf(f"cycle {cycle_no+1}/{num_iters}")
             # Select the features for the current recycling cycle
             fetch_cur_batch = lambda t: t[..., cycle_no]
@@ -520,11 +507,7 @@ class AlphaFold(nn.Module):
 
                 # Run the next iteration of the model
                 outputs, m_1_prev, z_prev, x_prev = self.iteration(
-                    feats,
-                    m_1_prev,
-                    z_prev,
-                    x_prev,
-                    _recycle=(num_iters > 1)
+                    feats, m_1_prev, z_prev, x_prev, _recycle=(num_iters > 1)
                 )
             if habana.is_habana():
                 perf.checknow("cycle finish")

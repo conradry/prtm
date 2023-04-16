@@ -2,7 +2,6 @@ import torch.nn as nn
 
 
 class Mixup(object):
-
     def __init__(self, alpha_sampler):
         self.sampler = alpha_sampler
 

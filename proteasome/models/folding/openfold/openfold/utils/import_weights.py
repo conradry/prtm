@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
+from typing import List, Union
+
 import numpy as np
 import torch
-from typing import Union, List
-
 
 _NPZ_KEY_PREFIX = "alphafold/alphafold_iteration/"
 
@@ -29,9 +29,7 @@ class ParamType(Enum):
     LinearWeight = partial(  # hack: partial prevents fns from becoming methods
         lambda w: w.transpose(-1, -2)
     )
-    LinearWeightMHA = partial(
-        lambda w: w.reshape(*w.shape[:-2], -1).transpose(-1, -2)
-    )
+    LinearWeightMHA = partial(lambda w: w.reshape(*w.shape[:-2], -1).transpose(-1, -2))
     LinearMHAOutputWeight = partial(
         lambda w: w.reshape(*w.shape[:-3], -1, w.shape[-1]).transpose(-1, -2)
     )
@@ -276,23 +274,15 @@ def generate_translation_dict(model, version):
             msa_col_att_params = MSAColAttParams(b.msa_att_col)
 
         d = {
-            "msa_row_attention_with_pair_bias": MSAAttPairBiasParams(
-                b.msa_att_row
-            ),
+            "msa_row_attention_with_pair_bias": MSAAttPairBiasParams(b.msa_att_row),
             col_att_name: msa_col_att_params,
             "msa_transition": MSATransitionParams(b.core.msa_transition),
-            "outer_product_mean": 
-                OuterProductMeanParams(b.core.outer_product_mean),
-            "triangle_multiplication_outgoing": 
-                TriMulOutParams(b.core.tri_mul_out),
-            "triangle_multiplication_incoming": 
-                TriMulInParams(b.core.tri_mul_in),
-            "triangle_attention_starting_node": 
-                TriAttParams(b.core.tri_att_start),
-            "triangle_attention_ending_node": 
-                TriAttParams(b.core.tri_att_end),
-            "pair_transition": 
-                PairTransitionParams(b.core.pair_transition),
+            "outer_product_mean": OuterProductMeanParams(b.core.outer_product_mean),
+            "triangle_multiplication_outgoing": TriMulOutParams(b.core.tri_mul_out),
+            "triangle_multiplication_incoming": TriMulInParams(b.core.tri_mul_in),
+            "triangle_attention_starting_node": TriAttParams(b.core.tri_att_start),
+            "triangle_attention_ending_node": TriAttParams(b.core.tri_att_end),
+            "pair_transition": PairTransitionParams(b.core.pair_transition),
         }
 
         return d
@@ -338,35 +328,21 @@ def generate_translation_dict(model, version):
             "prev_msa_first_row_norm": LayerNormParams(
                 model.recycling_embedder.layer_norm_m
             ),
-            "prev_pair_norm": LayerNormParams(
-                model.recycling_embedder.layer_norm_z
-            ),
-            "pair_activiations": LinearParams(
-                model.input_embedder.linear_relpos
-            ),
-            "extra_msa_activations": LinearParams(
-                model.extra_msa_embedder.linear
-            ),
+            "prev_pair_norm": LayerNormParams(model.recycling_embedder.layer_norm_z),
+            "pair_activiations": LinearParams(model.input_embedder.linear_relpos),
+            "extra_msa_activations": LinearParams(model.extra_msa_embedder.linear),
             "extra_msa_stack": ems_blocks_params,
             "evoformer_iteration": evo_blocks_params,
             "single_activations": LinearParams(model.evoformer.linear),
         },
         "structure_module": {
-            "single_layer_norm": LayerNormParams(
-                model.structure_module.layer_norm_s
-            ),
-            "initial_projection": LinearParams(
-                model.structure_module.linear_in
-            ),
-            "pair_layer_norm": LayerNormParams(
-                model.structure_module.layer_norm_z
-            ),
+            "single_layer_norm": LayerNormParams(model.structure_module.layer_norm_s),
+            "initial_projection": LinearParams(model.structure_module.linear_in),
+            "pair_layer_norm": LayerNormParams(model.structure_module.layer_norm_z),
             "fold_iteration": FoldIterationParams(model.structure_module),
         },
         "predicted_lddt_head": {
-            "input_layer_norm": LayerNormParams(
-                model.aux_heads.plddt.layer_norm
-            ),
+            "input_layer_norm": LayerNormParams(model.aux_heads.plddt.layer_norm),
             "act_0": LinearParams(model.aux_heads.plddt.linear_1),
             "act_1": LinearParams(model.aux_heads.plddt.linear_2),
             "logits": LinearParams(model.aux_heads.plddt.linear_3),
@@ -375,9 +351,7 @@ def generate_translation_dict(model, version):
             "half_logits": LinearParams(model.aux_heads.distogram.linear),
         },
         "experimentally_resolved_head": {
-            "logits": LinearParams(
-                model.aux_heads.experimentally_resolved.linear
-            ),
+            "logits": LinearParams(model.aux_heads.experimentally_resolved.linear),
         },
         "masked_msa_head": {
             "logits": LinearParams(model.aux_heads.masked_msa.linear),
@@ -395,15 +369,11 @@ def generate_translation_dict(model, version):
 
     if version not in no_templ:
         tps_blocks = model.template_pair_stack.blocks
-        tps_blocks_params = stacked(
-            [TemplatePairBlockParams(b) for b in tps_blocks]
-        ) 
+        tps_blocks_params = stacked([TemplatePairBlockParams(b) for b in tps_blocks])
         template_param_dict = {
             "template_embedding": {
                 "single_template_embedding": {
-                    "embedding2d": LinearParams(
-                        model.template_pair_embedder.linear
-                    ),
+                    "embedding2d": LinearParams(model.template_pair_embedder.linear),
                     "template_pair_stack": {
                         "__layer_stack_no_state": tps_blocks_params,
                     },
@@ -416,18 +386,15 @@ def generate_translation_dict(model, version):
             "template_single_embedding": LinearParams(
                 model.template_angle_embedder.linear_1
             ),
-            "template_projection": LinearParams(
-                model.template_angle_embedder.linear_2
-            ),
+            "template_projection": LinearParams(model.template_angle_embedder.linear_2),
         }
-        
-        translations["evoformer"].update(template_param_dict)   
+
+        translations["evoformer"].update(template_param_dict)
 
     if "_ptm" in version:
         translations["predicted_aligned_error_head"] = {
             "logits": LinearParams(model.aux_heads.tm.linear)
         }
-
 
     return translations
 

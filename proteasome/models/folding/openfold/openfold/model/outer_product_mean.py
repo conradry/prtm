@@ -18,7 +18,6 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
 from openfold.model.primitives import Linear
 from openfold.utils.chunk_utils import chunk_layer
 from openfold.utils.precision_utils import is_fp16_enabled
@@ -49,7 +48,7 @@ class OuterProductMean(nn.Module):
         self.layer_norm = nn.LayerNorm(c_m)
         self.linear_1 = Linear(c_m, c_hidden)
         self.linear_2 = Linear(c_m, c_hidden)
-        self.linear_out = Linear(c_hidden ** 2, c_z, init="final")
+        self.linear_out = Linear(c_hidden**2, c_z, init="final")
 
     def _opm(self, a, b):
         # [*, N_res, N_res, C, C]
@@ -64,11 +63,7 @@ class OuterProductMean(nn.Module):
         return outer
 
     @torch.jit.ignore
-    def _chunk(self, 
-        a: torch.Tensor, 
-        b: torch.Tensor, 
-        chunk_size: int
-    ) -> torch.Tensor:
+    def _chunk(self, a: torch.Tensor, b: torch.Tensor, chunk_size: int) -> torch.Tensor:
         # Since the "batch dim" in this case is not a true batch dimension
         # (in that the shape of the output depends on it), we need to
         # iterate over it ourselves
@@ -85,7 +80,7 @@ class OuterProductMean(nn.Module):
             out.append(outer)
 
         # For some cursed reason making this distinction saves memory
-        if(len(out) == 1):
+        if len(out) == 1:
             outer = out[0].unsqueeze(0)
         else:
             outer = torch.stack(out, dim=0)
@@ -94,8 +89,9 @@ class OuterProductMean(nn.Module):
 
         return outer
 
-    def _forward(self, 
-        m: torch.Tensor, 
+    def _forward(
+        self,
+        m: torch.Tensor,
         mask: Optional[torch.Tensor] = None,
         chunk_size: Optional[int] = None,
         inplace_safe: bool = False,
@@ -117,10 +113,10 @@ class OuterProductMean(nn.Module):
 
         # [*, N_seq, N_res, C]
         mask = mask.unsqueeze(-1)
-        a = self.linear_1(ln) 
+        a = self.linear_1(ln)
         a = a * mask
-        
-        b = self.linear_2(ln) 
+
+        b = self.linear_2(ln)
         b = b * mask
 
         del ln
@@ -138,22 +134,22 @@ class OuterProductMean(nn.Module):
         norm = norm + self.eps
 
         # [*, N_res, N_res, C_z]
-        if(inplace_safe):
+        if inplace_safe:
             outer /= norm
         else:
             outer = outer / norm
 
         return outer
 
-    def forward(self,
-                m: torch.Tensor,
-                mask: Optional[torch.Tensor] = None,
-                chunk_size: Optional[int] = None,
-                inplace_safe: bool = False,
+    def forward(
+        self,
+        m: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        chunk_size: Optional[int] = None,
+        inplace_safe: bool = False,
     ) -> torch.Tensor:
-        if(is_fp16_enabled()):
+        if is_fp16_enabled():
             with torch.cuda.amp.autocast(enabled=False):
                 return self._forward(m.float(), mask, chunk_size, inplace_safe)
         else:
             return self._forward(m, mask, chunk_size, inplace_safe)
-        

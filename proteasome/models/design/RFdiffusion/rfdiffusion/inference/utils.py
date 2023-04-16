@@ -1,17 +1,18 @@
-import numpy as np
+import glob
+import logging
 import os
-from omegaconf import DictConfig
+import random
+
+import numpy as np
 import torch
 import torch.nn.functional as nn
+from omegaconf import DictConfig
+from rfdiffusion import util
 from rfdiffusion.diffusion import get_beta_schedule
-from scipy.spatial.transform import Rotation as scipy_R
+from rfdiffusion.inference import model_runners
 from rfdiffusion.util import rigid_from_3_points
 from rfdiffusion.util_module import ComputeAllAtomCoords
-from rfdiffusion import util
-import random
-import logging
-from rfdiffusion.inference import model_runners
-import glob
+from scipy.spatial.transform import Rotation as scipy_R
 
 ###########################################################
 #### Functions which can be called outside of Denoiser ####
@@ -534,7 +535,7 @@ def parse_pdb(filename, **kwargs):
 
 def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
     # indices of residues observed in the structure
-    res, pdb_idx = [],[]
+    res, pdb_idx = [], []
     for l in lines:
         if l[:4] == "ATOM" and l[12:16].strip() == "CA":
             res.append((l[22:26], l[17:20]))
@@ -558,16 +559,18 @@ def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
             " " + l[12:16].strip().ljust(3),
             l[17:20],
         )
-        if (chain,resNo) in pdb_idx:
+        if (chain, resNo) in pdb_idx:
             idx = pdb_idx.index((chain, resNo))
             # for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]]):
-            for i_atm, tgtatm in enumerate(
-                util.aa2long[util.aa2num[aa]][:14]
-                ):
+            for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]][:14]):
                 if (
                     tgtatm is not None and tgtatm.strip() == atom.strip()
-                    ):  # ignore whitespace
-                    xyz[idx, i_atm, :] = [float(l[30:38]), float(l[38:46]), float(l[46:54])]
+                ):  # ignore whitespace
+                    xyz[idx, i_atm, :] = [
+                        float(l[30:38]),
+                        float(l[38:46]),
+                        float(l[46:54]),
+                    ]
                     break
 
     # save atom mask

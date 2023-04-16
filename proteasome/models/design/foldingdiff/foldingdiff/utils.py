@@ -1,15 +1,14 @@
 """
 Misc shared utility functions
 """
-import os
 import glob
 import hashlib
 import logging
+import os
 from typing import *
 
-import requests
-
 import numpy as np
+import requests
 
 
 def is_huggingface_hub_id(s: str) -> bool:
@@ -51,7 +50,7 @@ def num_to_groups(num: int, divisor: int) -> List[int]:
     return arr
 
 
-def seq_to_groups(seq:Sequence[Any], divisor:int) -> List[Sequence[Any]]:
+def seq_to_groups(seq: Sequence[Any], divisor: int) -> List[Sequence[Any]]:
     """
     Generates a list of items of at most <divisor> items
     >>> seq_to_groups([1,2,3,4,5,6,7,8,9], 3)
@@ -59,7 +58,7 @@ def seq_to_groups(seq:Sequence[Any], divisor:int) -> List[Sequence[Any]]:
     >>> seq_to_groups([1,2,3,4,5,6,7,8,9], 4)
     [[1, 2, 3, 4], [5, 6, 7, 8], [9]]
     """
-    return [seq[i:i+divisor] for i in range(0, len(seq), divisor)]
+    return [seq[i : i + divisor] for i in range(0, len(seq), divisor)]
 
 
 def tolerant_comparison_check(values, cmp: Literal[">=", "<="], v):

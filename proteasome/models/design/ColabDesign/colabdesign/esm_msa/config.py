@@ -15,23 +15,23 @@
 
 import ml_collections
 
-CONFIG = ml_collections.ConfigDict({
-  'RowAtt': {
-    'embed_dim': 768,
-    'head_num': 12,
-
-  },
-  'ColAtt': {
-    'embed_dim': 768,
-    'head_num': 12,
-
-  },
-  'Ffn': {
-    'embed_dim': 3072,
-  },
-  'dropout': 0.0,
-  'max_tokens_per_msa': 2 ** 16,
-  'layer_num': 12,
-  'embed_dim': 768,
-  'max_position': 1024,
-})
+CONFIG = ml_collections.ConfigDict(
+    {
+        "RowAtt": {
+            "embed_dim": 768,
+            "head_num": 12,
+        },
+        "ColAtt": {
+            "embed_dim": 768,
+            "head_num": 12,
+        },
+        "Ffn": {
+            "embed_dim": 3072,
+        },
+        "dropout": 0.0,
+        "max_tokens_per_msa": 2**16,
+        "layer_num": 12,
+        "embed_dim": 768,
+        "max_position": 1024,
+    }
+)

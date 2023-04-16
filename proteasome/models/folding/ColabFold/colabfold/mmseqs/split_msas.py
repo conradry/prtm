@@ -12,19 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 def split_msa(merged_msa: Path, output_folder: Path):
-
     # We need to split the a3m file into one a3m file per msa, for large files we don't want to load the whole thing into the memory
     with merged_msa.open("r") as f:
         line = f.readline()
-        msa = [line.strip().replace('\0', '')]
+        msa = [line.strip().replace("\0", "")]
         progress = tqdm()
         while line:
-            if line.count('\0') > 0:
-                filename = msa[0][1:].split(" ")[0].strip().replace("/", "_").replace('>','') + ".a3m"
+            if line.count("\0") > 0:
+                filename = (
+                    msa[0][1:].split(" ")[0].strip().replace("/", "_").replace(">", "")
+                    + ".a3m"
+                )
                 output_folder.joinpath(filename).write_text("\n".join(msa))
                 msa = []
                 progress.update(1)
-                line = line.replace('\0','')
+                line = line.replace("\0", "")
 
             msa.append(line.strip())
             line = f.readline()

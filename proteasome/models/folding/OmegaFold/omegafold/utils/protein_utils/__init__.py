@@ -17,11 +17,11 @@
 """
 
 """
+import omegafold.utils.protein_utils.residue_constants
 # =============================================================================
 # Imports
 # =============================================================================
 from omegafold.utils.protein_utils.aaframe import AAFrame
-import omegafold.utils.protein_utils.residue_constants
 
 # =============================================================================
 # Constants

@@ -12,37 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
 import unittest
 
-from openfold.data.data_transforms import make_atom14_masks_np
-from openfold.np.residue_constants import (
-    restype_rigid_group_default_frame,
-    restype_atom14_to_rigid_group,
-    restype_atom14_mask,
-    restype_atom14_rigid_group_positions,
-    restype_atom37_mask,
-)
-from openfold.model.structure_module import (
-    StructureModule,
-    StructureModuleTransition,
-    BackboneUpdate,
-    AngleResnet,
-    InvariantPointAttention,
-)
+import numpy as np
 import openfold.utils.feats as feats
-from openfold.utils.rigid_utils import Rotation, Rigid
 import tests.compare_utils as compare_utils
+import torch
+from openfold.data.data_transforms import make_atom14_masks_np
+from openfold.model.structure_module import (AngleResnet, BackboneUpdate,
+                                             InvariantPointAttention,
+                                             StructureModule,
+                                             StructureModuleTransition)
+from openfold.np.residue_constants import (
+    restype_atom14_mask, restype_atom14_rigid_group_positions,
+    restype_atom14_to_rigid_group, restype_atom37_mask,
+    restype_rigid_group_default_frame)
+from openfold.utils.rigid_utils import Rigid, Rotation
 from tests.config import consts
-from tests.data_utils import (
-    random_affines_4x4,
-)
+from tests.data_utils import random_affines_4x4
 
 if compare_utils.alphafold_is_installed():
     alphafold = compare_utils.import_alphafold()
-    import jax
     import haiku as hk
+    import jax
 
 
 class TestStructureModule(unittest.TestCase):
@@ -90,12 +82,8 @@ class TestStructureModule(unittest.TestCase):
         out = sm({"single": s, "pair": z}, f)
 
         self.assertTrue(out["frames"].shape == (no_layers, batch_size, n, 7))
-        self.assertTrue(
-            out["angles"].shape == (no_layers, batch_size, n, no_angles, 2)
-        )
-        self.assertTrue(
-            out["positions"].shape == (no_layers, batch_size, n, 14, 3)
-        )
+        self.assertTrue(out["angles"].shape == (no_layers, batch_size, n, no_angles, 2))
+        self.assertTrue(out["positions"].shape == (no_layers, batch_size, n, 14, 3))
 
     def test_structure_module_transition_shape(self):
         batch_size = 2
@@ -202,9 +190,7 @@ class TestInvariantPointAttention(unittest.TestCase):
 
         r = Rigid(rots, trans)
 
-        ipa = InvariantPointAttention(
-            c_m, c_z, c_hidden, no_heads, no_qp, no_vp
-        )
+        ipa = InvariantPointAttention(c_m, c_z, c_hidden, no_heads, no_qp, no_vp)
 
         shape_before = s.shape
         s = ipa(s, z, r, mask)
@@ -240,9 +226,7 @@ class TestInvariantPointAttention(unittest.TestCase):
         affines = random_affines_4x4((n_res,))
         rigids = alphafold.model.r3.rigids_from_tensor4x4(affines)
         quats = alphafold.model.r3.rigids_to_quataffine(rigids)
-        transformations = Rigid.from_tensor_4x4(
-            torch.as_tensor(affines).float().cuda()
-        )
+        transformations = Rigid.from_tensor_4x4(torch.as_tensor(affines).float().cuda())
 
         sample_affine = quats
 

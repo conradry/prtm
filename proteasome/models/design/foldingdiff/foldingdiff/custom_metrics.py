@@ -2,13 +2,12 @@
 Some custom metrics
 """
 import functools
-import multiprocessing
 import logging
+import multiprocessing
 
 import numpy as np
-from scipy import stats
-
 import torch
+from scipy import stats
 from torch.utils.data import Dataset
 
 

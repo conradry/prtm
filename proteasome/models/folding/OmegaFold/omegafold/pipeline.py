@@ -31,21 +31,21 @@ import os.path
 import pathlib
 import typing
 
+import torch
 from Bio import PDB as PDB
 from Bio.PDB import StructureBuilder
-import torch
+from omegafold import utils
+from omegafold.utils.protein_utils import residue_constants as rc
 from torch import hub
 from torch.backends import cuda, cudnn
 from torch.utils.hipify import hipify_python
-
-from omegafold import utils
-from omegafold.utils.protein_utils import residue_constants as rc
 
 try:
     from torch.backends import mps  # Compatibility with earlier versions
 
     _mps_is_available = mps.is_available
 except ImportError:
+
     def _mps_is_available():
         return False
 
@@ -91,15 +91,16 @@ def path_leaf(path: str) -> str:
 
 
 def fasta2inputs(
-        fasta_path: str,
-        output_dir: typing.Optional[str] = None,
-        num_pseudo_msa: int = 15,
-        device: typing.Optional[torch.device] = torch.device('cpu'),
-        mask_rate: float = 0.12,
-        num_cycle: int = 10,
-        deterministic: bool = True
+    fasta_path: str,
+    output_dir: typing.Optional[str] = None,
+    num_pseudo_msa: int = 15,
+    device: typing.Optional[torch.device] = torch.device("cpu"),
+    mask_rate: float = 0.12,
+    num_cycle: int = 10,
+    deterministic: bool = True,
 ) -> typing.Generator[
-    typing.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str], None, None]:
+    typing.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, str], None, None
+]:
     """
     Load a fasta file and
 
@@ -117,7 +118,7 @@ def fasta2inputs(
     """
     chain_ids: list[str] = []
     aastr: list[str] = []
-    with open(fasta_path, 'r') as file:
+    with open(fasta_path, "r") as file:
         lines = file.readlines()
     name = False
     for line in lines:
@@ -132,16 +133,14 @@ def fasta2inputs(
                 name = False
             else:
                 aastr[-1] = aastr[-1] + line.strip("\n").upper()
-    combined = sorted(
-        list(zip(chain_ids, aastr)), key=lambda x: len(x[1])
-    )
+    combined = sorted(list(zip(chain_ids, aastr)), key=lambda x: len(x[1]))
     if output_dir is None:
         parent = pathlib.Path(fasta_path).parent
         folder_name = path_leaf(fasta_path).split(".")[0]
         output_dir = os.path.join(parent, folder_name)
         os.makedirs(output_dir, exist_ok=True)
     try:
-        name_max = os.pathconf(output_dir, 'PC_NAME_MAX') - 4
+        name_max = os.pathconf(output_dir, "PC_NAME_MAX") - 4
     except AttributeError:
         # os.pathconf is UNIX specific. Set to 32 for now.
         name_max = 32
@@ -149,12 +148,13 @@ def fasta2inputs(
     for i, (ch, fas) in enumerate(combined):
         fas = fas.replace("Z", "E").replace("B", "D").replace("U", "C")
         aatype = torch.LongTensor(
-            [rc.restypes_with_x.index(aa) if aa != '-' else 21 for aa in fas]
+            [rc.restypes_with_x.index(aa) if aa != "-" else 21 for aa in fas]
         )
         mask = torch.ones_like(aatype).float()
-        assert torch.all(aatype.ge(0)) and torch.all(aatype.le(21)), \
-            f"Only take 0-20 amino acids as inputs with unknown amino acid " \
+        assert torch.all(aatype.ge(0)) and torch.all(aatype.le(21)), (
+            f"Only take 0-20 amino acids as inputs with unknown amino acid "
             f"indexed as 20"
+        )
         if len(ch) < name_max:
             out_fname = ch.replace(os.path.sep, "-")
         else:
@@ -169,9 +169,9 @@ def fasta2inputs(
             g.manual_seed(num_res)
         for _ in range(num_cycle):
             p_msa = aatype[None, :].repeat(num_pseudo_msa, 1)
-            p_msa_mask = torch.rand(
-                [num_pseudo_msa, num_res], generator=g
-            ).gt(mask_rate)
+            p_msa_mask = torch.rand([num_pseudo_msa, num_res], generator=g).gt(
+                mask_rate
+            )
             p_msa_mask = torch.cat((mask[None, :], p_msa_mask), dim=0)
             p_msa = torch.cat((aatype[None, :], p_msa), dim=0)
             p_msa[~p_msa_mask.bool()] = 21
@@ -181,13 +181,13 @@ def fasta2inputs(
 
 
 def save_pdb(
-        pos14: torch.Tensor,
-        b_factors: torch.Tensor,
-        sequence: torch.Tensor,
-        mask: torch.Tensor,
-        save_path: str,
-        model: int = 0,
-        init_chain: str = 'A'
+    pos14: torch.Tensor,
+    b_factors: torch.Tensor,
+    sequence: torch.Tensor,
+    mask: torch.Tensor,
+    save_path: str,
+    model: int = 0,
+    init_chain: str = "A",
 ) -> None:
     """
     saves the pos14 as a pdb file
@@ -209,9 +209,9 @@ def save_pdb(
     builder.init_structure(0)
     builder.init_model(model)
     builder.init_chain(init_chain)
-    builder.init_seg('    ')
+    builder.init_seg("    ")
     for i, (aa_idx, p_res, b, m_res) in enumerate(
-            zip(sequence, pos14, b_factors, mask.bool())
+        zip(sequence, pos14, b_factors, mask.bool())
     ):
         if not m_res:
             continue
@@ -224,13 +224,16 @@ def save_pdb(
         except IndexError:
             continue
         builder.init_residue(three, " ", int(i), icode=" ")
-        for j, (atom_name,) in enumerate(
-                zip(rc.restype_name_to_atom14_names[three])
-        ):
+        for j, (atom_name,) in enumerate(zip(rc.restype_name_to_atom14_names[three])):
             if len(atom_name) > 0:
                 builder.init_atom(
-                    atom_name, p_res[j].tolist(), b.item(), 1.0, ' ',
-                    atom_name.join([" ", " "]), element=atom_name[0]
+                    atom_name,
+                    p_res[j].tolist(),
+                    b.item(),
+                    1.0,
+                    " ",
+                    atom_name.join([" ", " "]),
+                    element=atom_name[0],
                 )
     structure = builder.get_structure()
     io = PDB.PDBIO()
@@ -240,7 +243,8 @@ def save_pdb(
 
 
 def _load_weights(
-        weights_url: str, weights_file: str,
+    weights_url: str,
+    weights_file: str,
 ) -> collections.OrderedDict:
     """
     Loads the weights from either a url or a local file. If from url,
@@ -257,15 +261,13 @@ def _load_weights(
     weights_file = os.path.expanduser(weights_file)
     use_cache = os.path.exists(weights_file)
     if weights_file and weights_url and not use_cache:
-        logging.info(
-            f"Downloading weights from {weights_url} to {weights_file}"
-        )
+        logging.info(f"Downloading weights from {weights_url} to {weights_file}")
         os.makedirs(os.path.dirname(weights_file), exist_ok=True)
         hub.download_url_to_file(weights_url, weights_file)
     else:
         logging.info(f"Loading weights from {weights_file}")
 
-    return torch.load(weights_file, map_location='cpu')
+    return torch.load(weights_file, map_location="cpu")
 
 
 def _get_device(device) -> str:
@@ -284,10 +286,10 @@ def _get_device(device) -> str:
         elif _mps_is_available():
             return "mps"
         else:
-            return 'cpu'
-    elif device == 'cpu':
+            return "cpu"
+    elif device == "cpu":
         return device
-    elif device.startswith('cuda'):
+    elif device.startswith("cuda"):
         if torch.cuda.is_available():
             return device
         else:
@@ -301,8 +303,9 @@ def _get_device(device) -> str:
         raise ValueError(f"Device type {device} is not available")
 
 
-def get_args() -> typing.Tuple[
-    argparse.Namespace, collections.OrderedDict, argparse.Namespace]:
+def get_args() -> (
+    typing.Tuple[argparse.Namespace, collections.OrderedDict, argparse.Namespace]
+):
     """
     Parse the arguments, which includes loading the weights
 
@@ -314,8 +317,7 @@ def get_args() -> typing.Tuple[
 
     """
     parser = argparse.ArgumentParser(
-        description=
-        """
+        description="""
         Launch OmegaFold and perform inference on the data. 
         Some examples (both the input and output files) are included in the 
         Examples folder, where each folder contains the output of each 
@@ -324,70 +326,79 @@ def get_args() -> typing.Tuple[
         """
     )
     parser.add_argument(
-        'input_file', type=lambda x: os.path.expanduser(str(x)),
-        help=
-        """
+        "input_file",
+        type=lambda x: os.path.expanduser(str(x)),
+        help="""
         The input fasta file
-        """
+        """,
     )
     parser.add_argument(
-        'output_dir', type=lambda x: os.path.expanduser(str(x)),
-        help=
-        """
+        "output_dir",
+        type=lambda x: os.path.expanduser(str(x)),
+        help="""
         The output directory to write the output pdb files. 
         If the directory does not exist, we just create it. 
         The output file name follows its unique identifier in the 
         rows of the input fasta file"
-        """
+        """,
     )
     parser.add_argument(
-        '--num_cycle', default=10, type=int,
-        help="The number of cycles for optimization, default to 10"
+        "--num_cycle",
+        default=10,
+        type=int,
+        help="The number of cycles for optimization, default to 10",
     )
     parser.add_argument(
-        '--subbatch_size', default=None, type=int,
-        help=
-        """
+        "--subbatch_size",
+        default=None,
+        type=int,
+        help="""
         The subbatching number, 
         the smaller, the slower, the less GRAM requirements. 
         Default is the entire length of the sequence.
         This one takes priority over the automatically determined one for 
         the sequences
-        """
+        """,
     )
     parser.add_argument(
-        '--device', default=None, type=str,
-        help=
-        'The device on which the model will be running, '
-        'default to the accelerator that we can find'
-    )
-    parser.add_argument(
-        '--weights_file',
+        "--device",
         default=None,
         type=str,
-        help='The model cache to run, default os.path.expanduser("~/.cache/omegafold_ckpt/model.pt")'
+        help="The device on which the model will be running, "
+        "default to the accelerator that we can find",
     )
     parser.add_argument(
-        '--weights',
+        "--weights_file",
+        default=None,
+        type=str,
+        help='The model cache to run, default os.path.expanduser("~/.cache/omegafold_ckpt/model.pt")',
+    )
+    parser.add_argument(
+        "--weights",
         default="https://helixon.s3.amazonaws.com/release1.pt",
         type=str,
-        help='The url to the weights of the model'
+        help="The url to the weights of the model",
     )
     parser.add_argument(
-        '--model', default=1, type=int,
-        help='The model number to run, current we support 1 or 2'
+        "--model",
+        default=1,
+        type=int,
+        help="The model number to run, current we support 1 or 2",
     )
     parser.add_argument(
-        '--pseudo_msa_mask_rate', default=0.12, type=float,
-        help='The masking rate for generating pseudo MSAs'
+        "--pseudo_msa_mask_rate",
+        default=0.12,
+        type=float,
+        help="The masking rate for generating pseudo MSAs",
     )
     parser.add_argument(
-        '--num_pseudo_msa', default=15, type=int,
-        help='The number of pseudo MSAs'
+        "--num_pseudo_msa", default=15, type=int, help="The number of pseudo MSAs"
     )
     parser.add_argument(
-        '--allow_tf32', default=True, type=hipify_python.str2bool,
-        help='if allow tf32 for speed if available, default to True'
+        "--allow_tf32",
+        default=True,
+        type=hipify_python.str2bool,
+        help="if allow tf32 for speed if available, default to True",
     )
 
     args = parser.parse_args()
@@ -396,26 +407,21 @@ def get_args() -> typing.Tuple[
     if args.model == 1:
         weights_url = "https://helixon.s3.amazonaws.com/release1.pt"
         if args.weights_file is None:
-            args.weights_file = os.path.expanduser(
-                "~/.cache/omegafold_ckpt/model.pt"
-            )
+            args.weights_file = os.path.expanduser("~/.cache/omegafold_ckpt/model.pt")
     elif args.model == 2:
         weights_url = "https://helixon.s3.amazonaws.com/release2.pt"
         if args.weights_file is None:
-            args.weights_file = os.path.expanduser(
-                "~/.cache/omegafold_ckpt/model2.pt"
-            )
+            args.weights_file = os.path.expanduser("~/.cache/omegafold_ckpt/model2.pt")
     else:
         raise ValueError(
-            f"Model {args.model} is not available, "
-            f"we only support model 1 and 2"
+            f"Model {args.model} is not available, " f"we only support model 1 and 2"
         )
     weights_file = args.weights_file
     # if the output directory is not provided, we will create one alongside the
     # input fasta file
     if weights_file or weights_url:
         weights = _load_weights(weights_url, weights_file)
-        weights = weights.pop('model', weights)
+        weights = weights.pop("model", weights)
     else:
         weights = None
 
@@ -435,5 +441,5 @@ def get_args() -> typing.Tuple[
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

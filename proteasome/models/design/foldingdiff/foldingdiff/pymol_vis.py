@@ -4,11 +4,11 @@ Code to visualize with pymol
 Example usage:
 python ~/protdiff/protdiff/pymol_vis.py pdb2gif -i projects/generated/generation-with-history/sampled_pdb/sample_history/generated_0/*.pdb -o generated_0.gif
 """
-import os
-import glob
-import re
-import multiprocessing as mp
 import argparse
+import glob
+import multiprocessing as mp
+import os
+import re
 import tempfile
 from pathlib import Path
 from typing import *
@@ -17,7 +17,6 @@ import biotite.structure as struc
 import biotite.structure.io as strucio
 import imageio
 import pymol
-
 from tqdm.auto import tqdm
 
 

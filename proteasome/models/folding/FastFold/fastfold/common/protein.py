@@ -16,13 +16,12 @@
 """Protein data type."""
 import dataclasses
 import io
-from typing import Any, Mapping, Optional
 import re
+from typing import Any, Mapping, Optional
 
-from fastfold.common import residue_constants
-from Bio.PDB import PDBParser
 import numpy as np
-
+from Bio.PDB import PDBParser
+from fastfold.common import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
@@ -30,7 +29,7 @@ PICO_TO_ANGSTROM = 0.01
 
 PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
-assert(PDB_MAX_CHAINS == 62)
+assert PDB_MAX_CHAINS == 62
 
 
 @dataclasses.dataclass(frozen=True)
@@ -51,10 +50,10 @@ class Protein:
 
     # Residue index as used in PDB. It is not necessarily continuous or 0-indexed.
     residue_index: np.ndarray  # [num_res]
-    
-    # 0-indexed number corresponding to the chain in the protein that this 
+
+    # 0-indexed number corresponding to the chain in the protein that this
     # residue belongs to
-    chain_index: np.ndarray # [num_res]
+    chain_index: np.ndarray  # [num_res]
 
     # B-factors, or temperature factors, of each residue (in sq. angstroms units),
     # representing the displacement of the residue from its ground truth mean
@@ -62,7 +61,7 @@ class Protein:
     b_factors: np.ndarray  # [num_res, num_atom_type]
 
     def __post_init__(self):
-        if(len(np.unique(self.chain_index)) > PDB_MAX_CHAINS):
+        if len(np.unique(self.chain_index)) > PDB_MAX_CHAINS:
             raise ValueError(
                 f"Cannot build an instance with more than {PDB_MAX_CHAINS} "
                 "chains because these cannot be written to PDB format"
@@ -75,7 +74,7 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
       non-standard atoms will be ignored.
     Args:
       pdb_str: The contents of the pdb file
-      chain_id: If chain_id is specified (e.g. A), then only that chain is 
+      chain_id: If chain_id is specified (e.g. A), then only that chain is
       parsed. Else, all chains are parsed.
     Returns:
       A new `Protein` parsed from the pdb contents.
@@ -98,9 +97,8 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
     b_factors = []
 
     for chain in model:
-        if(chain_id is not None and chain.id != chain_id):
+        if chain_id is not None and chain.id != chain_id:
             continue
-
 
         for res in chain:
             if res.id[2] != " ":
@@ -120,13 +118,11 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
                     continue
                 pos[residue_constants.atom_order[atom.name]] = atom.coord
                 mask[residue_constants.atom_order[atom.name]] = 1.0
-                res_b_factors[
-                    residue_constants.atom_order[atom.name]
-                ] = atom.bfactor
+                res_b_factors[residue_constants.atom_order[atom.name]] = atom.bfactor
             if np.sum(mask) < 0.5:
                 # If no known atom positions are reported for the residue then skip it.
                 continue
-            
+
             aatype.append(restype_idx)
             atom_positions.append(pos)
             atom_mask.append(mask)
@@ -150,44 +146,48 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
 
 
 def from_proteinnet_string(proteinnet_str: str) -> Protein:
-    tag_re = r'(\[[A-Z]+\]\n)'
-    tags = [
-        tag.strip() for tag in re.split(tag_re, proteinnet_str) if len(tag) > 0
-    ]
-    groups = zip(tags[0::2], [l.split('\n') for l in tags[1::2]])
-   
-    atoms = ['N', 'CA', 'C']
+    tag_re = r"(\[[A-Z]+\]\n)"
+    tags = [tag.strip() for tag in re.split(tag_re, proteinnet_str) if len(tag) > 0]
+    groups = zip(tags[0::2], [l.split("\n") for l in tags[1::2]])
+
+    atoms = ["N", "CA", "C"]
     aatype = None
     atom_positions = None
     atom_mask = None
     for g in groups:
-        if("[PRIMARY]" == g[0]):
+        if "[PRIMARY]" == g[0]:
             seq = g[1][0].strip()
             for i in range(len(seq)):
-                if(seq[i] not in residue_constants.restypes):
-                    seq[i] = 'X'
-            aatype = np.array([
-                residue_constants.restype_order.get(
-                    res_symbol, residue_constants.restype_num
-                ) for res_symbol in seq
-            ])
-        elif("[TERTIARY]" == g[0]):
+                if seq[i] not in residue_constants.restypes:
+                    seq[i] = "X"
+            aatype = np.array(
+                [
+                    residue_constants.restype_order.get(
+                        res_symbol, residue_constants.restype_num
+                    )
+                    for res_symbol in seq
+                ]
+            )
+        elif "[TERTIARY]" == g[0]:
             tertiary = []
             for axis in range(3):
                 tertiary.append(list(map(float, g[1][axis].split())))
             tertiary_np = np.array(tertiary)
             atom_positions = np.zeros(
-                (len(tertiary[0])//3, residue_constants.atom_type_num, 3)
+                (len(tertiary[0]) // 3, residue_constants.atom_type_num, 3)
             ).astype(np.float32)
             for i, atom in enumerate(atoms):
-                atom_positions[:, residue_constants.atom_order[atom], :] = (
-                    np.transpose(tertiary_np[:, i::3])
+                atom_positions[:, residue_constants.atom_order[atom], :] = np.transpose(
+                    tertiary_np[:, i::3]
                 )
             atom_positions *= PICO_TO_ANGSTROM
-        elif("[MASK]" == g[0]):
-            mask = np.array(list(map({'-': 0, '+': 1}.get, g[1][0].strip())))
+        elif "[MASK]" == g[0]:
+            mask = np.array(list(map({"-": 0, "+": 1}.get, g[1][0].strip())))
             atom_mask = np.zeros(
-                (len(mask), residue_constants.atom_type_num,)
+                (
+                    len(mask),
+                    residue_constants.atom_type_num,
+                )
             ).astype(np.float32)
             for i, atom in enumerate(atoms):
                 atom_mask[:, residue_constants.atom_order[atom]] = 1
@@ -203,10 +203,10 @@ def from_proteinnet_string(proteinnet_str: str) -> Protein:
 
 
 def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
-    chain_end = 'TER'
-    return(
-        f'{chain_end:<6}{atom_index:>5}      {end_resname:>3} '
-        f'{chain_name:>1}{residue_index:>4}'
+    chain_end = "TER"
+    return (
+        f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
+        f"{chain_name:>1}{residue_index:>4}"
     )
 
 
@@ -235,7 +235,7 @@ def to_pdb(prot: Protein) -> str:
 
     # Construct a mapping from chain integer indices to chain ID strings.
     chain_ids = {}
-    for i in np.unique(chain_index): # np.unique gives sorted output.
+    for i in np.unique(chain_index):  # np.unique gives sorted output.
         if i >= PDB_MAX_CHAINS:
             raise ValueError(
                 f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
@@ -251,14 +251,14 @@ def to_pdb(prot: Protein) -> str:
         if last_chain_index != chain_index[i]:
             pdb_lines.append(
                 _chain_end(
-                    atom_index, 
-                    res_1to3(aatype[i - 1]), 
-                    chain_ids[chain_index[i - 1]], 
-                    residue_index[i - 1]
+                    atom_index,
+                    res_1to3(aatype[i - 1]),
+                    chain_ids[chain_index[i - 1]],
+                    residue_index[i - 1],
                 )
             )
             last_chain_index = chain_index[i]
-            atom_index += 1 # Atom index increases at the TER symbol.
+            atom_index += 1  # Atom index increases at the TER symbol.
 
         res_name_3 = res_1to3(aatype[i])
         for atom_name, pos, mask, b_factor in zip(
@@ -272,9 +272,7 @@ def to_pdb(prot: Protein) -> str:
             alt_loc = ""
             insertion_code = ""
             occupancy = 1.00
-            element = atom_name[
-                0
-            ]  # Protein supports only C, N, O, S, this works.
+            element = atom_name[0]  # Protein supports only C, N, O, S, this works.
             charge = ""
             # PDB is a columnar format, every space matters here!
             atom_line = (
@@ -291,19 +289,19 @@ def to_pdb(prot: Protein) -> str:
     # Close the final chain.
     pdb_lines.append(
         _chain_end(
-            atom_index, 
-            res_1to3(aatype[-1]), 
-            chain_ids[chain_index[-1]], 
-            residue_index[-1]
+            atom_index,
+            res_1to3(aatype[-1]),
+            chain_ids[chain_index[-1]],
+            residue_index[-1],
         )
     )
-    
+
     pdb_lines.append("ENDMDL")
     pdb_lines.append("END")
 
     # Pad all lines to 80 characters
     pdb_lines = [line.ljust(80) for line in pdb_lines]
-    return '\n'.join(pdb_lines) + '\n' # Add terminating newline.
+    return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
 
 def ideal_atom_mask(prot: Protein) -> np.ndarray:
@@ -330,20 +328,19 @@ def from_prediction(
       features: Dictionary holding model inputs.
       result: Dictionary holding model outputs.
       b_factors: (Optional) B-factors to use for the protein.
-      remove_leading_feature_dimension: Whether to remove the leading dimension 
+      remove_leading_feature_dimension: Whether to remove the leading dimension
         of the `features` values
     Returns:
       A protein instance.
     """
+
     def _maybe_remove_leading_dim(arr: np.ndarray) -> np.ndarray:
         return arr[0] if remove_leading_feature_dimension else arr
 
-    if 'asym_id' in features:
+    if "asym_id" in features:
         chain_index = _maybe_remove_leading_dim(features["asym_id"])
     else:
-        chain_index = np.zeros_like(
-            _maybe_remove_leading_dim(features["aatype"])
-        )
+        chain_index = np.zeros_like(_maybe_remove_leading_dim(features["aatype"]))
 
     if b_factors is None:
         b_factors = np.zeros_like(result["final_atom_mask"])
@@ -356,4 +353,3 @@ def from_prediction(
         chain_index=chain_index,
         b_factors=b_factors,
     )
-

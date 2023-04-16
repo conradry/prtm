@@ -1,18 +1,18 @@
 import os
+import pickle
+from functools import partial
+
+import colossalai
 import pytest
 import torch
-import pickle
 import torch.multiprocessing as mp
-from functools import partial
-import colossalai
-from fastfold.model.hub import AlphaFold
 from fastfold.config import model_config
 from fastfold.model.fastnn import set_chunk_size
-from fastfold.utils.inject_fastnn import inject_fastnn
-from fastfold.utils.test_utils import get_train_data_path
+from fastfold.model.hub import AlphaFold
 from fastfold.model.hub.loss import AlphaFoldLoss
+from fastfold.utils.inject_fastnn import inject_fastnn
 from fastfold.utils.tensor_utils import tensor_tree_map
-from fastfold.utils.test_utils import set_seed
+from fastfold.utils.test_utils import get_train_data_path, set_seed
 
 
 def get_param_and_grad(model):
@@ -27,14 +27,14 @@ def get_param_and_grad(model):
 
 @pytest.fixture(scope="module")
 def get_openfold_state():
-    config = model_config('initial_training', train=True)
+    config = model_config("initial_training", train=True)
     config.globals.inplace = False
     set_seed(42)
     model = AlphaFold(config)
     model.train().cuda()
     criterion = AlphaFoldLoss(config.loss)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, eps=1e-8)
-    batch = pickle.load(open(get_train_data_path(), 'rb'))
+    batch = pickle.load(open(get_train_data_path(), "rb"))
     set_seed(42)
     batch = {k: torch.as_tensor(v).cuda() for k, v in batch.items()}
     out = model(batch)
@@ -48,26 +48,33 @@ def get_openfold_state():
     return of_params, of_grads
 
 
-@pytest.mark.skipif(torch.cuda.mem_get_info(0)[1] < 4e10, reason="Not enough cuda memory")
-@pytest.mark.parametrize('world_size', [1])
+@pytest.mark.skipif(
+    torch.cuda.mem_get_info(0)[1] < 4e10, reason="Not enough cuda memory"
+)
+@pytest.mark.parametrize("world_size", [1])
 def test_state_dict(world_size, get_openfold_state):
     run_func = partial(run_dist, world_size=world_size, model=get_openfold_state)
     mp.spawn(run_func, nprocs=world_size)
 
 
 def run_dist(rank, world_size, model):
-    os.environ['RANK'] = str(rank)
-    os.environ['LOCAL_RANK'] = str(rank)
-    os.environ['WORLD_SIZE'] = str(world_size)
-    colossalai.launch(config=dict(parallel=dict(tensor=dict(size=world_size))), rank=rank, world_size=world_size,
-                      host='localhost', port=10101, backend='nccl')
+    os.environ["RANK"] = str(rank)
+    os.environ["LOCAL_RANK"] = str(rank)
+    os.environ["WORLD_SIZE"] = str(world_size)
+    colossalai.launch(
+        config=dict(parallel=dict(tensor=dict(size=world_size))),
+        rank=rank,
+        world_size=world_size,
+        host="localhost",
+        port=10101,
+        backend="nccl",
+    )
     train(world_size, model)
 
 
 def train(world_size, get_openfold_state):
-
     of_params, of_grads = get_openfold_state
-    config = model_config('initial_training', train=True)
+    config = model_config("initial_training", train=True)
     config.globals.inplace = False
     set_seed(42)
     model = AlphaFold(config)
@@ -75,8 +82,8 @@ def train(world_size, get_openfold_state):
     model.train().cuda()
     criterion = AlphaFoldLoss(config.loss)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, eps=1e-8)
-    set_chunk_size(None) 
-    batch = pickle.load(open(get_train_data_path(), 'rb'))
+    set_chunk_size(None)
+    batch = pickle.load(open(get_train_data_path(), "rb"))
     batch = {k: torch.as_tensor(v).cuda() for k, v in batch.items()}
     set_seed(42)
     out = model(batch)
@@ -97,16 +104,18 @@ def train(world_size, get_openfold_state):
         # but check the params and grads of the same part may be just enough
         if name not in of_params.keys():
             continue
-     
+
         dif = torch.max(torch.abs(ff_params[name] - of_params[name]))
-        if  dif > params_dif:
+        if dif > params_dif:
             params_dif = dif
         dif = torch.max(torch.abs(ff_grads[name] - of_grads[name]))
         if dif > grads_dif:
             grads_dif = dif
-    assert params_dif < 1e-3 and grads_dif < 5e-3, f"Test failed at world size: {world_size}, \
+    assert (
+        params_dif < 1e-3 and grads_dif < 5e-3
+    ), f"Test failed at world size: {world_size}, \
         the param dif is {params_dif}, the grad diff is {grads_dif}"
 
 
-if __name__ == '__main__':
-     test_state_dict(1, None, None)
+if __name__ == "__main__":
+    test_state_dict(1, None, None)

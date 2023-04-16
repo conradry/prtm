@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
+from typing import List, Union
+
 import numpy as np
 import torch
-from typing import Union, List
-
-from fastfold.model.nn.triangular_multiplicative_update import is_fused_triangle_multiplication
+from fastfold.model.nn.triangular_multiplicative_update import \
+    is_fused_triangle_multiplication
 
 _NPZ_KEY_PREFIX = "alphafold/alphafold_iteration/"
 
@@ -30,9 +31,7 @@ class ParamType(Enum):
     LinearWeight = partial(  # hack: partial prevents fns from becoming methods
         lambda w: w.transpose(-1, -2)
     )
-    LinearWeightMHA = partial(
-        lambda w: w.reshape(*w.shape[:-2], -1).transpose(-1, -2)
-    )
+    LinearWeightMHA = partial(lambda w: w.reshape(*w.shape[:-2], -1).transpose(-1, -2))
     LinearMHAOutputWeight = partial(
         lambda w: w.reshape(*w.shape[:-3], -1, w.shape[-1]).transpose(-1, -2)
     )
@@ -45,7 +44,7 @@ class ParamType(Enum):
         if len(w.shape) == 1
         else w.reshape(w.shape[0], -1).transpose(-1, -2)
     )
-    LinearBiasMultimer = partial(lambda w: w.reshape(-1))   
+    LinearBiasMultimer = partial(lambda w: w.reshape(-1))
     Other = partial(lambda w: w)
 
     def __init__(self, fn):
@@ -128,6 +127,7 @@ def assign(translation_dict, orig_weights):
                 print(weights[0].shape)
                 raise
 
+
 def get_translation_dict(model, version):
     is_multimer = "multimer" in version
     #######################
@@ -188,7 +188,7 @@ def get_translation_dict(model, version):
         "feat_2d_weights": LinearWeight(tri_att.linear.weight),
         "attention": AttentionGatedParams(tri_att.mha),
     }
-    
+
     if is_fused_triangle_multiplication():
         TriMulOutParams = lambda tri_mul: {
             "left_norm_input": LayerNormParams(tri_mul.layer_norm_in),
@@ -616,10 +616,12 @@ def import_jax_weights_(model, npz_path, version="model_1"):
         for b in model.evoformer.blocks:
             _change_tri_mul_in_left_right(b.core.tri_mul_in)
 
+
 def _change_tri_mul_in_left_right(module):
     def _change_para(para):
         left_right_para = para.clone().chunk(2, dim=0)
         return torch.cat((left_right_para[1], left_right_para[0]), dim=0)
+
     with torch.no_grad():
         module.linear_p.weight.copy_(_change_para(module.linear_p.weight))
         module.linear_p.bias.copy_(_change_para(module.linear_p.bias))

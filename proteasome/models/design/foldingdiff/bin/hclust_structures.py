@@ -2,25 +2,25 @@
 Run heirarchical clustering on the pairwise distance matrix between all pairs of files
 """
 
-import os, sys
-import re
+import argparse
+import itertools
 import json
 import logging
+import multiprocessing as mp
+import os
+import re
+import sys
 from glob import glob
 from pathlib import Path
-import itertools
-import argparse
 from typing import *
-import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
-import scipy.spatial as sp, scipy.cluster.hierarchy as hc
+import scipy.cluster.hierarchy as hc
+import scipy.spatial as sp
 import seaborn as sns
-
-from train import get_train_valid_test_sets
-
 from foldingdiff import tmalign
+from train import get_train_valid_test_sets
 
 # :)
 SEED = int(

@@ -8,30 +8,29 @@ https://www.biotite-python.org/apidoc/biotite.structure.annotate_sse.html
 # python ~/projects/protdiff/bin/annot_secondary_structures.py sampled_pdb/*.pdb plots/ss_cooccurrence_sampled.pdf
 # python ~/projects/protdiff/bin/annot_secondary_structures.py model_snapshot/training_args.json plots/ss_cooccurrence_test.pdf
 
-import json
-import os, sys
-from pathlib import Path
-import logging
-import warnings
-import functools
-import multiprocessing as mp
 import argparse
-from itertools import groupby
+import functools
+import json
+import logging
+import multiprocessing as mp
+import os
+import sys
+import warnings
 from collections import Counter
-from typing import Tuple, Collection, Literal, Dict, Any
-
-import numpy as np
-from matplotlib import pyplot as plt
+from itertools import groupby
+from pathlib import Path
+from typing import Any, Collection, Dict, Literal, Tuple
 
 import biotite.structure as struc
+import numpy as np
 from biotite.application import dssp
 from biotite.structure.io.pdb import PDBFile
+from matplotlib import pyplot as plt
 
 SSE_BACKEND = Literal["dssp", "psea"]
 
-from train import get_train_valid_test_sets
-
 from foldingdiff.angles_and_coords import get_pdb_length
+from train import get_train_valid_test_sets
 
 
 def build_datasets(training_args: Dict[str, Any]):

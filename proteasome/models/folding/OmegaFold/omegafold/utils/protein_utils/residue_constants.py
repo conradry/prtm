@@ -16,11 +16,11 @@
 # limitations under the License.
 # =============================================================================
 """Constants used in OmegaFold."""
+import Bio.PDB
+import torch
 # Internal import (35fd).
 # Distance from one CA to next CA [trans configuration: omega = 180].
 from Bio.Data import PDBData
-import Bio.PDB
-import torch
 
 ca_ca = 3.80209737096
 
@@ -30,23 +30,40 @@ ca_ca = 3.80209737096
 chi_angles_atoms = {
     "ALA": [],
     # Chi5 in arginine is always 0 +- 5 degrees, so ignore it.
-    "ARG": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD"],
-            ["CB", "CG", "CD", "NE"], ["CG", "CD", "NE", "CZ"]],
+    "ARG": [
+        ["N", "CA", "CB", "CG"],
+        ["CA", "CB", "CG", "CD"],
+        ["CB", "CG", "CD", "NE"],
+        ["CG", "CD", "NE", "CZ"],
+    ],
     "ASN": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "OD1"]],
     "ASP": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "OD1"]],
     "CYS": [["N", "CA", "CB", "SG"]],
-    "GLN": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD"],
-            ["CB", "CG", "CD", "OE1"]],
-    "GLU": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD"],
-            ["CB", "CG", "CD", "OE1"]],
+    "GLN": [
+        ["N", "CA", "CB", "CG"],
+        ["CA", "CB", "CG", "CD"],
+        ["CB", "CG", "CD", "OE1"],
+    ],
+    "GLU": [
+        ["N", "CA", "CB", "CG"],
+        ["CA", "CB", "CG", "CD"],
+        ["CB", "CG", "CD", "OE1"],
+    ],
     "GLY": [],
     "HIS": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "ND1"]],
     "ILE": [["N", "CA", "CB", "CG1"], ["CA", "CB", "CG1", "CD1"]],
     "LEU": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD1"]],
-    "LYS": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD"],
-            ["CB", "CG", "CD", "CE"], ["CG", "CD", "CE", "NZ"]],
-    "MET": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "SD"],
-            ["CB", "CG", "SD", "CE"]],
+    "LYS": [
+        ["N", "CA", "CB", "CG"],
+        ["CA", "CB", "CG", "CD"],
+        ["CB", "CG", "CD", "CE"],
+        ["CG", "CD", "CE", "NZ"],
+    ],
+    "MET": [
+        ["N", "CA", "CB", "CG"],
+        ["CA", "CB", "CG", "SD"],
+        ["CB", "CG", "SD", "CE"],
+    ],
     "PHE": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD1"]],
     "PRO": [["N", "CA", "CB", "CG"], ["CA", "CB", "CG", "CD"]],
     "SER": [["N", "CA", "CB", "OG"]],
@@ -308,7 +325,10 @@ aa_atom_positions = {
     ],
 }
 
-for aa_k, aa_dict, in aa_atom_positions.items():
+for (
+    aa_k,
+    aa_dict,
+) in aa_atom_positions.items():
     for i, v in enumerate(aa_dict):
         aa_dict[i][-1] = torch.tensor(v[-1])
     aa_atom_positions[aa_k] = aa_dict
@@ -316,10 +336,43 @@ for aa_k, aa_dict, in aa_atom_positions.items():
 # This mapping is used when we need to store atom data in a format that
 # requires fixed atom data size for every residue (e.g. a numpy array).
 atom_types = [
-    "N", "CA", "C", "CB", "O", "CG", "CG1", "CG2", "OG", "OG1", "SG", "CD",
-    "CD1", "CD2", "ND1", "ND2", "OD1", "OD2", "SD", "CE", "CE1", "CE2", "CE3",
-    "NE", "NE1", "NE2", "OE1", "OE2", "CH2", "NH1", "NH2", "OH", "CZ", "CZ2",
-    "CZ3", "NZ", "OXT"
+    "N",
+    "CA",
+    "C",
+    "CB",
+    "O",
+    "CG",
+    "CG1",
+    "CG2",
+    "OG",
+    "OG1",
+    "SG",
+    "CD",
+    "CD1",
+    "CD2",
+    "ND1",
+    "ND2",
+    "OD1",
+    "OD2",
+    "SD",
+    "CE",
+    "CE1",
+    "CE2",
+    "CE3",
+    "NE",
+    "NE1",
+    "NE2",
+    "OE1",
+    "OE2",
+    "CH2",
+    "NH1",
+    "NH2",
+    "OH",
+    "CZ",
+    "CZ2",
+    "CZ3",
+    "NZ",
+    "OXT",
 ]
 atom_order = {atom_type: i for i, atom_type in enumerate(atom_types)}
 atom_type_num = len(atom_types)  # := 37.
@@ -329,42 +382,101 @@ atom_type_num = len(atom_types)  # := 37.
 # pylint: disable=bad-whitespace
 restype_name_to_atom14_names = {
     "ALA": ["N", "CA", "C", "O", "CB", "", "", "", "", "", "", "", "", ""],
-    "ARG": ["N", "CA", "C", "O", "CB", "CG", "CD", "NE", "CZ", "NH1", "NH2",
-            "", "", ""],
-    "ASN": ["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2", "", "", "", "", "",
-            ""],
-    "ASP": ["N", "CA", "C", "O", "CB", "CG", "OD1", "OD2", "", "", "", "", "",
-            ""],
+    "ARG": [
+        "N",
+        "CA",
+        "C",
+        "O",
+        "CB",
+        "CG",
+        "CD",
+        "NE",
+        "CZ",
+        "NH1",
+        "NH2",
+        "",
+        "",
+        "",
+    ],
+    "ASN": ["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2", "", "", "", "", "", ""],
+    "ASP": ["N", "CA", "C", "O", "CB", "CG", "OD1", "OD2", "", "", "", "", "", ""],
     "CYS": ["N", "CA", "C", "O", "CB", "SG", "", "", "", "", "", "", "", ""],
-    "GLN": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2", "", "", "",
-            "", ""],
-    "GLU": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "OE2", "", "", "",
-            "", ""],
+    "GLN": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2", "", "", "", "", ""],
+    "GLU": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "OE2", "", "", "", "", ""],
     "GLY": ["N", "CA", "C", "O", "", "", "", "", "", "", "", "", "", ""],
-    "HIS": ["N", "CA", "C", "O", "CB", "CG", "ND1", "CD2", "CE1", "NE2", "",
-            "", "", ""],
-    "ILE": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "CD1", "", "", "", "", "",
-            ""],
-    "LEU": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "", "", "", "", "",
-            ""],
-    "LYS": ["N", "CA", "C", "O", "CB", "CG", "CD", "CE", "NZ", "", "", "", "",
-            ""],
-    "MET": ["N", "CA", "C", "O", "CB", "CG", "SD", "CE", "", "", "", "", "",
-            ""],
-    "PHE": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "CE1", "CE2", "CZ",
-            "", "", ""],
+    "HIS": [
+        "N",
+        "CA",
+        "C",
+        "O",
+        "CB",
+        "CG",
+        "ND1",
+        "CD2",
+        "CE1",
+        "NE2",
+        "",
+        "",
+        "",
+        "",
+    ],
+    "ILE": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "CD1", "", "", "", "", "", ""],
+    "LEU": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "", "", "", "", "", ""],
+    "LYS": ["N", "CA", "C", "O", "CB", "CG", "CD", "CE", "NZ", "", "", "", "", ""],
+    "MET": ["N", "CA", "C", "O", "CB", "CG", "SD", "CE", "", "", "", "", "", ""],
+    "PHE": [
+        "N",
+        "CA",
+        "C",
+        "O",
+        "CB",
+        "CG",
+        "CD1",
+        "CD2",
+        "CE1",
+        "CE2",
+        "CZ",
+        "",
+        "",
+        "",
+    ],
     "PRO": ["N", "CA", "C", "O", "CB", "CG", "CD", "", "", "", "", "", "", ""],
     "SER": ["N", "CA", "C", "O", "CB", "OG", "", "", "", "", "", "", "", ""],
-    "THR": ["N", "CA", "C", "O", "CB", "OG1", "CG2", "", "", "", "", "", "",
-            ""],
-    "TRP": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "NE1", "CE2", "CE3",
-            "CZ2", "CZ3", "CH2"],
-    "TYR": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "CE1", "CE2", "CZ",
-            "OH", "", ""],
-    "VAL": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "", "", "", "", "", "",
-            ""],
+    "THR": ["N", "CA", "C", "O", "CB", "OG1", "CG2", "", "", "", "", "", "", ""],
+    "TRP": [
+        "N",
+        "CA",
+        "C",
+        "O",
+        "CB",
+        "CG",
+        "CD1",
+        "CD2",
+        "NE1",
+        "CE2",
+        "CE3",
+        "CZ2",
+        "CZ3",
+        "CH2",
+    ],
+    "TYR": [
+        "N",
+        "CA",
+        "C",
+        "O",
+        "CB",
+        "CG",
+        "CD1",
+        "CD2",
+        "CE1",
+        "CE2",
+        "CZ",
+        "OH",
+        "",
+        "",
+    ],
+    "VAL": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "", "", "", "", "", "", ""],
     "UNK": ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-
 }
 # pylint: enable=line-too-long
 # pylint: enable=bad-whitespace
@@ -372,17 +484,33 @@ restype_name_to_atom14_names = {
 # This is the standard residue order when coding AA type as a number.
 # Reproduce it by taking 3-letter AA codes and sorting them alphabetically.
 restypes = [
-    "A", "R", "N", "D", "C", "Q", "E", "G", "H", "I", "L", "K", "M", "F", "P",
-    "S", "T", "W", "Y", "V"
+    "A",
+    "R",
+    "N",
+    "D",
+    "C",
+    "Q",
+    "E",
+    "G",
+    "H",
+    "I",
+    "L",
+    "K",
+    "M",
+    "F",
+    "P",
+    "S",
+    "T",
+    "W",
+    "Y",
+    "V",
 ]
 restype_order = {restype: i for i, restype in enumerate(restypes)}
 restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
 restypes_with_x = restypes + ["X", "-"]
-restype_order_with_x = {
-    restype: i for i, restype in enumerate(restypes_with_x)
-}
+restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
 restype_1to3 = {
     "A": "ALA",
     "R": "ARG",
@@ -404,7 +532,7 @@ restype_1to3 = {
     "W": "TRP",
     "Y": "TYR",
     "V": "VAL",
-    "X": "UNK"
+    "X": "UNK",
 }
 
 # NB: restype_3to1 differs from Bio.PDB.protein_letters_3to1 by being a simple
@@ -416,9 +544,7 @@ restype_3to1 = {v: k for k, v in restype_1to3.items()}
 restype2atom_mask = torch.zeros([len(restypes_with_x), 14])
 for k, v in restype_name_to_atom14_names.items():
     for i, atom in enumerate(v):
-        restype2atom_mask[restype_order_with_x[restype_3to1[k]]][i] = len(
-            atom
-        ) > 0
+        restype2atom_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
 
 restype_rigidgroup_mask = torch.zeros([21, 8], dtype=torch.float)
 restype_rigidgroup_mask[:, 0] = 1
@@ -468,7 +594,7 @@ chi_angle_atom_indices = get_chi_angle_atom_indices()
 
 
 def _make_rigid_transformation_4x4(
-        ex: torch.Tensor, ey: torch.Tensor, translation: torch.Tensor
+    ex: torch.Tensor, ey: torch.Tensor, translation: torch.Tensor
 ) -> torch.Tensor:
     """Create a rigid 4x4 transformation matrix from two axes and transl."""
     # Normalize ex.
@@ -481,7 +607,7 @@ def _make_rigid_transformation_4x4(
     # compute ez as cross product
     eznorm = torch.cross(ex_normalized, ey_normalized)
     m = torch.stack([ex_normalized, ey_normalized, eznorm, translation]).T
-    m = torch.cat([m, torch.tensor([[0., 0., 0., 1.]])], dim=0)
+    m = torch.cat([m, torch.tensor([[0.0, 0.0, 0.0, 1.0]])], dim=0)
     return m
 
 
@@ -515,8 +641,7 @@ def _make_aa_constants():
 
     for restype, restype_letter in enumerate(restypes):
         resname = restype_1to3[restype_letter]
-        atom_positions = {name: pos for name, _, pos
-                          in aa_atom_positions[resname]}
+        atom_positions = {name: pos for name, _, pos in aa_atom_positions[resname]}
 
         # backbone to backbone is the identity transforms
         restype_aa_default_frame[restype, 0, :, :] = torch.eye(4)
@@ -527,8 +652,8 @@ def _make_aa_constants():
         # phi-frame to backbone
         mat = _make_rigid_transformation_4x4(
             ex=atom_positions["N"] - atom_positions["CA"],
-            ey=torch.tensor([1., 0., 0.]),
-            translation=atom_positions["N"]
+            ey=torch.tensor([1.0, 0.0, 0.0]),
+            translation=atom_positions["N"],
         )
         restype_aa_default_frame[restype, 2, :, :] = mat
 
@@ -536,19 +661,18 @@ def _make_aa_constants():
         mat = _make_rigid_transformation_4x4(
             ex=atom_positions["C"] - atom_positions["CA"],
             ey=atom_positions["CA"] - atom_positions["N"],
-            translation=atom_positions["C"]
+            translation=atom_positions["C"],
         )
         restype_aa_default_frame[restype, 3, :, :] = mat
 
         # chi1-frame to backbone
         if chi_angles_mask[restype][0]:
             base_atom_names = chi_angles_atoms[resname][0]
-            base_atom_positions = [atom_positions[name] for name in
-                                   base_atom_names]
+            base_atom_positions = [atom_positions[name] for name in base_atom_names]
             mat = _make_rigid_transformation_4x4(
                 ex=base_atom_positions[2] - base_atom_positions[1],
                 ey=base_atom_positions[0] - base_atom_positions[1],
-                translation=base_atom_positions[2]
+                translation=base_atom_positions[2],
             )
             restype_aa_default_frame[restype, 4, :, :] = mat
 
@@ -563,8 +687,8 @@ def _make_aa_constants():
                 axis_end_atom_position = atom_positions[axis_end_atom_name]
                 mat = _make_rigid_transformation_4x4(
                     ex=axis_end_atom_position,
-                    ey=torch.tensor([-1., 0., 0.]),
-                    translation=axis_end_atom_position
+                    ey=torch.tensor([-1.0, 0.0, 0.0]),
+                    translation=axis_end_atom_position,
                 )
                 restype_aa_default_frame[restype, 4 + chi_idx, :, :] = mat
 
@@ -578,10 +702,7 @@ for rt in restypes:
     atom_names = restype_name_to_atom14_names[restype_1to3[rt]]
 
     restype_atom14_to_atom37.append(
-        [
-            (atom_order[name] if name else 0)
-            for name in atom_names
-        ]
+        [(atom_order[name] if name else 0) for name in atom_names]
     )
 
     atom_name_to_idx14 = {name: i for i, name in enumerate(atom_names)}
@@ -596,14 +717,8 @@ for rt in restypes:
 restype_atom14_to_atom37.append([0] * 14)
 restype_atom37_to_atom14.append([0] * 37)
 
-restype_atom14_to_atom37 = torch.tensor(
-    restype_atom14_to_atom37,
-    dtype=torch.long
-)
-restype_atom37_to_atom14 = torch.tensor(
-    restype_atom37_to_atom14,
-    dtype=torch.long
-)
+restype_atom14_to_atom37 = torch.tensor(restype_atom14_to_atom37, dtype=torch.long)
+restype_atom37_to_atom14 = torch.tensor(restype_atom37_to_atom14, dtype=torch.long)
 chi_pi_periodic = torch.tensor(
     [
         [0.0, 0.0, 0.0, 0.0],  # ALA
@@ -647,35 +762,23 @@ for resname, swap in residue_atom_renaming_swaps.items():
         mask_ambiguous[restype, atom_idx1] = 1
         mask_ambiguous[restype, atom_idx2] = 1
 
-restype_3 = [
-    restype_1to3[res] for res in restypes
-]
+restype_3 = [restype_1to3[res] for res in restypes]
 restype_3 += ["UNK"]
 
-all_matrices = {
-    res: torch.eye(
-        14, dtype=torch.float32
-    ) for res in restype_3
-}
+all_matrices = {res: torch.eye(14, dtype=torch.float32) for res in restype_3}
 for resname, swap in residue_atom_renaming_swaps.items():
     correspondences = torch.arange(14)
     renaming_matrix = None
     for source_atom_swap, target_atom_swap in swap.items():
-        source_index = restype_name_to_atom14_names[
-            resname].index(source_atom_swap)
-        target_index = restype_name_to_atom14_names[
-            resname].index(target_atom_swap)
+        source_index = restype_name_to_atom14_names[resname].index(source_atom_swap)
+        target_index = restype_name_to_atom14_names[resname].index(target_atom_swap)
         correspondences[source_index] = target_index
         correspondences[target_index] = source_index
-        renaming_matrix = torch.zeros(
-            (14, 14), dtype=torch.float32
-        )
+        renaming_matrix = torch.zeros((14, 14), dtype=torch.float32)
         for index, correspondence in enumerate(correspondences):
-            renaming_matrix[index, correspondence] = 1.
+            renaming_matrix[index, correspondence] = 1.0
     all_matrices[resname] = renaming_matrix.to(torch.float32)
-renaming_matrices = torch.stack(
-    [all_matrices[restype] for restype in restype_3], dim=0
-)
+renaming_matrices = torch.stack([all_matrices[restype] for restype in restype_3], dim=0)
 
 
 def substitute(res: str):

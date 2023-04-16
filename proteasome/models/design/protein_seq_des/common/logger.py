@@ -1,12 +1,21 @@
-from tensorboardX import SummaryWriter
-import numpy as np
-import os
 import datetime
+import os
 import subprocess
+
+import numpy as np
+from tensorboardX import SummaryWriter
 
 
 class Logger(object):
-    def __init__(self, log_dir="./logs", dummy=False, prefix="", suffix="", full_log_dir=None, rank=0):
+    def __init__(
+        self,
+        log_dir="./logs",
+        dummy=False,
+        prefix="",
+        suffix="",
+        full_log_dir=None,
+        rank=0,
+    ):
         self.suffix = suffix
         self.prefix = prefix
         self.dummy = dummy

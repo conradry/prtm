@@ -3,23 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import torch
-from openfold.model.triangular_attention import (
-    TriangleAttentionEndingNode,
-    TriangleAttentionStartingNode,
-)
+from esm.esmfold.v1.misc import (Attention, Dropout, PairToSequence,
+                                 ResidueMLP, SequenceToPair)
+from openfold.model.triangular_attention import (TriangleAttentionEndingNode,
+                                                 TriangleAttentionStartingNode)
 from openfold.model.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming,
-    TriangleMultiplicationOutgoing,
-)
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 from torch import nn
-
-from esm.esmfold.v1.misc import (
-    Attention,
-    Dropout,
-    PairToSequence,
-    ResidueMLP,
-    SequenceToPair,
-)
 
 
 class TriangularSelfAttentionBlock(nn.Module):
@@ -76,8 +66,12 @@ class TriangularSelfAttentionBlock(nn.Module):
             inf=1e9,
         )  # type: ignore
 
-        self.mlp_seq = ResidueMLP(sequence_state_dim, 4 * sequence_state_dim, dropout=dropout)
-        self.mlp_pair = ResidueMLP(pairwise_state_dim, 4 * pairwise_state_dim, dropout=dropout)
+        self.mlp_seq = ResidueMLP(
+            sequence_state_dim, 4 * sequence_state_dim, dropout=dropout
+        )
+        self.mlp_pair = ResidueMLP(
+            pairwise_state_dim, 4 * pairwise_state_dim, dropout=dropout
+        )
 
         assert dropout < 0.4
         self.drop = nn.Dropout(dropout)
@@ -103,7 +97,9 @@ class TriangularSelfAttentionBlock(nn.Module):
         torch.nn.init.zeros_(self.mlp_pair.mlp[-2].weight)
         torch.nn.init.zeros_(self.mlp_pair.mlp[-2].bias)
 
-    def forward(self, sequence_state, pairwise_state, mask=None, chunk_size=None, **__kwargs):
+    def forward(
+        self, sequence_state, pairwise_state, mask=None, chunk_size=None, **__kwargs
+    ):
         """
         Inputs:
           sequence_state: B x L x sequence_state_dim

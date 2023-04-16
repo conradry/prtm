@@ -25,10 +25,8 @@ import math
 import typing
 
 import torch
-from torch import nn
-
 from omegafold import modules, utils
-
+from torch import nn
 
 # =============================================================================
 # Constants
@@ -70,7 +68,7 @@ class InvariantPointAttention(modules.OFModule):
 
         # trainable weights for edge bias
         self.trainable_point_weights = nn.Parameter(
-            torch.full([cfg.num_head], fill_value=math.log(math.exp(1.) - 1)),
+            torch.full([cfg.num_head], fill_value=math.log(math.exp(1.0) - 1)),
         )
         self.bias_2d = nn.Linear(edge_dim, num_head)
 
@@ -82,17 +80,14 @@ class InvariantPointAttention(modules.OFModule):
 
         # weighting of each component
         num_logit_terms = 3
-        scalar_variance = max(num_scalar_qk, 1) * 1.
-        point_variance = max(num_point_qk, 1) * 9. / 2
+        scalar_variance = max(num_scalar_qk, 1) * 1.0
+        point_variance = max(num_point_qk, 1) * 9.0 / 2
         self.scalar_weight = math.sqrt(1 / (num_logit_terms * scalar_variance))
         self.point_weight = math.sqrt(1 / (num_logit_terms * point_variance))
         self.edge_logits_weight = math.sqrt(1 / num_logit_terms)
 
     def forward(
-            self,
-            node_repr: torch.Tensor,
-            edge_repr: torch.Tensor,
-            frames: utils.AAFrame
+        self, node_repr: torch.Tensor, edge_repr: torch.Tensor, frames: utils.AAFrame
     ) -> torch.Tensor:
         """
         From Jumper et al. (2021), Invariant Point Attention
@@ -125,7 +120,7 @@ class InvariantPointAttention(modules.OFModule):
         _q_point = self._get_point(self.q_point, node_repr, n_head, frames)
         _k_point = self._get_point(self.k_point, node_repr, n_head, frames)
         _v_point = self._get_point(self.v_point, node_repr, n_head, frames)
-        dist = ((_q_point[:, None, ...] - _k_point[None, ...]) ** 2)
+        dist = (_q_point[:, None, ...] - _k_point[None, ...]) ** 2
         point_logits = dist.sum([-1, -2]) * self.point_weight
         point_logits *= self.softplus(self.trainable_point_weights) / 2
 
@@ -146,14 +141,15 @@ class InvariantPointAttention(modules.OFModule):
                 ret_point.flatten(start_dim=-3),
                 utils.get_norm(ret_point).flatten(start_dim=-2),
                 ret_edge.flatten(start_dim=-2),
-            ], dim=-1
+            ],
+            dim=-1,
         )
 
         return self.output_projection(feat)
 
     @staticmethod
     def _get_scalar(
-            linear: nn.Linear, inputs: torch.Tensor, num_head: int
+        linear: nn.Linear, inputs: torch.Tensor, num_head: int
     ) -> torch.Tensor:
         """
         Pass the input through linear and then perform reshaping for the
@@ -173,10 +169,10 @@ class InvariantPointAttention(modules.OFModule):
 
     @staticmethod
     def _get_point(
-            linear: nn.Linear,
-            inputs: torch.Tensor,
-            n_head: int,
-            transformation: utils.AAFrame
+        linear: nn.Linear,
+        inputs: torch.Tensor,
+        n_head: int,
+        transformation: utils.AAFrame,
     ) -> torch.Tensor:
         """
         Pass the input through the linear and perform reshaping for the
@@ -207,24 +203,26 @@ class TorsionAngleHead(modules.OFModule):
         super(TorsionAngleHead, self).__init__(cfg)
 
         self.input_projection = nn.ModuleList(
-            [nn.Linear(
-                cfg.node_dim, cfg.num_channel
-            ) for _ in range(2)]
+            [nn.Linear(cfg.node_dim, cfg.num_channel) for _ in range(2)]
         )
 
         self.resblock1 = nn.ModuleList(
-            [nn.Linear(cfg.num_channel, cfg.num_channel)
-             for _ in range(cfg.num_residual_block)]
+            [
+                nn.Linear(cfg.num_channel, cfg.num_channel)
+                for _ in range(cfg.num_residual_block)
+            ]
         )
         self.resblock2 = nn.ModuleList(
-            [nn.Linear(cfg.num_channel, cfg.num_channel)
-             for _ in range(cfg.num_residual_block)]
+            [
+                nn.Linear(cfg.num_channel, cfg.num_channel)
+                for _ in range(cfg.num_residual_block)
+            ]
         )
 
         self.unnormalized_angles = nn.Linear(cfg.num_channel, 14)
 
     def forward(
-            self, representations_list: typing.Sequence[torch.Tensor]
+        self, representations_list: typing.Sequence[torch.Tensor]
     ) -> torch.Tensor:
         """
         Predict side chains using multi-rigid representations.
@@ -234,8 +232,8 @@ class TorsionAngleHead(modules.OFModule):
         Returns:
             The normalized sin-cos representation of the torsion angles
         """
-        act = 0.
-        for (x, layer) in zip(representations_list, self.input_projection):
+        act = 0.0
+        for x, layer in zip(representations_list, self.input_projection):
             act = layer(torch.relu(x)) + act
 
         for layer1, layer2 in zip(self.resblock1, self.resblock2):
@@ -260,26 +258,21 @@ class StructureCycle(modules.OFModule):
     """
 
     def __init__(self, cfg: argparse.Namespace) -> None:
-        super(StructureCycle, self).__init__(
-            cfg
-        )
+        super(StructureCycle, self).__init__(cfg)
         self.ipa = InvariantPointAttention(cfg)
         self.input_norm = nn.LayerNorm(cfg.node_dim)
         self.transition = nn.ModuleList(
-            [
-                nn.Linear(cfg.node_dim, cfg.node_dim) for _ in
-                range(cfg.num_transition)
-            ]
+            [nn.Linear(cfg.node_dim, cfg.node_dim) for _ in range(cfg.num_transition)]
         )
         self.update_norm = nn.LayerNorm(cfg.node_dim)
 
         self.affine_update = nn.Linear(cfg.node_dim, 6)
 
     def forward(
-            self,
-            node_repr: torch.Tensor,
-            edge_repr: torch.Tensor,
-            backbone_frames: utils.AAFrame
+        self,
+        node_repr: torch.Tensor,
+        edge_repr: torch.Tensor,
+        backbone_frames: utils.AAFrame,
     ) -> typing.Tuple[torch.Tensor, utils.AAFrame]:
         """
         Perform one backbone update and node representation update
@@ -307,7 +300,7 @@ class StructureCycle(modules.OFModule):
         node_repr += input_repr  # Shortcut residual connection
         node_repr = self.update_norm(node_repr)
         backbone_update = self.affine_update(node_repr)
-        frame_update = utils.AAFrame.from_tensor(backbone_update, unit='nano')
+        frame_update = utils.AAFrame.from_tensor(backbone_update, unit="nano")
         backbone_frames = backbone_frames * frame_update
 
         return node_repr, backbone_frames
@@ -322,18 +315,19 @@ class StructureModule(modules.OFModule):
         self.edge_norm = nn.LayerNorm(cfg.edge_dim)
         self.init_proj = nn.Linear(cfg.node_dim, cfg.node_dim)
 
-        self.cycles = nn.ModuleList(
-            [StructureCycle(cfg) for _ in range(cfg.num_cycle)]
-        )
+        self.cycles = nn.ModuleList([StructureCycle(cfg) for _ in range(cfg.num_cycle)])
 
         self.torsion_angle_pred = TorsionAngleHead(cfg)
 
     def forward(
-            self,
-            node_repr: torch.Tensor, edge_repr: torch.Tensor,
-            fasta: torch.Tensor, mask: torch.Tensor
-    ) -> typing.Tuple[torch.Tensor, typing.Dict[
-        str, typing.Union[utils.AAFrame, torch.Tensor]]]:
+        self,
+        node_repr: torch.Tensor,
+        edge_repr: torch.Tensor,
+        fasta: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> typing.Tuple[
+        torch.Tensor, typing.Dict[str, typing.Union[utils.AAFrame, torch.Tensor]]
+    ]:
         """
         Jumper et al. (2021) Suppl. Alg. 20 "StructureModule"
 
@@ -360,16 +354,11 @@ class StructureModule(modules.OFModule):
         node_repr = self.init_proj(node_repr)
         # Initialize the initial frames with Black-hole Jumper et al. (2021)
         backbone_frames = utils.AAFrame.default_init(
-            *node_repr.shape[0:1],
-            unit='nano',
-            device=self.device,
-            mask=mask.bool()
+            *node_repr.shape[0:1], unit="nano", device=self.device, mask=mask.bool()
         )
 
         for layer in self.cycles:
-            node_repr, backbone_frames = layer(
-                node_repr, edge_repr, backbone_frames
-            )
+            node_repr, backbone_frames = layer(node_repr, edge_repr, backbone_frames)
 
         torsion_angles_sin_cos = self.torsion_angle_pred(
             representations_list=[node_repr, init_node_repr],
@@ -382,18 +371,18 @@ class StructureModule(modules.OFModule):
         frames8 = backbone_frames.expand_w_torsion(
             torsion_angles=torsion_angles_sin_cos,
             torsion_angles_mask=torsion_angles_mask,
-            fasta=fasta
+            fasta=fasta,
         )
         pos14, mask14 = frames8.expanded_to_pos(fasta)
         return node_repr, {
             "final_frames": frames8,
             "final_atom_positions": pos14,
-            "final_atom_mask": mask14
+            "final_atom_mask": mask14,
         }
 
 
 # =============================================================================
 # Tests
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

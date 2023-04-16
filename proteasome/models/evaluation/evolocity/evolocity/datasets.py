@@ -1,6 +1,7 @@
 from scanpy import read
 
-url_datadir = 'https://github.com/brianhie/evovdss/raw/master/'
+url_datadir = "https://github.com/brianhie/evovdss/raw/master/"
+
 
 def nucleoprotein():
     """Influenza A nucleoprotein.
@@ -18,11 +19,12 @@ def nucleoprotein():
     Returns `adata` object
     """
 
-    fname = 'target/ev_cache/np_adata.h5ad'
-    url = f'{url_datadir}np_adata.h5ad'
+    fname = "target/ev_cache/np_adata.h5ad"
+    url = f"{url_datadir}np_adata.h5ad"
     adata = read(fname, backup_url=url, sparse=True, cache=True)
 
     return adata
+
 
 def cytochrome_c():
     """Eukaryotic cytochrome c.
@@ -39,8 +41,8 @@ def cytochrome_c():
     Returns `adata` object
     """
 
-    fname = 'target/ev_cache/cyc_adata.h5ad'
-    url = f'{url_datadir}cyc_adata.h5ad'
+    fname = "target/ev_cache/cyc_adata.h5ad"
+    url = f"{url_datadir}cyc_adata.h5ad"
     adata = read(fname, backup_url=url, sparse=True, cache=True)
 
     return adata
