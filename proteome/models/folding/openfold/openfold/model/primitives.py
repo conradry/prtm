@@ -33,7 +33,6 @@ import torch
 import torch.nn as nn
 from openfold.utils.checkpointing import get_checkpoint_fn
 from openfold.utils.chunk_utils import _chunk_slice
-from openfold.utils.kernel.attention_core import attention_core
 from openfold.utils.precision_utils import is_fp16_enabled
 from openfold.utils.tensor_utils import flatten_final_dims, permute_final_dims
 from scipy.stats import truncnorm
@@ -317,6 +316,30 @@ def _attention_chunked_trainable(
 
     o = torch.cat(o_chunks, dim=chunk_dim)
     return o
+
+
+def attention_core(q, k, v, bias_1=None, bias_2=None):
+    """
+    Core attention operation.
+    """
+    if bias_1 is None and bias_2 is not None:
+        raise ValueError("bias_1 must be specified before bias_2")
+
+    q = q.contiguous()
+    k = k.contiguous()
+
+    # [*, H, Q, K]
+    attention_logits = torch.matmul(q, k.transpose(-1, -2))
+
+    if bias_1 is not None:
+        attention_logits += bias_1
+    if bias_2 is not None:
+        attention_logits += bias_2
+
+    # Apply softmax for attention probabilities
+    attention_weights = softmax_no_cast(attention_logits, -1)
+    output = torch.matmul(attention_weights, v)
+    return output
 
 
 class Attention(nn.Module):
