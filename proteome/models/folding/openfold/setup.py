@@ -18,8 +18,12 @@ import subprocess
 import torch
 from scripts.utils import get_nvidia_cc
 from setuptools import Extension, find_packages, setup
-from torch.utils.cpp_extension import (CUDA_HOME, BuildExtension, CppExtension,
-                                       CUDAExtension)
+from torch.utils.cpp_extension import (
+    CUDA_HOME,
+    BuildExtension,
+    CppExtension,
+    CUDAExtension,
+)
 
 version_dependent_macros = [
     "-DVERSION_GE_1_1",

@@ -4,8 +4,7 @@ from matplotlib import rcParams
 from matplotlib.colors import is_color_like
 
 from ..tools.utils import groups_to_bool
-from ..tools.velocity_embedding import \
-    velocity_embedding as compute_velocity_embedding
+from ..tools.velocity_embedding import velocity_embedding as compute_velocity_embedding
 from .docs import doc_params, doc_scatter
 from .scatter import scatter
 from .utils import *

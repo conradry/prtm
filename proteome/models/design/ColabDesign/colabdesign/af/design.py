@@ -5,9 +5,17 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from colabdesign.af.alphafold.common import residue_constants
-from colabdesign.shared.utils import (Key, categorical, copy_dict,
-                                      copy_missing, dict_to_str, softmax,
-                                      to_float, to_list, update_dict)
+from colabdesign.shared.utils import (
+    Key,
+    categorical,
+    copy_dict,
+    copy_missing,
+    dict_to_str,
+    softmax,
+    to_float,
+    to_list,
+    update_dict,
+)
 
 ####################################################
 # AF_DESIGN - design functions

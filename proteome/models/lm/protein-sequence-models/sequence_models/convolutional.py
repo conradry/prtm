@@ -2,8 +2,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sequence_models.layers import (DoubleEmbedding, PositionFeedForward,
-                                    PositionFeedForward2d)
+from sequence_models.layers import (
+    DoubleEmbedding,
+    PositionFeedForward,
+    PositionFeedForward2d,
+)
 from torch.utils.checkpoint import checkpoint
 
 

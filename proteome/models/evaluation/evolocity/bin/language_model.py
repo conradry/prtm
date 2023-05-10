@@ -1,8 +1,14 @@
 import tensorflow as tf
 from tensorflow.keras import Input
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.layers import (LSTM, Activation, Dense, Embedding,
-                                     Reshape, concatenate)
+from tensorflow.keras.layers import (
+    LSTM,
+    Activation,
+    Dense,
+    Embedding,
+    Reshape,
+    concatenate,
+)
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import Adam

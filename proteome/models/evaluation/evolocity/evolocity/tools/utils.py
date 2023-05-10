@@ -252,8 +252,7 @@ def extract_int_from_str(array):
 def strings_to_categoricals(adata):
     """Transform string annotations to categoricals."""
     from pandas import Categorical
-    from pandas.api.types import (is_bool_dtype, is_integer_dtype,
-                                  is_string_dtype)
+    from pandas.api.types import is_bool_dtype, is_integer_dtype, is_string_dtype
 
     def is_valid_dtype(values):
         return (

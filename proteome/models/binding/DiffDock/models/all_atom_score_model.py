@@ -1,10 +1,12 @@
 import numpy as np
 import torch
-from datasets.process_mols import (lig_feature_dims, rec_atom_feature_dims,
-                                   rec_residue_feature_dims)
+from datasets.process_mols import (
+    lig_feature_dims,
+    rec_atom_feature_dims,
+    rec_residue_feature_dims,
+)
 from e3nn import o3
-from models.score_model import (AtomEncoder, GaussianSmearing,
-                                TensorProductConvLayer)
+from models.score_model import AtomEncoder, GaussianSmearing, TensorProductConvLayer
 from torch import nn
 from torch.nn import functional as F
 from torch_cluster import radius, radius_graph

@@ -18,6 +18,7 @@
 """Constants used in OmegaFold."""
 import Bio.PDB
 import torch
+
 # Internal import (35fd).
 # Distance from one CA to next CA [trans configuration: omega = 180].
 from Bio.Data import PDBData

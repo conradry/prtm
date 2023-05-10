@@ -20,8 +20,7 @@ import dataclasses
 import jax
 import jax.numpy as jnp
 import numpy as np
-from colabdesign.af.alphafold.model.geometry import (struct_of_array, utils,
-                                                     vector)
+from colabdesign.af.alphafold.model.geometry import struct_of_array, utils, vector
 
 COMPONENTS = ["xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz"]
 

@@ -10,11 +10,15 @@ from multiprocessing import Pool
 
 import numpy as np
 import torch
-from datasets.process_mols import (extract_receptor_structure,
-                                   generate_conformer,
-                                   get_lig_graph_with_matching, get_rec_graph,
-                                   parse_pdb_from_path, parse_receptor,
-                                   read_molecule)
+from datasets.process_mols import (
+    extract_receptor_structure,
+    generate_conformer,
+    get_lig_graph_with_matching,
+    get_rec_graph,
+    parse_pdb_from_path,
+    parse_receptor,
+    read_molecule,
+)
 from rdkit.Chem import AddHs, MolFromSmiles, MolToSmiles
 from torch_geometric.data import Dataset, HeteroData
 from torch_geometric.loader import DataListLoader, DataLoader

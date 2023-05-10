@@ -16,8 +16,7 @@ you don't have permissions lol.)
 import os
 import glob
 
-roots = ["/data/scratch/rmwu/tmp-runs",
-         "/data/scratch/rmwu/tmp-runs/ml-energy"]
+roots = ["/data/scratch/rmwu/tmp-runs", "/data/scratch/rmwu/tmp-runs/ml-energy"]
 
 for root in roots:
     for exps in os.listdir(root):
@@ -33,9 +32,13 @@ for root in roots:
                     break
 
                 try:
-                    models = sorted(glob.glob(f"{fold_dir}/*.pth"),
-                                    key=lambda s:(int(s.split("/")[-1].split("_")[3]),
-                                                  int(s.split("/")[-1].split("_")[2])))
+                    models = sorted(
+                        glob.glob(f"{fold_dir}/*.pth"),
+                        key=lambda s: (
+                            int(s.split("/")[-1].split("_")[3]),
+                            int(s.split("/")[-1].split("_")[2]),
+                        ),
+                    )
                 except:
                     print(glob.glob(f"{fold_dir}/*.pth"))
                     continue
@@ -50,4 +53,3 @@ for root in roots:
                     cmd = f"rm {fp}"
                     os.system(cmd)
                     print("cleaned", fold_dir)
-

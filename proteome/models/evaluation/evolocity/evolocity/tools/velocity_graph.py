@@ -5,8 +5,12 @@ from scipy.sparse import coo_matrix
 from tqdm import tqdm
 
 from .. import logging as logg
-from ..preprocessing.neighbors import (compute_connectivities_umap, get_neighs,
-                                       neighbors, verify_neighbors)
+from ..preprocessing.neighbors import (
+    compute_connectivities_umap,
+    get_neighs,
+    neighbors,
+    verify_neighbors,
+)
 from ..preprocessing.utils import sum_var
 from .utils import scale
 from .velocity_model import velocity_model

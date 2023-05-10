@@ -28,9 +28,16 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from alphafold.common import residue_constants
-from alphafold.model import (all_atom_multimer, common_modules,
-                             folding_multimer, geometry, layer_stack, modules,
-                             prng, utils)
+from alphafold.model import (
+    all_atom_multimer,
+    common_modules,
+    folding_multimer,
+    geometry,
+    layer_stack,
+    modules,
+    prng,
+    utils,
+)
 
 
 def reduce_fn(x, mode):

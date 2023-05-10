@@ -9,7 +9,6 @@ from se3_transformer.model.fiber import Fiber
 # from equivariant_attention.fibers import Fiber
 
 
-
 class SE3TransformerWrapper(nn.Module):
     """SE(3) equivariant GCN with attention"""
 

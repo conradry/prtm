@@ -14,12 +14,27 @@ class Logger:
 class WandbLogger(Logger):
     """Weight and Biases logger."""
 
-    def __init__(self, project: str, entity: str, name: str = None, group: str = None, config=None, notes: str = None):
+    def __init__(
+        self,
+        project: str,
+        entity: str,
+        name: str = None,
+        group: str = None,
+        config=None,
+        notes: str = None,
+    ):
         """
         notes: A longer description of the run. helps you remember what you were doing when you
             ran this run.
         """
-        wandb.init(project=project, entity=entity, name=name, group=group, config=config, notes=notes)
+        wandb.init(
+            project=project,
+            entity=entity,
+            name=name,
+            group=group,
+            config=config,
+            notes=notes,
+        )
 
     def add_scalar(self, tag: str, scalar_value, global_step=None):
         wandb.log({tag: scalar_value}, step=global_step)

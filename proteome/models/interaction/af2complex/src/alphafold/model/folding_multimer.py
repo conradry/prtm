@@ -24,8 +24,14 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 from alphafold.common import residue_constants
-from alphafold.model import (all_atom_multimer, common_modules, geometry,
-                             modules, prng, utils)
+from alphafold.model import (
+    all_atom_multimer,
+    common_modules,
+    geometry,
+    modules,
+    prng,
+    utils,
+)
 from alphafold.model.geometry import utils as geometry_utils
 
 EPSILON = 1e-8

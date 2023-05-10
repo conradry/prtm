@@ -25,8 +25,7 @@ class Network:
         if model == "orig":
             from net.resnet_3d import resnet_arg_scope, resnet_v1_18
         elif model == "lds":
-            from net.resnet_lds_3d_bottleneck import (resnet_arg_scope,
-                                                      resnet_v1_18)
+            from net.resnet_lds_3d_bottleneck import resnet_arg_scope, resnet_v1_18
 
         with slim.arg_scope(resnet_arg_scope()):
             self.net, self.end_points = resnet_v1_18(self.inputs, 1, is_training=False)

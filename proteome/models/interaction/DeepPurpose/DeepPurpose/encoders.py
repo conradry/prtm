@@ -8,8 +8,13 @@ import torch
 import torch.nn.functional as F
 from lifelines.utils import concordance_index
 from scipy.stats import pearsonr
-from sklearn.metrics import (average_precision_score, f1_score, log_loss,
-                             mean_squared_error, roc_auc_score)
+from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
+    log_loss,
+    mean_squared_error,
+    roc_auc_score,
+)
 from torch import nn
 from torch.autograd import Variable
 from torch.utils import data
@@ -402,8 +407,7 @@ class DGL_GCN(nn.Module):
     ):
         super(DGL_GCN, self).__init__()
         from dgllife.model.gnn.gcn import GCN
-        from dgllife.model.readout.weighted_sum_and_max import \
-            WeightedSumAndMax
+        from dgllife.model.readout.weighted_sum_and_max import WeightedSumAndMax
 
         self.gnn = GCN(
             in_feats=in_feats, hidden_feats=hidden_feats, activation=activation

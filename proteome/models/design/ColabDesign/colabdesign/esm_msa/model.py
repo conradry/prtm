@@ -10,8 +10,13 @@ import joblib
 import numpy as np
 from colabdesign.shared.prng import SafeKey
 
-from .modules import (AxialTransformerLayer, ContactPredictionHead,
-                      EmbedPosition, LmHead, MSAPositionEmbedding)
+from .modules import (
+    AxialTransformerLayer,
+    ContactPredictionHead,
+    EmbedPosition,
+    LmHead,
+    MSAPositionEmbedding,
+)
 
 
 class MSATransformer(hk.Module):

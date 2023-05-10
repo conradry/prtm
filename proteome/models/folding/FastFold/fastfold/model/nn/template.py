@@ -23,12 +23,19 @@ from fastfold.model.nn.dropout import DropoutColumnwise, DropoutRowwise
 from fastfold.model.nn.pair_transition import PairTransition
 from fastfold.model.nn.primitives import Attention, LayerNorm, Linear
 from fastfold.model.nn.triangular_attention import (
-    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+    TriangleAttentionEndingNode,
+    TriangleAttentionStartingNode,
+)
 from fastfold.model.nn.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
+    TriangleMultiplicationIncoming,
+    TriangleMultiplicationOutgoing,
+)
 from fastfold.utils.checkpointing import checkpoint_blocks
-from fastfold.utils.tensor_utils import (chunk_layer, flatten_final_dims,
-                                         permute_final_dims)
+from fastfold.utils.tensor_utils import (
+    chunk_layer,
+    flatten_final_dims,
+    permute_final_dims,
+)
 
 
 class TemplatePointwiseAttention(nn.Module):

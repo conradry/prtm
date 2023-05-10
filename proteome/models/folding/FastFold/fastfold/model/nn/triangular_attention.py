@@ -20,8 +20,11 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 from fastfold.model.nn.primitives import Attention, LayerNorm, Linear
-from fastfold.utils.tensor_utils import (chunk_layer, flatten_final_dims,
-                                         permute_final_dims)
+from fastfold.utils.tensor_utils import (
+    chunk_layer,
+    flatten_final_dims,
+    permute_final_dims,
+)
 
 
 class TriangleAttention(nn.Module):

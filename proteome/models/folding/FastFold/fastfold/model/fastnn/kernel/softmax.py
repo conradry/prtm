@@ -7,15 +7,19 @@ import torch
 _triton_available = True
 if _triton_available:
     try:
-        from .triton.softmax import (softmax_grad_triton_kernel_wrapper,
-                                     softmax_triton_kernel_wrapper)
+        from .triton.softmax import (
+            softmax_grad_triton_kernel_wrapper,
+            softmax_triton_kernel_wrapper,
+        )
 
     except ImportError:
         logging.warning("Triton is not available, fallback to old kernel.")
         _triton_available = False
 
-from .cuda_native.softmax import (softmax_cuda_kernel_wrapper,
-                                  softmax_grad_cuda_kernel_wrapper)
+from .cuda_native.softmax import (
+    softmax_cuda_kernel_wrapper,
+    softmax_grad_cuda_kernel_wrapper,
+)
 
 
 class FusedSoftmaxFunc(torch.autograd.Function):

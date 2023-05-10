@@ -15,8 +15,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from alphafold.common import protein
-from alphafold.data import (feature_processing, msa_pairing, pipeline,
-                            pipeline_multimer)
+from alphafold.data import feature_processing, msa_pairing, pipeline, pipeline_multimer
 from alphafold.data.msa_pairing import _correct_post_merged_feats_af2complex
 
 CHAIN_BREAK_GAP = 200  ### used for separate residues between monomers

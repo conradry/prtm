@@ -12,10 +12,11 @@ from .losses import DiffusionLoss
 
 class BaseModel(nn.Module):
     """
-        enc(receptor) -> R^(dxL)
-        enc(ligand)  -> R^(dxL)
+    enc(receptor) -> R^(dxL)
+    enc(ligand)  -> R^(dxL)
     """
-    def __init__(self, args, params,confidence_mode=False):
+
+    def __init__(self, args, params, confidence_mode=False):
         super(BaseModel, self).__init__()
 
         ######## unpack model parameters
@@ -25,7 +26,9 @@ class BaseModel(nn.Module):
 
         ######## initialize (shared) modules
         # raw encoders
-        self.encoder = TensorProductScoreModel(args, params, confidence_mode=confidence_mode)
+        self.encoder = TensorProductScoreModel(
+            args, params, confidence_mode=confidence_mode
+        )
 
         self._init()
 
@@ -46,8 +49,8 @@ class BaseModel(nn.Module):
 
     def dist(self, x, y):
         if len(x.size()) > 1:
-            return ((x-y)**2).sum(-1)
-        return ((x-y)**2)
+            return ((x - y) ** 2).sum(-1)
+        return (x - y) ** 2
 
 
 class ScoreModel(BaseModel):
@@ -72,6 +75,7 @@ class ScoreModel(BaseModel):
     def compute_loss(self, batch, outputs):
         losses = self.loss(batch, outputs)
         return losses
+
 
 class ConfidenceModel(BaseModel):
     def __init__(self, args, params):

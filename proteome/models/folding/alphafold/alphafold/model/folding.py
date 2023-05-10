@@ -23,8 +23,7 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 from alphafold.common import residue_constants
-from alphafold.model import (all_atom, common_modules, prng, quat_affine, r3,
-                             utils)
+from alphafold.model import all_atom, common_modules, prng, quat_affine, r3, utils
 
 
 def squared_difference(x, y):

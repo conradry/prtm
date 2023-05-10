@@ -127,4 +127,3 @@ def kabsch_torch(A, B):
 
     t = -R @ centroid_A + centroid_B
     return R, t
-

@@ -20,16 +20,22 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 from fastfold.model.nn.dropout import DropoutColumnwise, DropoutRowwise
-from fastfold.model.nn.msa import (MSAColumnAttention,
-                                   MSAColumnGlobalAttention,
-                                   MSARowAttentionWithPairBias)
+from fastfold.model.nn.msa import (
+    MSAColumnAttention,
+    MSAColumnGlobalAttention,
+    MSARowAttentionWithPairBias,
+)
 from fastfold.model.nn.outer_product_mean import OuterProductMean
 from fastfold.model.nn.pair_transition import PairTransition
 from fastfold.model.nn.primitives import LayerNorm, Linear
 from fastfold.model.nn.triangular_attention import (
-    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+    TriangleAttentionEndingNode,
+    TriangleAttentionStartingNode,
+)
 from fastfold.model.nn.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
+    TriangleMultiplicationIncoming,
+    TriangleMultiplicationOutgoing,
+)
 from fastfold.utils.checkpointing import checkpoint_blocks, get_checkpoint_fn
 from fastfold.utils.tensor_utils import chunk_layer
 

@@ -29,8 +29,7 @@ from dgl import DGLGraph
 from dgl.data import QM9EdgeDataset
 from se3_transformer.data_loading.data_module import DataModule
 from se3_transformer.model.basis import get_basis
-from se3_transformer.runtime.utils import (get_local_rank, str2bool,
-                                           using_tensor_cores)
+from se3_transformer.runtime.utils import get_local_rank, str2bool, using_tensor_cores
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm import tqdm

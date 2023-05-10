@@ -20,18 +20,25 @@ import fastfold.habana as habana
 import torch
 import torch.nn as nn
 from fastfold.common.residue_constants import (
-    restype_atom14_mask, restype_atom14_rigid_group_positions,
-    restype_atom14_to_rigid_group, restype_rigid_group_default_frame)
-from fastfold.model.nn.primitives import (LayerNorm, Linear,
-                                          ipa_point_weights_init_)
+    restype_atom14_mask,
+    restype_atom14_rigid_group_positions,
+    restype_atom14_to_rigid_group,
+    restype_rigid_group_default_frame,
+)
+from fastfold.model.nn.primitives import LayerNorm, Linear, ipa_point_weights_init_
 from fastfold.utils.feats import (
-    frames_and_literature_positions_to_atom14_pos, torsion_angles_to_frames)
+    frames_and_literature_positions_to_atom14_pos,
+    torsion_angles_to_frames,
+)
 from fastfold.utils.geometry.quat_rigid import QuatRigid
 from fastfold.utils.geometry.rigid_matrix_vector import Rigid3Array
 from fastfold.utils.geometry.vector import Vec3Array
 from fastfold.utils.rigid_utils import Rigid, Rotation
-from fastfold.utils.tensor_utils import (dict_multimap, flatten_final_dims,
-                                         permute_final_dims)
+from fastfold.utils.tensor_utils import (
+    dict_multimap,
+    flatten_final_dims,
+    permute_final_dims,
+)
 
 
 class AngleResnetBlock(nn.Module):

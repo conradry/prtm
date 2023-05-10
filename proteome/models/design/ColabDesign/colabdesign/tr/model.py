@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 from colabdesign.af.alphafold.common import protein
+
 # borrow some stuff from AfDesign
 from colabdesign.af.prep import prep_pdb
 from colabdesign.shared.model import design_model, soft_seq

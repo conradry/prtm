@@ -5,8 +5,7 @@ import torch
 import torch.nn.functional as F
 from scipy.stats import beta
 from torch import nn
-from utils.geometry import (axis_angle_to_matrix,
-                            rigid_transform_Kabsch_3D_torch)
+from utils.geometry import axis_angle_to_matrix, rigid_transform_Kabsch_3D_torch
 from utils.torsion import modify_conformer_torsion_angles
 
 

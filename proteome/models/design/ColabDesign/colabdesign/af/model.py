@@ -7,8 +7,15 @@ import numpy as np
 from colabdesign.af.alphafold.model import all_atom, config, data, model
 from colabdesign.af.design import _af_design
 from colabdesign.af.inputs import _af_inputs, update_aatype, update_seq
-from colabdesign.af.loss import (_af_loss, get_contact_map, get_mlm_loss,
-                                 get_pae, get_plddt, get_ptm, get_seq_ent_loss)
+from colabdesign.af.loss import (
+    _af_loss,
+    get_contact_map,
+    get_mlm_loss,
+    get_pae,
+    get_plddt,
+    get_ptm,
+    get_seq_ent_loss,
+)
 from colabdesign.af.prep import _af_prep
 from colabdesign.af.utils import _af_utils
 from colabdesign.shared.model import design_model

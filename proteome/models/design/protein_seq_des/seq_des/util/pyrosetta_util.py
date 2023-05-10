@@ -7,6 +7,7 @@ init("-mute basic -mute core -mute protocols  -ex1 -ex2 -constant_seed")
 
 from pyrosetta.rosetta.core import chemical, conformation
 from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
+
 # from pyrosetta.toolbox import pose_from_rcsb, cleanATOM  # , mutate_residue
 from pyrosetta.rosetta.protocols.simple_moves import MutateResidue
 

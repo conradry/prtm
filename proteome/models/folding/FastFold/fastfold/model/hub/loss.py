@@ -25,9 +25,13 @@ import torch.nn as nn
 from fastfold.common import residue_constants
 from fastfold.utils import feats
 from fastfold.utils.rigid_utils import Rigid, Rotation
-from fastfold.utils.tensor_utils import (batched_gather, masked_mean,
-                                         permute_final_dims, tensor_tree_map,
-                                         tree_map)
+from fastfold.utils.tensor_utils import (
+    batched_gather,
+    masked_mean,
+    permute_final_dims,
+    tensor_tree_map,
+    tree_map,
+)
 from torch.distributions.bernoulli import Bernoulli
 
 

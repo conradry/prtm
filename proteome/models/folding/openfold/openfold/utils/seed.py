@@ -3,7 +3,9 @@ import os
 import random
 
 import numpy as np
-from proteome.models.folding.openfold.openfold.utils.suppress_output import SuppressLogging
+from proteome.models.folding.openfold.openfold.utils.suppress_output import (
+    SuppressLogging,
+)
 from pytorch_lightning.utilities.seed import seed_everything
 
 

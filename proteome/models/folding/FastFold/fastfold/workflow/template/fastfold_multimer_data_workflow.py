@@ -6,8 +6,7 @@ from typing import Optional, Union
 import ray
 from fastfold.data.tools import hmmsearch
 from fastfold.workflow import batch_run
-from fastfold.workflow.factory import (HHBlitsFactory, HmmSearchFactory,
-                                       JackHmmerFactory)
+from fastfold.workflow.factory import HHBlitsFactory, HmmSearchFactory, JackHmmerFactory
 from ray import workflow
 
 

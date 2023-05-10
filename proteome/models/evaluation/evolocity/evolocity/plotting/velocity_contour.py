@@ -4,10 +4,18 @@ import scipy.stats as ss
 
 from ..tools.velocity_embedding import velocity_embedding
 from ..tools.velocity_pseudotime import velocity_pseudotime
-from .utils import (default_arrow, default_basis, default_color, get_ax,
-                    get_basis, get_components, groups_to_bool,
-                    make_unique_list, savefig_or_show,
-                    velocity_embedding_changed)
+from .utils import (
+    default_arrow,
+    default_basis,
+    default_color,
+    get_ax,
+    get_basis,
+    get_components,
+    groups_to_bool,
+    make_unique_list,
+    savefig_or_show,
+    velocity_embedding_changed,
+)
 from .velocity_embedding_grid import compute_velocity_on_grid
 
 

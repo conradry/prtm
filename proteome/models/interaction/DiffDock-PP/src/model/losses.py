@@ -15,11 +15,10 @@ class DiffusionLoss(nn.Module):
         self.noise_schedule = NoiseSchedule(args)
         self.eps = 1e-5
 
-    def forward(self, data, outputs,
-                apply_mean=True, no_torsion=True):
+    def forward(self, data, outputs, apply_mean=True, no_torsion=True):
         """
-            @param (dict) outputs
-            @param (torch_geometric.data.HeteroData) data
+        @param (dict) outputs
+        @param (torch_geometric.data.HeteroData) data
         """
         # extract outputs
         tr_pred = outputs["tr_pred"]
@@ -57,10 +56,9 @@ class DiffusionLoss(nn.Module):
             else data.rot_score.cpu()
         )
         rot_score_norm = score_norm(rot_s.cpu()).unsqueeze(-1)
-        rot_loss = (((rot_pred.cpu() - rot_score) /
-            (rot_score_norm + self.eps)) ** 2).mean(
-            dim=mean_dims
-        )
+        rot_loss = (
+            ((rot_pred.cpu() - rot_score) / (rot_score_norm + self.eps)) ** 2
+        ).mean(dim=mean_dims)
         rot_base_loss = ((rot_score / rot_score_norm) ** 2).mean(dim=mean_dims).detach()
 
         # torsion component
@@ -115,10 +113,8 @@ class DiffusionLoss(nn.Module):
                 tor_loss = torch.zeros(1, dtype=torch.float)
                 tor_base_loss = torch.zeros(1, dtype=torch.float)
             else:
-                tor_loss = torch.zeros(len(rot_loss),
-                                       dtype=torch.float)
-                tor_base_loss = torch.zeros(len(rot_loss),
-                                            dtype=torch.float)
+                tor_loss = torch.zeros(len(rot_loss), dtype=torch.float)
+                tor_base_loss = torch.zeros(len(rot_loss), dtype=torch.float)
 
         # compile and re-weight losses
         loss = tr_loss * self.tr_weight
@@ -134,10 +130,6 @@ class DiffusionLoss(nn.Module):
             "rot_base_loss": rot_base_loss,
         }
         if not no_torsion:
-            losses.update({
-                "tor_loss": tor_loss,
-                "tor_base_loss": tor_base_loss
-            })
+            losses.update({"tor_loss": tor_loss, "tor_base_loss": tor_base_loss})
 
         return losses
-

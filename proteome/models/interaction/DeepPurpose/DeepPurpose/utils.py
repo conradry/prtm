@@ -2,10 +2,13 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from DeepPurpose.pybiomed_helper import (CalculateAADipeptideComposition,
-                                         CalculateConjointTriad,
-                                         GetQuasiSequenceOrder, _GetPseudoAAC,
-                                         calcPubChemFingerAll)
+from DeepPurpose.pybiomed_helper import (
+    CalculateAADipeptideComposition,
+    CalculateConjointTriad,
+    GetQuasiSequenceOrder,
+    _GetPseudoAAC,
+    calcPubChemFingerAll,
+)
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 from rdkit.Chem.Fingerprints import FingerprintMols
@@ -14,8 +17,7 @@ from torch.autograd import Variable
 from torch.utils import data
 
 try:
-    from descriptastorus.descriptors import (rdDescriptors,
-                                             rdNormalizedDescriptors)
+    from descriptastorus.descriptors import rdDescriptors, rdNormalizedDescriptors
 except:
     raise ImportError(
         "Please install pip install git+https://github.com/bp-kelley/descriptastorus and pip install pandas-flavor"
@@ -28,8 +30,14 @@ import sys
 from zipfile import ZipFile
 
 import wget
-from DeepPurpose.chemutils import (ATOM_FDIM, BOND_FDIM, MAX_NB, atom_features,
-                                   bond_features, get_mol)
+from DeepPurpose.chemutils import (
+    ATOM_FDIM,
+    BOND_FDIM,
+    MAX_NB,
+    atom_features,
+    bond_features,
+    get_mol,
+)
 from subword_nmt.apply_bpe import BPE
 
 this_dir = str(pathlib.Path(__file__).parent.absolute())
@@ -103,8 +111,12 @@ def prauc_curve(y_pred, y_label, figure_file, method_name):
             https://machinelearningmastery.com/roc-curves-and-precision-recall-curves-for-classification-in-python/
     """
     import matplotlib.pyplot as plt
-    from sklearn.metrics import (auc, average_precision_score, f1_score,
-                                 precision_recall_curve)
+    from sklearn.metrics import (
+        auc,
+        average_precision_score,
+        f1_score,
+        precision_recall_curve,
+    )
 
     lr_precision, lr_recall, _ = precision_recall_curve(y_label, y_pred)
     # 	plt.plot([0,1], [no_skill, no_skill], linestyle='--')
@@ -754,9 +766,11 @@ class data_process_loader(data.Dataset):
         self.config = config
 
         if self.config["drug_encoding"] in ["DGL_GCN", "DGL_NeuralFP"]:
-            from dgllife.utils import (CanonicalAtomFeaturizer,
-                                       CanonicalBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                CanonicalAtomFeaturizer,
+                CanonicalBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = CanonicalAtomFeaturizer()
             self.edge_featurizer = CanonicalBondFeaturizer(self_loop=True)
@@ -765,9 +779,11 @@ class data_process_loader(data.Dataset):
             self.fc = partial(smiles_to_bigraph, add_self_loop=True)
 
         elif self.config["drug_encoding"] == "DGL_AttentiveFP":
-            from dgllife.utils import (AttentiveFPAtomFeaturizer,
-                                       AttentiveFPBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                AttentiveFPAtomFeaturizer,
+                AttentiveFPBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = AttentiveFPAtomFeaturizer()
             self.edge_featurizer = AttentiveFPBondFeaturizer(self_loop=True)
@@ -779,9 +795,11 @@ class data_process_loader(data.Dataset):
             "DGL_GIN_AttrMasking",
             "DGL_GIN_ContextPred",
         ]:
-            from dgllife.utils import (PretrainAtomFeaturizer,
-                                       PretrainBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                PretrainAtomFeaturizer,
+                PretrainBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = PretrainAtomFeaturizer()
             self.edge_featurizer = PretrainBondFeaturizer()
@@ -833,9 +851,11 @@ class data_process_DDI_loader(data.Dataset):
         self.config = config
 
         if self.config["drug_encoding"] in ["DGL_GCN", "DGL_NeuralFP"]:
-            from dgllife.utils import (CanonicalAtomFeaturizer,
-                                       CanonicalBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                CanonicalAtomFeaturizer,
+                CanonicalBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = CanonicalAtomFeaturizer()
             self.edge_featurizer = CanonicalBondFeaturizer(self_loop=True)
@@ -844,9 +864,11 @@ class data_process_DDI_loader(data.Dataset):
             self.fc = partial(smiles_to_bigraph, add_self_loop=True)
 
         elif self.config["drug_encoding"] == "DGL_AttentiveFP":
-            from dgllife.utils import (AttentiveFPAtomFeaturizer,
-                                       AttentiveFPBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                AttentiveFPAtomFeaturizer,
+                AttentiveFPBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = AttentiveFPAtomFeaturizer()
             self.edge_featurizer = AttentiveFPBondFeaturizer(self_loop=True)
@@ -858,9 +880,11 @@ class data_process_DDI_loader(data.Dataset):
             "DGL_GIN_AttrMasking",
             "DGL_GIN_ContextPred",
         ]:
-            from dgllife.utils import (PretrainAtomFeaturizer,
-                                       PretrainBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                PretrainAtomFeaturizer,
+                PretrainBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = PretrainAtomFeaturizer()
             self.edge_featurizer = PretrainBondFeaturizer()
@@ -955,9 +979,11 @@ class data_process_loader_Property_Prediction(data.Dataset):
         self.config = config
 
         if self.config["drug_encoding"] in ["DGL_GCN", "DGL_NeuralFP"]:
-            from dgllife.utils import (CanonicalAtomFeaturizer,
-                                       CanonicalBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                CanonicalAtomFeaturizer,
+                CanonicalBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = CanonicalAtomFeaturizer()
             self.edge_featurizer = CanonicalBondFeaturizer(self_loop=True)
@@ -966,9 +992,11 @@ class data_process_loader_Property_Prediction(data.Dataset):
             self.fc = partial(smiles_to_bigraph, add_self_loop=True)
 
         elif self.config["drug_encoding"] == "DGL_AttentiveFP":
-            from dgllife.utils import (AttentiveFPAtomFeaturizer,
-                                       AttentiveFPBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                AttentiveFPAtomFeaturizer,
+                AttentiveFPBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = AttentiveFPAtomFeaturizer()
             self.edge_featurizer = AttentiveFPBondFeaturizer(self_loop=True)
@@ -980,9 +1008,11 @@ class data_process_loader_Property_Prediction(data.Dataset):
             "DGL_GIN_AttrMasking",
             "DGL_GIN_ContextPred",
         ]:
-            from dgllife.utils import (PretrainAtomFeaturizer,
-                                       PretrainBondFeaturizer,
-                                       smiles_to_bigraph)
+            from dgllife.utils import (
+                PretrainAtomFeaturizer,
+                PretrainBondFeaturizer,
+                smiles_to_bigraph,
+            )
 
             self.node_featurizer = PretrainAtomFeaturizer()
             self.edge_featurizer = PretrainBondFeaturizer()

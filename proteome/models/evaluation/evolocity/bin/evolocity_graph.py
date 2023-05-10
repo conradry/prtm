@@ -6,8 +6,12 @@ from mutation import predict_sequence_prob
 from scanpy.tools._dpt import DPT
 from scipy.sparse import coo_matrix, issparse, linalg, spdiags
 from scvelo.preprocessing.moments import get_connectivities
-from scvelo.preprocessing.neighbors import (get_n_neighs, get_neighs,
-                                            neighbors, verify_neighbors)
+from scvelo.preprocessing.neighbors import (
+    get_n_neighs,
+    get_neighs,
+    neighbors,
+    verify_neighbors,
+)
 from scvelo.tools.utils import groups_to_bool, scale, strings_to_categoricals
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm

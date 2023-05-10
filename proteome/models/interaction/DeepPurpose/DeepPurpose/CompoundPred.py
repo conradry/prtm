@@ -8,8 +8,12 @@ import torch
 import torch.nn.functional as F
 from lifelines.utils import concordance_index
 from scipy.stats import pearsonr
-from sklearn.metrics import (average_precision_score, f1_score,
-                             mean_squared_error, roc_auc_score)
+from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
+    mean_squared_error,
+    roc_auc_score,
+)
 from torch import nn
 from torch.autograd import Variable
 from torch.utils import data

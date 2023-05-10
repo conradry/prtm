@@ -14,8 +14,12 @@ import tensorflow as tf
 from tensorflow.contrib import layers as layers_lib
 from tensorflow.contrib.framework import deprecated_args
 from tensorflow.contrib.framework.python.ops import add_arg_scope, arg_scope
-from tensorflow.contrib.layers.python.layers import (initializers, layers,
-                                                     regularizers, utils)
+from tensorflow.contrib.layers.python.layers import (
+    initializers,
+    layers,
+    regularizers,
+    utils,
+)
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops, nn_ops, variable_scope
 

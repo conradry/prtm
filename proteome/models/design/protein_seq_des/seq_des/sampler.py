@@ -12,10 +12,13 @@ import seq_des.util.sampler_util as sampler_util
 import torch
 import torch.nn.functional as F
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
-from pyrosetta.rosetta.protocols.denovo_design.filters import \
-    ExposedHydrophobicsFilterCreator
+from pyrosetta.rosetta.protocols.denovo_design.filters import (
+    ExposedHydrophobicsFilterCreator,
+)
 from pyrosetta.rosetta.protocols.simple_filters import (
-    BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
+    BuriedUnsatHbondFilterCreator,
+    PackStatFilterCreator,
+)
 from torch.distributions.categorical import Categorical
 
 

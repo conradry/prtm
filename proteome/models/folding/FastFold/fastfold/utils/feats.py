@@ -24,8 +24,12 @@ from fastfold.common import protein
 from fastfold.utils.geometry.rigid_matrix_vector import Rigid3Array
 from fastfold.utils.geometry.rotation_matrix import Rot3Array
 from fastfold.utils.rigid_utils import Rigid, Rotation
-from fastfold.utils.tensor_utils import (batched_gather, one_hot,
-                                         tensor_tree_map, tree_map)
+from fastfold.utils.tensor_utils import (
+    batched_gather,
+    one_hot,
+    tensor_tree_map,
+    tree_map,
+)
 
 
 def dgram_from_positions(

@@ -5,8 +5,7 @@ from typing import Optional
 
 import ray
 from fastfold.workflow import batch_run
-from fastfold.workflow.factory import (HHBlitsFactory, HHSearchFactory,
-                                       JackHmmerFactory)
+from fastfold.workflow.factory import HHBlitsFactory, HHSearchFactory, JackHmmerFactory
 from ray import workflow
 
 

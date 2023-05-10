@@ -10,8 +10,13 @@ from tensorflow import keras
 
 from .model_generation import PretrainingModelGenerator
 from .shared_utils.util import log
-from .tokenization import (ADDED_TOKENS_PER_SEQ, additional_token_to_index,
-                           n_tokens, parse_seq, tokenize_seq)
+from .tokenization import (
+    ADDED_TOKENS_PER_SEQ,
+    additional_token_to_index,
+    n_tokens,
+    parse_seq,
+    tokenize_seq,
+)
 
 DEFAULT_EPISODE_SETTINGS = [
     # seq_len, batch_size

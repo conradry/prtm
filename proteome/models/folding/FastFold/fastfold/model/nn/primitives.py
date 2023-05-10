@@ -22,8 +22,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 from fastfold.utils.checkpointing import get_checkpoint_fn
-from fastfold.utils.tensor_utils import (_chunk_slice, flatten_final_dims,
-                                         permute_final_dims)
+from fastfold.utils.tensor_utils import (
+    _chunk_slice,
+    flatten_final_dims,
+    permute_final_dims,
+)
 from scipy.stats import truncnorm
 
 
@@ -215,8 +218,7 @@ def _attention(
     # [*, H, Q, K]
     a = torch.matmul(query, key)
     if habana.is_habana():
-        from fastfold.habana.fastnn.custom_op import (fused_softmax,
-                                                      fused_softmax_bias)
+        from fastfold.habana.fastnn.custom_op import fused_softmax, fused_softmax_bias
 
         if len(biases) == 1:
             a = fused_softmax(a, biases[0], -1)
@@ -496,8 +498,10 @@ class GlobalAttention(nn.Module):
         )
         bias = (self.inf * (mask - 1))[..., :, None, :]
         if habana.is_habana():
-            from fastfold.habana.fastnn.custom_op import (fused_softmax,
-                                                          fused_softmax_bias)
+            from fastfold.habana.fastnn.custom_op import (
+                fused_softmax,
+                fused_softmax_bias,
+            )
 
             a = fused_softmax(a, bias, -1)
         else:

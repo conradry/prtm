@@ -9,9 +9,12 @@ import torch
 from proteome.models.folding.openfold.openfold.model.model import AlphaFold
 from proteome.models.folding.openfold.openfold.np import protein, residue_constants
 from proteome.models.folding.openfold.openfold.np.relax import relax
-from proteome.models.folding.openfold.openfold.utils.import_weights import import_jax_weights_
-from pytorch_lightning.utilities.deepspeed import \
-    convert_zero_checkpoint_to_fp32_state_dict
+from proteome.models.folding.openfold.openfold.utils.import_weights import (
+    import_jax_weights_,
+)
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 
 logging.basicConfig()
 logger = logging.getLogger(__file__)

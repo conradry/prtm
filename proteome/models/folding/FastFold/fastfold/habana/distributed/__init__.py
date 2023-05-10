@@ -1,5 +1,15 @@
-from .comm import (All_to_All, _gather, _reduce, _split, col_to_row, copy,
-                   gather, reduce, row_to_col, scatter)
+from .comm import (
+    All_to_All,
+    _gather,
+    _reduce,
+    _split,
+    col_to_row,
+    copy,
+    gather,
+    reduce,
+    row_to_col,
+    scatter,
+)
 from .core import get_data_parallel_world_size, init_dist
 
 __all__ = [

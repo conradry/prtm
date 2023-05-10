@@ -9,4 +9,3 @@ def _init(model):
             nn.init.constant_(param, 0)
         else:
             nn.init.xavier_normal_(param)
-

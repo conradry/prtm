@@ -22,8 +22,7 @@ import torch
 from fastfold.common import residue_constants as rc
 from fastfold.config import NUM_EXTRA_SEQ, NUM_MSA_SEQ, NUM_RES, NUM_TEMPLATES
 from fastfold.utils.rigid_utils import Rigid, Rotation
-from fastfold.utils.tensor_utils import (batched_gather, tensor_tree_map,
-                                         tree_map)
+from fastfold.utils.tensor_utils import batched_gather, tensor_tree_map, tree_map
 
 MSA_FEATURE_NAMES = [
     "msa",

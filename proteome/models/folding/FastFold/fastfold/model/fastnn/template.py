@@ -22,9 +22,12 @@ from colossalai.core import global_context as gpc
 from fastfold.distributed.comm import col_to_row, gather, row_to_col, scatter
 from fastfold.model.fastnn.ops import (
     AsyncChunkTriangleMultiplicationIncoming,
-    AsyncChunkTriangleMultiplicationOutgoing, ChunkTransition,
-    ChunkTriangleAttentionEndingNode, ChunkTriangleAttentionStartingNode,
-    LayerNorm)
+    AsyncChunkTriangleMultiplicationOutgoing,
+    ChunkTransition,
+    ChunkTriangleAttentionEndingNode,
+    ChunkTriangleAttentionStartingNode,
+    LayerNorm,
+)
 from fastfold.model.nn.primitives import Attention
 from fastfold.utils.checkpointing import checkpoint_blocks
 from fastfold.utils.tensor_utils import chunk_layer, permute_final_dims

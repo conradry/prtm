@@ -20,14 +20,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from fastfold.distributed import gather, scatter
-from fastfold.distributed.comm_async import (broadcast_async,
-                                             broadcast_async_opp,
-                                             broadcast_sync, gather_async,
-                                             gather_async_opp, get_rank,
-                                             get_world_size)
-from fastfold.model.fastnn.kernel import (LayerNorm, bias_dropout_add,
-                                          bias_ele_dropout_residual,
-                                          bias_sigmod_ele, fused_softmax)
+from fastfold.distributed.comm_async import (
+    broadcast_async,
+    broadcast_async_opp,
+    broadcast_sync,
+    gather_async,
+    gather_async_opp,
+    get_rank,
+    get_world_size,
+)
+from fastfold.model.fastnn.kernel import (
+    LayerNorm,
+    bias_dropout_add,
+    bias_ele_dropout_residual,
+    bias_sigmod_ele,
+    fused_softmax,
+)
 
 from .initializer import glorot_uniform_af
 

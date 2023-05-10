@@ -12,9 +12,16 @@ import numpy as np
 import pandas as pd
 import torch
 from scipy.spatial.distance import cdist, hamming, pdist, squareform
-from sequence_models.constants import (DIST_BINS, OMEGA_BINS, PAD, PHI_BINS,
-                                       PROTEIN_ALPHABET, STOP, THETA_BINS,
-                                       trR_ALPHABET)
+from sequence_models.constants import (
+    DIST_BINS,
+    OMEGA_BINS,
+    PAD,
+    PHI_BINS,
+    PROTEIN_ALPHABET,
+    STOP,
+    THETA_BINS,
+    trR_ALPHABET,
+)
 from sequence_models.gnn import bins_to_vals
 from sequence_models.pdb_utils import process_coords
 from sequence_models.utils import Tokenizer, parse_fasta

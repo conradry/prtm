@@ -4,9 +4,12 @@ import torch
 import torch.distributed as dist
 from torch import Tensor
 
-from .core import (ensure_divisibility, get_tensor_model_parallel_group,
-                   get_tensor_model_parallel_rank,
-                   get_tensor_model_parallel_world_size)
+from .core import (
+    ensure_divisibility,
+    get_tensor_model_parallel_group,
+    get_tensor_model_parallel_rank,
+    get_tensor_model_parallel_world_size,
+)
 
 
 def divide(numerator, denominator):

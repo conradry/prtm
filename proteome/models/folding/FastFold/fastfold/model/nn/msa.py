@@ -18,12 +18,19 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from fastfold.model.nn.primitives import (Attention, GlobalAttention,
-                                          LayerNorm, Linear,
-                                          _attention_chunked_trainable)
+from fastfold.model.nn.primitives import (
+    Attention,
+    GlobalAttention,
+    LayerNorm,
+    Linear,
+    _attention_chunked_trainable,
+)
 from fastfold.utils.checkpointing import get_checkpoint_fn
-from fastfold.utils.tensor_utils import (chunk_layer, flatten_final_dims,
-                                         permute_final_dims)
+from fastfold.utils.tensor_utils import (
+    chunk_layer,
+    flatten_final_dims,
+    permute_final_dims,
+)
 
 
 class MSAAttention(nn.Module):

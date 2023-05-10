@@ -6,8 +6,7 @@ import torch.nn as nn
 from colossalai.context.parallel_mode import ParallelMode
 from colossalai.core import global_context as gpc
 from fastfold.distributed.comm import col_to_row, gather, scatter
-from fastfold.distributed.comm_async import (All_to_All_Async,
-                                             All_to_All_Async_Opp)
+from fastfold.distributed.comm_async import All_to_All_Async, All_to_All_Async_Opp
 from fastfold.model.fastnn import MSACore, OutProductMean, PairCore
 from fastfold.model.fastnn.ops import Linear
 from fastfold.utils.checkpointing import checkpoint_blocks

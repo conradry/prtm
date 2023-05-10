@@ -24,12 +24,13 @@ from .utils import _init
 
 class AtomEmbedding(nn.Module):
     """
-        Embeddings for atom identity only (as of now)
+    Embeddings for atom identity only (as of now)
     """
+
     def __init__(self, args, num_atom):
         super(AtomEmbedding, self).__init__()
         # add 1 for padding
-        self.atom_ebd = nn.Embedding(num_atom+1, args.ns)
+        self.atom_ebd = nn.Embedding(num_atom + 1, args.ns)
         self.sigma_ebd = nn.Linear(args.sigma_embed_dim, args.ns)
         # LM embedding (ESM2)
         self.lm_ebd_dim = args.lm_embed_dim
@@ -40,10 +41,10 @@ class AtomEmbedding(nn.Module):
 
     def forward(self, x):
         # atom sequence
-        atom_ebd = self.atom_ebd(x[:,0:1].long()).squeeze()
+        atom_ebd = self.atom_ebd(x[:, 0:1].long()).squeeze()
         # sigma noise embedding
         sigma_start = 1 + self.lm_ebd_dim
-        sigma_ebd = self.sigma_ebd(x[:,sigma_start:])
+        sigma_ebd = self.sigma_ebd(x[:, sigma_start:])
         # add together
         final_ebd = atom_ebd + sigma_ebd
         # consider LM embedding here
@@ -55,11 +56,20 @@ class AtomEmbedding(nn.Module):
 
 class TPCL(nn.Module):
     """
-        Tensor product convolution layer
+    Tensor product convolution layer
     """
-    def __init__(self, args,
-                 in_irreps, sh_irreps, out_irreps, n_edge_features,
-                 residual=True, hidden_features=None, is_last_layer=False):
+
+    def __init__(
+        self,
+        args,
+        in_irreps,
+        sh_irreps,
+        out_irreps,
+        n_edge_features,
+        residual=True,
+        hidden_features=None,
+        is_last_layer=False,
+    ):
         super(TPCL, self).__init__()
         self.in_irreps = in_irreps
         self.out_irreps = out_irreps
@@ -115,7 +125,10 @@ class TPCL(nn.Module):
 
 
 class TensorProductScoreModel(torch.nn.Module):
-    def __init__(self, args, model_params,
+    def __init__(
+        self,
+        args,
+        model_params,
         confidence_mode=False,
         confidence_dropout=0,
         confidence_no_batchnorm=True,
@@ -161,11 +174,14 @@ class TensorProductScoreModel(torch.nn.Module):
 
         # distance expansion
         self.lig_dist_exp = GaussianSmearing(
-                0.0, self.lig_max_radius, args.dist_embed_dim)
+            0.0, self.lig_max_radius, args.dist_embed_dim
+        )
         self.rec_dist_exp = GaussianSmearing(
-                0.0, self.rec_max_radius, args.dist_embed_dim)
+            0.0, self.rec_max_radius, args.dist_embed_dim
+        )
         self.cross_dist_exp = GaussianSmearing(
-                0.0, self.cross_max_dist, args.cross_dist_embed_dim)
+            0.0, self.cross_max_dist, args.cross_dist_embed_dim
+        )
 
         if args.use_second_order_repr:
             irrep_seq = [
@@ -300,7 +316,9 @@ class TensorProductScoreModel(torch.nn.Module):
 
         # build cross graph
         if self.dynamic_max_cross:
-            cross_cutoff = (tr_s * self.cross_cutoff_weight + self.cross_cutoff_bias).unsqueeze(1)
+            cross_cutoff = (
+                tr_s * self.cross_cutoff_weight + self.cross_cutoff_bias
+            ).unsqueeze(1)
         else:
             cross_cutoff = self.cross_max_dist
         cross_edge_index, cross_edge_attr, cross_edge_sh = self.cross_conv_graph(
@@ -311,58 +329,77 @@ class TensorProductScoreModel(torch.nn.Module):
 
         for idx in range(len(self.intra_convs)):
             # message passing within ligand graph (intra)
-            lig_edge_attr_ = torch.cat([
+            lig_edge_attr_ = torch.cat(
+                [
                     lig_edge_attr,
-                    lig_node_attr[lig_src, :self.ns],
-                    lig_node_attr[lig_dst, :self.ns]], -1)
+                    lig_node_attr[lig_src, : self.ns],
+                    lig_node_attr[lig_dst, : self.ns],
+                ],
+                -1,
+            )
             lig_intra_update = self.intra_convs[idx](
-                lig_node_attr, lig_edge_index,
-                lig_edge_attr_, lig_edge_sh)
+                lig_node_attr, lig_edge_index, lig_edge_attr_, lig_edge_sh
+            )
 
             # message passing between two graphs (inter)
-            rec2lig_edge_attr_ = torch.cat([
+            rec2lig_edge_attr_ = torch.cat(
+                [
                     cross_edge_attr,
-                    lig_node_attr[cross_lig, :self.ns],
-                    rec_node_attr[cross_rec, :self.ns]], -1)
+                    lig_node_attr[cross_lig, : self.ns],
+                    rec_node_attr[cross_rec, : self.ns],
+                ],
+                -1,
+            )
             lig_inter_update = self.cross_convs[idx](
                 rec_node_attr,
                 cross_edge_index,
                 rec2lig_edge_attr_,
                 cross_edge_sh,
-                out_nodes=lig_node_attr.shape[0])
+                out_nodes=lig_node_attr.shape[0],
+            )
 
             # message passing within receptor graph (intra)
             if idx != len(self.intra_convs) - 1:
-                rec_edge_attr_ = torch.cat([
+                rec_edge_attr_ = torch.cat(
+                    [
                         rec_edge_attr,
-                        rec_node_attr[rec_src, :self.ns],
-                        rec_node_attr[rec_dst, :self.ns]], -1)
+                        rec_node_attr[rec_src, : self.ns],
+                        rec_node_attr[rec_dst, : self.ns],
+                    ],
+                    -1,
+                )
                 rec_intra_update = self.intra_convs[idx](
-                    rec_node_attr, rec_edge_index,
-                    rec_edge_attr_, rec_edge_sh)
+                    rec_node_attr, rec_edge_index, rec_edge_attr_, rec_edge_sh
+                )
 
-                lig2rec_edge_attr_ = torch.cat([
+                lig2rec_edge_attr_ = torch.cat(
+                    [
                         cross_edge_attr,
                         lig_node_attr[cross_lig, : self.ns],
-                        rec_node_attr[cross_rec, : self.ns]], -1)
+                        rec_node_attr[cross_rec, : self.ns],
+                    ],
+                    -1,
+                )
                 rec_inter_update = self.cross_convs[idx](
                     lig_node_attr,
                     torch.flip(cross_edge_index, dims=[0]),
                     lig2rec_edge_attr_,
                     cross_edge_sh,
-                    out_nodes=rec_node_attr.shape[0])
+                    out_nodes=rec_node_attr.shape[0],
+                )
 
             # padding original features
             lig_node_attr = F.pad(
-                lig_node_attr,
-                (0, lig_intra_update.shape[-1] - lig_node_attr.shape[-1]))
+                lig_node_attr, (0, lig_intra_update.shape[-1] - lig_node_attr.shape[-1])
+            )
 
             # update features with residual updates
             lig_node_attr = lig_node_attr + lig_intra_update + lig_inter_update
             if idx != len(self.intra_convs) - 1:
                 rec_node_attr = F.pad(
                     rec_node_attr,
-                    (0, rec_intra_update.shape[-1] - rec_node_attr.shape[-1]))
+                    (0, rec_intra_update.shape[-1] - rec_node_attr.shape[-1]),
+                )
                 rec_node_attr = rec_node_attr + rec_intra_update + rec_inter_update
 
         # compute confidence score
@@ -408,12 +445,14 @@ class TensorProductScoreModel(torch.nn.Module):
         # fix the magnitude of tr and rot score vectors
         tr_norm = torch.linalg.vector_norm(tr_pred, dim=1)[:, None]
         tr_scale = self.tr_final_layer(
-            torch.cat([tr_norm, batch.graph_sigma_emb], dim=1))
+            torch.cat([tr_norm, batch.graph_sigma_emb], dim=1)
+        )
         tr_pred = (tr_pred / tr_norm) * tr_scale
 
         rot_norm = torch.linalg.vector_norm(rot_pred, dim=1)[:, None]
         rot_scale = self.rot_final_layer(
-            torch.cat([rot_norm, batch.graph_sigma_emb], dim=1))
+            torch.cat([rot_norm, batch.graph_sigma_emb], dim=1)
+        )
         rot_pred = (rot_pred / rot_norm) * rot_scale
 
         if self.scale_by_sigma:
@@ -476,18 +515,16 @@ class TensorProductScoreModel(torch.nn.Module):
 
     def build_rigid_graph(self, batch, key):
         """
-            Fixed rigid proteins.
-            Adds noise information to existing embeddings.
+        Fixed rigid proteins.
+        Adds noise information to existing embeddings.
         """
         batch[key].node_sigma_emb = self.t_embedding(
             batch[key].node_t["tr"]
         )  # tr rot and tor noise is all the same
         # if no ESM models, graph.x should still be flat
         if len(batch[key].x.shape) == 1:
-            batch[key].x = batch[key].x[:,None]
-        node_attr = torch.cat(
-            [batch[key].x, batch[key].node_sigma_emb], 1
-        )
+            batch[key].x = batch[key].x[:, None]
+        node_attr = torch.cat([batch[key].x, batch[key].node_sigma_emb], 1)
 
         # this assumes the edges were already created in preprocessing since protein's structure is fixed
         edge_index = batch[key, key].edge_index
@@ -497,14 +534,15 @@ class TensorProductScoreModel(torch.nn.Module):
         edge_length_emb = self.rec_dist_exp(edge_vec.norm(dim=-1))
         edge_sigma_emb = batch[key].node_sigma_emb[edge_index[0].long()]
         edge_attr = torch.cat([edge_sigma_emb, edge_length_emb], 1)
-        edge_sh = o3.spherical_harmonics(self.sh_irreps, edge_vec,
-            normalize=True, normalization="component")
+        edge_sh = o3.spherical_harmonics(
+            self.sh_irreps, edge_vec, normalize=True, normalization="component"
+        )
 
         return node_attr, edge_index, edge_attr, edge_sh
 
     def cross_conv_graph(self, batch, cross_dist_cutoff):
         """
-            Builds the cross edges between ligand and receptor
+        Builds the cross edges between ligand and receptor
         """
         if torch.is_tensor(cross_dist_cutoff):
             # different cutoff for every graph
@@ -533,15 +571,16 @@ class TensorProductScoreModel(torch.nn.Module):
         edge_length_emb = self.cross_dist_exp(edge_vec.norm(dim=-1))
         edge_sigma_emb = batch["ligand"].node_sigma_emb[src.long()]
         edge_attr = torch.cat([edge_sigma_emb, edge_length_emb], 1)
-        edge_sh = o3.spherical_harmonics(self.sh_irreps, edge_vec,
-            normalize=True, normalization="component")
+        edge_sh = o3.spherical_harmonics(
+            self.sh_irreps, edge_vec, normalize=True, normalization="component"
+        )
 
         return edge_index, edge_attr, edge_sh
 
     def center_conv_graph(self, batch):
         """
-            Builds the filter and edges for the convolution
-            generating translational and rotational scores
+        Builds the filter and edges for the convolution
+        generating translational and rotational scores
         """
         edge_index = torch.cat(
             [
@@ -566,16 +605,15 @@ class TensorProductScoreModel(torch.nn.Module):
         edge_sigma_emb = batch["ligand"].node_sigma_emb[edge_index[1].long()]
         edge_attr = torch.cat([edge_attr, edge_sigma_emb], 1)
         edge_sh = o3.spherical_harmonics(
-            self.sh_irreps, edge_vec, normalize=True,
-            normalization="component"
+            self.sh_irreps, edge_vec, normalize=True, normalization="component"
         )
         return edge_index, edge_attr, edge_sh
 
     def bond_conv_graph(self, batch):
         """
-            Builds the graph for the convolution between
-            the center of the rotatable bonds and the neighbouring
-            nodes
+        Builds the graph for the convolution between
+        the center of the rotatable bonds and the neighbouring
+        nodes
         """
         bonds = (
             batch["ligand", "ligand"].edge_index[:, batch["ligand"].edge_mask].long()
@@ -595,8 +633,7 @@ class TensorProductScoreModel(torch.nn.Module):
 
         edge_attr = self.final_edge_embed(edge_attr)
         edge_sh = o3.spherical_harmonics(
-            self.sh_irreps, edge_vec, normalize=True,
-            normalization="component"
+            self.sh_irreps, edge_vec, normalize=True, normalization="component"
         )
 
         return bonds, edge_index, edge_attr, edge_sh
@@ -613,7 +650,6 @@ class GaussianSmearing(nn.Module):
     def forward(self, dist):
         dist = dist.view(-1, 1) - self.offset.view(1, -1)
         return torch.exp(self.coeff * torch.pow(dist, 2))
-
 
 
 def get_timestep_embedding(args):
@@ -643,9 +679,8 @@ class SinusoidalEmbedding(nn.Module):
         half_dim = self.embed_dim // 2
         emb = math.log(self.max_positions) / (half_dim - 1)
         emb = torch.exp(
-            torch.arange(half_dim,
-                dtype=torch.float32,
-                device=x.device) * -emb)
+            torch.arange(half_dim, dtype=torch.float32, device=x.device) * -emb
+        )
         emb = x.float()[:, None] * emb[None, :]
         emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
         if self.embed_dim % 2 == 1:  # zero pad
@@ -665,13 +700,10 @@ class GaussianFourierProjection(nn.Module):
         self.embed_dim = args.sigma_embed_dim
         self.scale = args.embedding_scale
         self.W = nn.Parameter(
-            torch.randn(self.embed_dim // 2) * self.scale,
-            requires_grad=False
+            torch.randn(self.embed_dim // 2) * self.scale, requires_grad=False
         )
 
     def forward(self, x):
         x_proj = x[:, None] * self.W[None, :] * 2 * np.pi
-        emb = torch.cat([torch.sin(x_proj), torch.cos(x_proj)],
-                        dim=-1)
+        emb = torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=-1)
         return emb
-

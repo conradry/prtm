@@ -4,10 +4,23 @@ from typing import Any, Iterable, List
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sequence_models.constants import (ALL_AAS, GAP, MASK, MSA_PAD, PAD,
-                                       PROTEIN_ALPHABET, START, STOP)
-from sequence_models.gnn import (get_edge_features, get_k_neighbors, get_mask,
-                                 get_node_features, replace_nan)
+from sequence_models.constants import (
+    ALL_AAS,
+    GAP,
+    MASK,
+    MSA_PAD,
+    PAD,
+    PROTEIN_ALPHABET,
+    START,
+    STOP,
+)
+from sequence_models.gnn import (
+    get_edge_features,
+    get_k_neighbors,
+    get_mask,
+    get_node_features,
+    replace_nan,
+)
 from sequence_models.trRosetta_utils import trRosettaPreprocessing
 from sequence_models.utils import Tokenizer
 

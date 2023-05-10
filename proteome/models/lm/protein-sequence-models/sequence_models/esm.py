@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from esm.modules import (AxialTransformerLayer, ESM1bLayerNorm,
-                         LearnedPositionalEmbedding, TransformerLayer)
+from esm.modules import (
+    AxialTransformerLayer,
+    ESM1bLayerNorm,
+    LearnedPositionalEmbedding,
+    TransformerLayer,
+)
 from sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET
 from torch.utils.checkpoint import checkpoint
 

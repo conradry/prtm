@@ -17,8 +17,9 @@ from fastfold.model.fastnn import EvoformerStack, ExtraMSAStack
 from fastfold.model.fastnn.embedders import TemplateEmbedder
 from fastfold.model.fastnn.embedders_multimer import TemplateEmbedderMultimer
 from fastfold.model.fastnn.ops import InputEmbedder, RecyclingEmbedder
-from fastfold.model.nn.triangular_multiplicative_update import \
-    is_fused_triangle_multiplication
+from fastfold.model.nn.triangular_multiplicative_update import (
+    is_fused_triangle_multiplication,
+)
 
 
 def copy_layernorm(model_fast, model_ori):

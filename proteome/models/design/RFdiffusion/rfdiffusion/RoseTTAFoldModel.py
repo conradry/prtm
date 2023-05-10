@@ -1,11 +1,19 @@
 import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
-from rfdiffusion.AuxiliaryPredictor import (DistanceNetwork,
-                                            ExpResolvedNetwork, LDDTNetwork,
-                                            MaskedTokenNetwork)
-from rfdiffusion.Embeddings import (Extra_emb, MSA_emb, Recycling, Templ_emb,
-                                    Timestep_emb)
+from rfdiffusion.AuxiliaryPredictor import (
+    DistanceNetwork,
+    ExpResolvedNetwork,
+    LDDTNetwork,
+    MaskedTokenNetwork,
+)
+from rfdiffusion.Embeddings import (
+    Extra_emb,
+    MSA_emb,
+    Recycling,
+    Templ_emb,
+    Timestep_emb,
+)
 from rfdiffusion.Track_module import IterativeSimulator
 
 

@@ -28,9 +28,16 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from colabdesign.af.alphafold.common import residue_constants
-from colabdesign.af.alphafold.model import (all_atom_multimer, common_modules,
-                                            folding_multimer, geometry,
-                                            layer_stack, modules, prng, utils)
+from colabdesign.af.alphafold.model import (
+    all_atom_multimer,
+    common_modules,
+    folding_multimer,
+    geometry,
+    layer_stack,
+    modules,
+    prng,
+    utils,
+)
 
 
 def create_extra_msa_feature(batch, num_extra_msa):

@@ -22,17 +22,26 @@ from data import BindingDataset
 from evaluation.compute_rmsd import evaluate_all_rmsds
 
 
-def train(train_loader, val_loader, model,
-          writer, fold_dir, args, loaders_for_reverse_diffusion=None):
+def train(
+    train_loader,
+    val_loader,
+    model,
+    writer,
+    fold_dir,
+    args,
+    loaders_for_reverse_diffusion=None,
+):
     # optimizer
     start_epoch, optimizer = get_optimizer(model, args, load_best=True)
 
     # validation
     best_loss = float("inf")
-    best_metrics = {'rmsds_lt2': -1,
-                    'rmsds_lt5': -1,
-                    'rmsds_mean': float("inf"),
-                    'rmsds_median': float("inf")}
+    best_metrics = {
+        "rmsds_lt2": -1,
+        "rmsds_lt5": -1,
+        "rmsds_mean": float("inf"),
+        "rmsds_median": float("inf"),
+    }
 
     best_path = None
     best_epoch = start_epoch
@@ -40,20 +49,23 @@ def train(train_loader, val_loader, model,
     log_path = os.path.join(fold_dir, "log.yaml")
 
     num_batches = start_epoch * (len(train_loader) // args.batch_size)
-    ep_iterator = range(start_epoch, start_epoch+args.epochs)
+    ep_iterator = range(start_epoch, start_epoch + args.epochs)
     if not args.no_tqdm:
-        ep_iterator = tqdm(ep_iterator,
-                           initial=start_epoch,
-                           desc="train epoch", ncols=50)
+        ep_iterator = tqdm(
+            ep_iterator, initial=start_epoch, desc="train epoch", ncols=50
+        )
     for epoch in ep_iterator:
         writer.add_scalar("epoch", epoch, num_batches)
         # start epoch!
         iterator = enumerate(train_loader)
         if not args.no_tqdm:
-            iterator = tqdm(iterator,
-                            total=len(train_loader),
-                            desc="train batch",
-                            leave=False, ncols=50)
+            iterator = tqdm(
+                iterator,
+                total=len(train_loader),
+                desc="train batch",
+                leave=False,
+                ncols=50,
+            )
         num_oom_errors = 0
 
         for batch_num, batch in iterator:
@@ -100,12 +112,14 @@ def train(train_loader, val_loader, model,
             grads = []
             for name, param in model.named_parameters():
                 if param.grad is not None:
-                    #print(name, param.grad.norm())
+                    # print(name, param.grad.norm())
                     grads.append(param.grad.norm().item())
             grad_mean = torch.tensor(grads).mean()
             if writer is not None:
                 writer.add_scalar("gradient", grad_mean, num_batches)
-            nn.utils.clip_grad_norm_(model.parameters(), 1) # TODO (AK): consider enabling this 
+            nn.utils.clip_grad_norm_(
+                model.parameters(), 1
+            )  # TODO (AK): consider enabling this
             optimizer.step()
 
             # write to tensorboard
@@ -122,33 +136,42 @@ def train(train_loader, val_loader, model,
             # end of batch ========
             # force checkpoint saving + evaluation
             # VERY BAD BUG. just exits the training epoch after one single batch
-            #if num_batches > 5000:
+            # if num_batches > 5000:
             #    break
 
-        printt(f'\nEncountered {num_oom_errors} Out-of-memory errors during last epoch.')
-        
+        printt(
+            f"\nEncountered {num_oom_errors} Out-of-memory errors during last epoch."
+        )
+
         # evaluate (end of epoch)
-        avg_train_loss, avg_train_score = train_epoch_end(num_batches,
-                train_loader, model,
-                log_path, fold_dir, args,
-                max_batch=20, split="train")  # adjust based on batch size
-        val_loss, avg_val_score = train_epoch_end(num_batches,
-                val_loader, model, log_path, fold_dir, args, writer)
-        printt('\nepoch', epoch)
-        printt('train loss', avg_train_loss, args.metric, avg_train_score)
-        printt('val loss', val_loss, args.metric, avg_val_score)
+        avg_train_loss, avg_train_score = train_epoch_end(
+            num_batches,
+            train_loader,
+            model,
+            log_path,
+            fold_dir,
+            args,
+            max_batch=20,
+            split="train",
+        )  # adjust based on batch size
+        val_loss, avg_val_score = train_epoch_end(
+            num_batches, val_loader, model, log_path, fold_dir, args, writer
+        )
+        printt("\nepoch", epoch)
+        printt("train loss", avg_train_loss, args.metric, avg_train_score)
+        printt("val loss", val_loss, args.metric, avg_val_score)
 
         # save latest model every e.g. 10 epochs
         if epoch % args.save_model_every == 0 and epoch != 0:
             last_path = os.path.join(fold_dir, "model_last.pth")
             save_model(model, args, optimizer, last_path)
         # >>>
-        #if avg_val_score < best_loss:
+        # if avg_val_score < best_loss:
         #    best_loss = avg_val_score
 
         # save model
-        #path_suffix = f"{num_batches}_{epoch}_{avg_val_score:.3f}_{val_loss:.3f}.pth"
-        #if val_loss < best_loss:
+        # path_suffix = f"{num_batches}_{epoch}_{avg_val_score:.3f}_{val_loss:.3f}.pth"
+        # if val_loss < best_loss:
         #    best_loss = val_loss
         #    best_epoch = epoch
         #    # save model ONLY IF best
@@ -156,35 +179,52 @@ def train(train_loader, val_loader, model,
         #    save_model(model, args, optimizer, best_path)
 
         ## check if out of patience
-        #if epoch - best_epoch >= args.patience:
+        # if epoch - best_epoch >= args.patience:
         #    break
 
-        if args.val_inference_freq is not None and epoch % args.val_inference_freq == 0: # and epoch != 0:
+        if (
+            args.val_inference_freq is not None and epoch % args.val_inference_freq == 0
+        ):  # and epoch != 0:
             # run reverse diffusion process
             # only use subset to run reverse diffusion process
             if args.num_inference_complexes is not None:
-                data_list = loaders_for_reverse_diffusion["val"][:args.num_inference_complexes]
+                data_list = loaders_for_reverse_diffusion["val"][
+                    : args.num_inference_complexes
+                ]
             else:
                 data_list = loaders_for_reverse_diffusion["val"]
 
-            samples_val = sample(data_list, model, args, epoch=epoch,
-                                 visualize_first_n_samples=args.visualize_n_val_graphs,
-                                 visualization_dir=args.visualization_path)
+            samples_val = sample(
+                data_list,
+                model,
+                args,
+                epoch=epoch,
+                visualize_first_n_samples=args.visualize_n_val_graphs,
+                visualization_dir=args.visualization_path,
+            )
 
             meter = evaluate_all_rmsds(data_list, samples_val)
-            ligand_rmsd_summarized, complex_rmsd_summarized, interface_rmsd_summarized = meter.summarize()
+            (
+                ligand_rmsd_summarized,
+                complex_rmsd_summarized,
+                interface_rmsd_summarized,
+            ) = meter.summarize()
 
             if writer is not None:
                 for rd_key, rd_value in ligand_rmsd_summarized.items():
                     writer.add_scalar(f"val_lig_rmsd_{rd_key}", rd_value, num_batches)
                 for rd_key, rd_value in complex_rmsd_summarized.items():
-                    writer.add_scalar(f"val_complex_rmsd_{rd_key}", rd_value, num_batches)
-
+                    writer.add_scalar(
+                        f"val_complex_rmsd_{rd_key}", rd_value, num_batches
+                    )
 
             # save model if it improves rmsd
-            if ligand_rmsd_summarized['mean'] < best_metrics['rmsds_mean'] and ligand_rmsd_summarized['median'] < best_metrics['rmsds_median']:
-                best_metrics['rmsds_mean'] = ligand_rmsd_summarized['mean']
-                best_metrics['rmsds_median'] = ligand_rmsd_summarized['median']
+            if (
+                ligand_rmsd_summarized["mean"] < best_metrics["rmsds_mean"]
+                and ligand_rmsd_summarized["median"] < best_metrics["rmsds_median"]
+            ):
+                best_metrics["rmsds_mean"] = ligand_rmsd_summarized["mean"]
+                best_metrics["rmsds_median"] = ligand_rmsd_summarized["median"]
                 best_epoch = epoch
                 best_loss = val_loss
 
@@ -193,75 +233,101 @@ def train(train_loader, val_loader, model,
                 best_path = os.path.join(fold_dir, f"model_best_{path_suffix}")
                 save_model(model, args, optimizer, best_path)
 
-        if args.sample_train and args.val_inference_freq is not None and epoch % args.val_inference_freq == 0:# and epoch != 0:
+        if (
+            args.sample_train
+            and args.val_inference_freq is not None
+            and epoch % args.val_inference_freq == 0
+        ):  # and epoch != 0:
             # run reverse diffusion process
             # only use subset to run reverse diffusion process
-            #if args.num_inference_complexes_train_data is not None:
+            # if args.num_inference_complexes_train_data is not None:
             #    random_indices = np.random.choice(len(loaders_for_reverse_diffusion["train"]), size=args.num_inference_complexes_train_data, replace=False)
             #    data_list = loaders_for_reverse_diffusion["train"][random_indices]
-            #else:
+            # else:
             #    data_list = loaders_for_reverse_diffusion["train"]
 
             if args.num_inference_complexes_train_data is not None:
-                random_indices = np.random.choice(len(loaders_for_reverse_diffusion["train"]), size=args.num_inference_complexes_train_data, replace=False)
+                random_indices = np.random.choice(
+                    len(loaders_for_reverse_diffusion["train"]),
+                    size=args.num_inference_complexes_train_data,
+                    replace=False,
+                )
 
                 data_list = BindingDataset(args, {}, apply_transform=False)
-                data_list.data = [loaders_for_reverse_diffusion["train"].data[i] for i in random_indices]
+                data_list.data = [
+                    loaders_for_reverse_diffusion["train"].data[i]
+                    for i in random_indices
+                ]
                 data_list.length = len(data_list.data)
             else:
                 data_list = loaders_for_reverse_diffusion["train"]
 
-            samples_val = sample(data_list, model, args, epoch=epoch,
-                                 visualize_first_n_samples=args.visualize_n_val_graphs,
-                                 visualization_dir=args.visualization_path)
+            samples_val = sample(
+                data_list,
+                model,
+                args,
+                epoch=epoch,
+                visualize_first_n_samples=args.visualize_n_val_graphs,
+                visualization_dir=args.visualization_path,
+            )
 
-            print(f'on {len(samples_val)} training samples:')
+            print(f"on {len(samples_val)} training samples:")
             meter = evaluate_all_rmsds(data_list, samples_val)
-            ligand_rmsd_summarized, complex_rmsd_summarized, interface_rmsd_summarized = meter.summarize()
+            (
+                ligand_rmsd_summarized,
+                complex_rmsd_summarized,
+                interface_rmsd_summarized,
+            ) = meter.summarize()
 
             if writer is not None:
                 for rd_key, rd_value in ligand_rmsd_summarized.items():
                     writer.add_scalar(f"train_lig_rmsd_{rd_key}", rd_value, num_batches)
                 for rd_key, rd_value in complex_rmsd_summarized.items():
-                    writer.add_scalar(f"train_complex_rmsd_{rd_key}", rd_value, num_batches)
-
+                    writer.add_scalar(
+                        f"train_complex_rmsd_{rd_key}", rd_value, num_batches
+                    )
 
         # check if out of patience
         if epoch - best_epoch >= args.patience:
             break
 
-
         # end of epoch ========
     # end of all epochs ========
 
     return best_loss, best_epoch, best_path
-    #return best_score, best_epoch, best_path
+    # return best_score, best_epoch, best_path
+
 
 def save_model(model, args, optimizer, path):
     if args.num_gpu > 1:
         state_dict = model.module.state_dict()
     else:
         state_dict = model.state_dict()
-    torch.save({"model": state_dict,
-                        "optimizer": optimizer.state_dict()}, path)
+    torch.save({"model": state_dict, "optimizer": optimizer.state_dict()}, path)
     printt(f"\nsaved model to {path}")
 
 
-def train_epoch_end(num_batches, val_loader,
-                    model, log_path, fold_dir, args,
-                    writer=None,
-                    max_batch=None, split="val"):
+def train_epoch_end(
+    num_batches,
+    val_loader,
+    model,
+    log_path,
+    fold_dir,
+    args,
+    writer=None,
+    max_batch=None,
+    split="val",
+):
     """
-        Evaluate at end of training epoch and write to log file
+    Evaluate at end of training epoch and write to log file
     """
-    log_item = { "batch": num_batches }
+    log_item = {"batch": num_batches}
     val_loss, avg_val_score = float("inf"), 0
     if len(val_loader) == 0:
         return val_loss, avg_val_score
 
     # run inference
-    val_scores = evaluate(val_loader, model, writer, args,
-                          max_batch=max_batch)
+    val_scores = evaluate(val_loader, model, writer, args, max_batch=max_batch)
     metric = args.metric
     if metric not in val_scores:
         metric = list(val_scores)[0]
@@ -285,10 +351,9 @@ def train_epoch_end(num_batches, val_loader,
     return val_loss, avg_val_score
 
 
-def evaluate(val_loader, model, writer, args,
-             max_batch=None):
+def evaluate(val_loader, model, writer, args, max_batch=None):
     """
-        @param (int) max_batch       number of batches to sample
+    @param (int) max_batch       number of batches to sample
     """
     all_output = defaultdict(list)
     all_losses = defaultdict(list)
@@ -298,10 +363,13 @@ def evaluate(val_loader, model, writer, args,
         # loop through all batches
         iterator = enumerate(val_loader)
         if not args.no_tqdm:
-            iterator = tqdm(iterator,
-                            total=len(val_loader),
-                            desc="evaluation",
-                            leave=False, ncols=50)
+            iterator = tqdm(
+                iterator,
+                total=len(val_loader),
+                desc="evaluation",
+                leave=False,
+                ncols=50,
+            )
         for batch_num, batch in iterator:
             # move to CUDA
             if torch.cuda.is_available() and args.num_gpu == 1:
@@ -357,7 +425,7 @@ def evaluate(val_loader, model, writer, args,
 
 def evaluate_pose(data_list, samples_list):
     """
-        Evaluate sampled pose vs. ground truth
+    Evaluate sampled pose vs. ground truth
     """
     all_rmsds = []
     rmsds_with_name = {}

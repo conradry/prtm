@@ -18,21 +18,40 @@ from functools import partial
 import proteome.models.folding.openfold.openfold.np.residue_constants as residue_constants
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.model.embedders import (ExtraMSAEmbedder, InputEmbedder,
-                                      RecyclingEmbedder, TemplateAngleEmbedder,
-                                      TemplatePairEmbedder)
-from proteome.models.folding.openfold.openfold.model.evoformer import EvoformerStack, ExtraMSAStack
+from proteome.models.folding.openfold.openfold.model.embedders import (
+    ExtraMSAEmbedder,
+    InputEmbedder,
+    RecyclingEmbedder,
+    TemplateAngleEmbedder,
+    TemplatePairEmbedder,
+)
+from proteome.models.folding.openfold.openfold.model.evoformer import (
+    EvoformerStack,
+    ExtraMSAStack,
+)
 from proteome.models.folding.openfold.openfold.model.heads import AuxiliaryHeads
-from proteome.models.folding.openfold.openfold.model.structure_module import StructureModule
-from proteome.models.folding.openfold.openfold.model.template import (TemplatePairStack,
-                                     TemplatePointwiseAttention,
-                                     embed_templates_average,
-                                     embed_templates_offload)
-from proteome.models.folding.openfold.openfold.utils.feats import (atom14_to_atom37, build_extra_msa_feat,
-                                  build_template_angle_feat,
-                                  build_template_pair_feat, pseudo_beta_fn)
+from proteome.models.folding.openfold.openfold.model.structure_module import (
+    StructureModule,
+)
+from proteome.models.folding.openfold.openfold.model.template import (
+    TemplatePairStack,
+    TemplatePointwiseAttention,
+    embed_templates_average,
+    embed_templates_offload,
+)
+from proteome.models.folding.openfold.openfold.utils.feats import (
+    atom14_to_atom37,
+    build_extra_msa_feat,
+    build_template_angle_feat,
+    build_template_pair_feat,
+    pseudo_beta_fn,
+)
 from proteome.models.folding.openfold.openfold.utils.loss import compute_plddt
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import add, dict_multimap, tensor_tree_map
+from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+    add,
+    dict_multimap,
+    tensor_tree_map,
+)
 
 
 class AlphaFold(nn.Module):

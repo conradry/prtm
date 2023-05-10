@@ -27,8 +27,17 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 from alphafold.common import residue_constants
-from alphafold.model import (all_atom, common_modules, folding, layer_stack,
-                             lddt, mapping, prng, quat_affine, utils)
+from alphafold.model import (
+    all_atom,
+    common_modules,
+    folding,
+    layer_stack,
+    lddt,
+    mapping,
+    prng,
+    quat_affine,
+    utils,
+)
 
 
 def softmax_cross_entropy(logits, labels):

@@ -8,8 +8,12 @@ from typing import Union
 import esm
 import torch
 import torch.nn as nn
-from esm.modules import (ContactPredictionHead, ESM1bLayerNorm, RobertaLMHead,
-                         TransformerLayer)
+from esm.modules import (
+    ContactPredictionHead,
+    ESM1bLayerNorm,
+    RobertaLMHead,
+    TransformerLayer,
+)
 
 
 class ESM2(nn.Module):

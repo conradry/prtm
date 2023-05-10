@@ -7,7 +7,9 @@ import unittest
 import numpy as np
 from proteome.models.folding.openfold.openfold.config import model_config
 from proteome.models.folding.openfold.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.openfold.utils.import_weights import import_jax_weights_
+from proteome.models.folding.openfold.openfold.utils.import_weights import (
+    import_jax_weights_,
+)
 from tests.config import consts
 
 # Give JAX some GPU memory discipline

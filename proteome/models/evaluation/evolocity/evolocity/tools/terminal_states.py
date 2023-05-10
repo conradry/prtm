@@ -5,8 +5,7 @@ from .. import logging as logg
 from .. import settings
 from ..preprocessing.neighbors import get_connectivities, verify_neighbors
 from .transition_matrix import transition_matrix
-from .utils import (get_plasticity_score, groups_to_bool, scale,
-                    strings_to_categoricals)
+from .utils import get_plasticity_score, groups_to_bool, scale, strings_to_categoricals
 
 
 def eigs(T, k=10, eps=1e-3, perc=None, random_state=None, v0=None):

@@ -22,9 +22,17 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 from colabdesign.af.alphafold.common import residue_constants
-from colabdesign.af.alphafold.model import (all_atom, common_modules, folding,
-                                            layer_stack, lddt, mapping, prng,
-                                            quat_affine, utils)
+from colabdesign.af.alphafold.model import (
+    all_atom,
+    common_modules,
+    folding,
+    layer_stack,
+    lddt,
+    mapping,
+    prng,
+    quat_affine,
+    utils,
+)
 from colabdesign.af.alphafold.model.r3 import Rigids, Rots, Vecs
 
 

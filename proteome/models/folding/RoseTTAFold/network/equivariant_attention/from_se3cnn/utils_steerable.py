@@ -4,8 +4,7 @@ import os
 import numpy as np
 import torch
 from equivariant_attention.from_se3cnn.cache_file import cached_dirpklgz
-from equivariant_attention.from_se3cnn.representations import \
-    SphericalHarmonics
+from equivariant_attention.from_se3cnn.representations import SphericalHarmonics
 from equivariant_attention.from_se3cnn.SO3 import irr_repr, torch_default_dtype
 
 ################################################################################

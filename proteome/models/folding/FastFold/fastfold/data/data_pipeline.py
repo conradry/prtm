@@ -26,8 +26,14 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Union
 
 import numpy as np
 from fastfold.common import protein, residue_constants
-from fastfold.data import (feature_processing_multimer, mmcif_parsing,
-                           msa_identifiers, msa_pairing, parsers, templates)
+from fastfold.data import (
+    feature_processing_multimer,
+    mmcif_parsing,
+    msa_identifiers,
+    msa_pairing,
+    parsers,
+    templates,
+)
 from fastfold.data.parsers import Msa
 from fastfold.data.tools import hhblits, hhsearch, hmmsearch, jackhmmer
 from fastfold.data.tools.utils import to_date

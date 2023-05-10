@@ -20,16 +20,26 @@ import fastfold.habana as habana
 import torch
 import torch.nn as nn
 from fastfold.data import data_transforms_multimer
-from fastfold.model.nn.embedders import (ExtraMSAEmbedder, InputEmbedder,
-                                         RecyclingEmbedder, TemplateEmbedder)
-from fastfold.model.nn.embedders_multimer import (InputEmbedderMultimer,
-                                                  TemplateEmbedderMultimer)
+from fastfold.model.nn.embedders import (
+    ExtraMSAEmbedder,
+    InputEmbedder,
+    RecyclingEmbedder,
+    TemplateEmbedder,
+)
+from fastfold.model.nn.embedders_multimer import (
+    InputEmbedderMultimer,
+    TemplateEmbedderMultimer,
+)
 from fastfold.model.nn.evoformer import EvoformerStack, ExtraMSAStack
 from fastfold.model.nn.heads import AuxiliaryHeads
 from fastfold.model.nn.structure_module import StructureModule
-from fastfold.utils.feats import (atom14_to_atom37, build_extra_msa_feat,
-                                  build_template_angle_feat,
-                                  build_template_pair_feat, pseudo_beta_fn)
+from fastfold.utils.feats import (
+    atom14_to_atom37,
+    build_extra_msa_feat,
+    build_template_angle_feat,
+    build_template_pair_feat,
+    pseudo_beta_fn,
+)
 from fastfold.utils.tensor_utils import dict_multimap, tensor_tree_map
 
 

@@ -2,13 +2,20 @@ import torch
 import torch.nn as nn
 from fastfold.distributed.comm import col_to_row, row_to_col, scatter
 from fastfold.distributed.comm_async import gather_async, gather_async_opp
-from fastfold.model.fastnn.kernel import (LayerNorm, bias_dropout_add,
-                                          bias_ele_dropout_residual)
+from fastfold.model.fastnn.kernel import (
+    LayerNorm,
+    bias_dropout_add,
+    bias_ele_dropout_residual,
+)
 from fastfold.model.fastnn.ops import (
     AsyncChunkTriangleMultiplicationIncoming,
-    AsyncChunkTriangleMultiplicationOutgoing, ChunkTransition,
-    ChunkTriangleAttentionEndingNode, ChunkTriangleAttentionStartingNode,
-    Linear, SelfAttention)
+    AsyncChunkTriangleMultiplicationOutgoing,
+    ChunkTransition,
+    ChunkTriangleAttentionEndingNode,
+    ChunkTriangleAttentionStartingNode,
+    Linear,
+    SelfAttention,
+)
 
 
 def permute_final_dims(tensor, inds):

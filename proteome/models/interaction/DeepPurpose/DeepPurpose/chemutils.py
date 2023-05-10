@@ -3,8 +3,10 @@ from collections import defaultdict
 import rdkit
 import rdkit.Chem as Chem
 import torch
-from rdkit.Chem.EnumerateStereoisomers import (EnumerateStereoisomers,
-                                               StereoEnumerationOptions)
+from rdkit.Chem.EnumerateStereoisomers import (
+    EnumerateStereoisomers,
+    StereoEnumerationOptions,
+)
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 

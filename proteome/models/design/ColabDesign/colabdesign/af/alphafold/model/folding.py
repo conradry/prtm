@@ -23,8 +23,14 @@ import jax.numpy as jnp
 import ml_collections
 import numpy as np
 from colabdesign.af.alphafold.common import residue_constants
-from colabdesign.af.alphafold.model import (all_atom, common_modules, prng,
-                                            quat_affine, r3, utils)
+from colabdesign.af.alphafold.model import (
+    all_atom,
+    common_modules,
+    prng,
+    quat_affine,
+    r3,
+    utils,
+)
 
 
 def squared_difference(x, y):

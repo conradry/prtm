@@ -19,10 +19,8 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 from fastfold.model.fastnn.ops import Linear
-from fastfold.model.fastnn.template import (TemplatePairStack,
-                                            TemplatePointwiseAttention)
-from fastfold.utils.feats import (build_template_angle_feat,
-                                  build_template_pair_feat)
+from fastfold.model.fastnn.template import TemplatePairStack, TemplatePointwiseAttention
+from fastfold.utils.feats import build_template_angle_feat, build_template_pair_feat
 from fastfold.utils.tensor_utils import dict_multimap, one_hot, tensor_tree_map
 
 

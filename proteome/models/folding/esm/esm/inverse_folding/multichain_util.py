@@ -8,9 +8,13 @@ from typing import List, Sequence, Tuple
 import biotite.structure
 import numpy as np
 import torch
-from esm.inverse_folding.util import (extract_coords_from_structure,
-                                      get_encoder_output, get_sequence_loss,
-                                      load_coords, load_structure)
+from esm.inverse_folding.util import (
+    extract_coords_from_structure,
+    get_encoder_output,
+    get_sequence_loss,
+    load_coords,
+    load_structure,
+)
 
 
 def extract_coords_from_complex(structure: biotite.structure.AtomArray):

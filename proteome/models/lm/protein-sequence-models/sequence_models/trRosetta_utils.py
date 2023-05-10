@@ -5,8 +5,14 @@ import tarfile
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sequence_models.constants import (DIST_BINS, OMEGA_BINS, PHI_BINS,
-                                       THETA_BINS, WEIGHTS_DIR, trR_ALPHABET)
+from sequence_models.constants import (
+    DIST_BINS,
+    OMEGA_BINS,
+    PHI_BINS,
+    THETA_BINS,
+    WEIGHTS_DIR,
+    trR_ALPHABET,
+)
 
 
 def probs2value(array, property, mask2d):

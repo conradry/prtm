@@ -94,4 +94,3 @@ def score_norm(sigma):
     )
     sigma = np.round(np.clip(sigma, 0, SIGMA_N)).astype(int)
     return score_norm_[sigma]
-

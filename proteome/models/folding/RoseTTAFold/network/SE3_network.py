@@ -1,8 +1,13 @@
 import torch
 import torch.nn as nn
 from equivariant_attention.fibers import Fiber
-from equivariant_attention.modules import (GConvSE3, GNormBias, GNormSE3,
-                                           GSE3Res, get_basis_and_r)
+from equivariant_attention.modules import (
+    GConvSE3,
+    GNormBias,
+    GNormSE3,
+    GSE3Res,
+    get_basis_and_r,
+)
 
 
 class TFN(nn.Module):

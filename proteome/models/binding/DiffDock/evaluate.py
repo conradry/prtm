@@ -16,9 +16,13 @@ from tqdm import tqdm
 from utils.diffusion_utils import get_t_schedule
 from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl
 from utils.sampling import randomize_position, sampling
-from utils.utils import (ExponentialMovingAverage, get_model,
-                         get_symmetry_rmsd, read_strings_from_txt,
-                         remove_all_hs)
+from utils.utils import (
+    ExponentialMovingAverage,
+    get_model,
+    get_symmetry_rmsd,
+    read_strings_from_txt,
+    remove_all_hs,
+)
 from utils.visualise import PDBFile
 
 RDLogger.DisableLog("rdApp.*")

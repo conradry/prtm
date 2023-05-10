@@ -4,8 +4,7 @@ from typing import Dict, Tuple
 import torch
 import torch.nn as nn
 from fastfold.model.nn.primitives import LayerNorm, Linear
-from fastfold.model.nn.template import (TemplatePairStack,
-                                        TemplatePointwiseAttention)
+from fastfold.model.nn.template import TemplatePairStack, TemplatePointwiseAttention
 from fastfold.utils import all_atom_multimer, geometry
 from fastfold.utils.feats import dgram_from_positions
 from fastfold.utils.tensor_utils import dict_multimap, one_hot, tensor_tree_map

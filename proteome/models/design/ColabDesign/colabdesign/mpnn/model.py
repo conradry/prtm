@@ -8,6 +8,7 @@ import jax.numpy as jnp
 import joblib
 import numpy as np
 from colabdesign.af.alphafold.common import protein, residue_constants
+
 # borrow some stuff from AfDesign
 from colabdesign.af.prep import prep_pdb
 from colabdesign.shared.prep import prep_pos

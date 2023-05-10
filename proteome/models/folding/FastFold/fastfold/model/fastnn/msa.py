@@ -22,15 +22,21 @@ from colossalai.context.parallel_mode import ParallelMode
 from colossalai.core import global_context as gpc
 from fastfold.distributed import row_to_col, scatter
 from fastfold.distributed.comm import gather, row_to_col, scatter
-from fastfold.distributed.comm_async import (All_to_All_Async,
-                                             All_to_All_Async_Opp,
-                                             gather_async)
+from fastfold.distributed.comm_async import (
+    All_to_All_Async,
+    All_to_All_Async_Opp,
+    gather_async,
+)
 from fastfold.model.fastnn.kernel import LayerNorm, bias_dropout_add
-from fastfold.model.fastnn.ops import (ChunkMSAColumnGlobalAttention,
-                                       ChunkMSARowAttentionWithPairBias,
-                                       ChunkTransition, GlobalAttention,
-                                       OutProductMean, SelfAttention,
-                                       Transition)
+from fastfold.model.fastnn.ops import (
+    ChunkMSAColumnGlobalAttention,
+    ChunkMSARowAttentionWithPairBias,
+    ChunkTransition,
+    GlobalAttention,
+    OutProductMean,
+    SelfAttention,
+    Transition,
+)
 from fastfold.model.fastnn.triangle import PairCore
 
 

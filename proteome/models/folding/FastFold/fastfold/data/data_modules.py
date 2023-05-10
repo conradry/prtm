@@ -22,8 +22,7 @@ from typing import Any, List, Optional, Sequence
 import ml_collections as mlc
 import torch
 from colossalai.utils import is_using_ddp
-from fastfold.data import (data_pipeline, feature_pipeline, mmcif_parsing,
-                           templates)
+from fastfold.data import data_pipeline, feature_pipeline, mmcif_parsing, templates
 from fastfold.utils.tensor_utils import dict_multimap, tensor_tree_map
 
 

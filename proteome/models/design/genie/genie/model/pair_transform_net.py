@@ -1,9 +1,13 @@
 from genie.model.modules.dropout import DropoutColumnwise, DropoutRowwise
 from genie.model.modules.pair_transition import PairTransition
 from genie.model.modules.triangular_attention import (
-    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+    TriangleAttentionEndingNode,
+    TriangleAttentionStartingNode,
+)
 from genie.model.modules.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
+    TriangleMultiplicationIncoming,
+    TriangleMultiplicationOutgoing,
+)
 from torch import nn
 
 

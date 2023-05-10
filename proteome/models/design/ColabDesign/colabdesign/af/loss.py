@@ -3,8 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from colabdesign.af.alphafold.common import confidence, residue_constants
 from colabdesign.af.alphafold.model import all_atom, folding, model
-from colabdesign.shared.protein import (_np_get_6D_loss, _np_kabsch, _np_rmsd,
-                                        jnp_rmsd_w)
+from colabdesign.shared.protein import _np_get_6D_loss, _np_kabsch, _np_rmsd, jnp_rmsd_w
 from colabdesign.shared.utils import Key, copy_dict
 
 ####################################################

@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-from sequence_models.collaters import (BGCCollater, SimpleCollater,
-                                       StructureCollater)
+from sequence_models.collaters import BGCCollater, SimpleCollater, StructureCollater
 from sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET
 from sequence_models.convolutional import ByteNetLM
 from sequence_models.gnn import BidirectionalStruct2SeqDecoder

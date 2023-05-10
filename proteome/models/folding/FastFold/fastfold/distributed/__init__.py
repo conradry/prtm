@@ -1,5 +1,14 @@
-from .comm import (_gather, _reduce, _split, col_to_row, copy, gather, reduce,
-                   row_to_col, scatter)
+from .comm import (
+    _gather,
+    _reduce,
+    _split,
+    col_to_row,
+    copy,
+    gather,
+    reduce,
+    row_to_col,
+    scatter,
+)
 from .core import init_dap
 
 __all__ = [

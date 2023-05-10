@@ -3,10 +3,14 @@ import os
 import esm
 import torch
 from Bio.PDB import PDBParser
-from datasets.process_mols import (extract_receptor_structure,
-                                   generate_conformer,
-                                   get_lig_graph_with_matching, get_rec_graph,
-                                   parse_pdb_from_path, read_molecule)
+from datasets.process_mols import (
+    extract_receptor_structure,
+    generate_conformer,
+    get_lig_graph_with_matching,
+    get_rec_graph,
+    parse_pdb_from_path,
+    read_molecule,
+)
 from esm import FastaBatchedDataset, pretrained
 from rdkit.Chem import AddHs, MolFromSmiles
 from torch_geometric.data import Dataset, HeteroData

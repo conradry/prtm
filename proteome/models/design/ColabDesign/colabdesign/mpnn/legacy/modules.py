@@ -9,8 +9,7 @@ import numpy as np
 from colabdesign.shared.prng import SafeKey
 
 from .sample import mpnn_sample
-from .utils import (cat_neighbors_nodes, gather_edges, gather_nodes,
-                    get_ar_mask, scatter)
+from .utils import cat_neighbors_nodes, gather_edges, gather_nodes, get_ar_mask, scatter
 
 Gelu = functools.partial(jax.nn.gelu, approximate=False)
 

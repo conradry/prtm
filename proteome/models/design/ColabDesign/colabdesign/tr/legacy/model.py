@@ -26,8 +26,15 @@ def tr_set_mem(frac=0.5):
 
 
 import numpy as np
-from tensorflow.keras.layers import (Activation, Concatenate, Conv2D, Dense,
-                                     Input, Lambda, Layer)
+from tensorflow.keras.layers import (
+    Activation,
+    Concatenate,
+    Conv2D,
+    Dense,
+    Input,
+    Lambda,
+    Layer,
+)
 from tensorflow.keras.models import Model
 
 

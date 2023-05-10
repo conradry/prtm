@@ -5,8 +5,7 @@
 import os
 
 import pybind11
-from habana_frameworks.torch.utils.lib_utils import (get_include_dir,
-                                                     get_lib_dir)
+from habana_frameworks.torch.utils.lib_utils import get_include_dir, get_lib_dir
 from setuptools import setup
 from torch.utils import cpp_extension
 

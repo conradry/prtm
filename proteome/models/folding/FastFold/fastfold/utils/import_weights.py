@@ -20,8 +20,9 @@ from typing import List, Union
 
 import numpy as np
 import torch
-from fastfold.model.nn.triangular_multiplicative_update import \
-    is_fused_triangle_multiplication
+from fastfold.model.nn.triangular_multiplicative_update import (
+    is_fused_triangle_multiplication,
+)
 
 _NPZ_KEY_PREFIX = "alphafold/alphafold_iteration/"
 

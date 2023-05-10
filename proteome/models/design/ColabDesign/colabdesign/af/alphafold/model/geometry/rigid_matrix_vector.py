@@ -19,8 +19,11 @@ from typing import Union
 
 import jax
 import jax.numpy as jnp
-from colabdesign.af.alphafold.model.geometry import (rotation_matrix,
-                                                     struct_of_array, vector)
+from colabdesign.af.alphafold.model.geometry import (
+    rotation_matrix,
+    struct_of_array,
+    vector,
+)
 
 Float = Union[float, jnp.ndarray]
 

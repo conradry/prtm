@@ -8,8 +8,7 @@ import torch
 import torch.nn.functional as F
 from Bio.PDB import PDBParser
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
-from datasets.conformer_matching import (get_torsion_angles,
-                                         optimize_rotatable_bonds)
+from datasets.conformer_matching import get_torsion_angles, optimize_rotatable_bonds
 from rdkit import Chem
 from rdkit.Chem import AllChem, GetPeriodicTable, RemoveHs
 from rdkit.Chem.rdchem import BondType as BT

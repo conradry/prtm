@@ -142,4 +142,3 @@ def score_norm(eps):
     if device is not None:
         norm = norm.to(device)
     return norm
-

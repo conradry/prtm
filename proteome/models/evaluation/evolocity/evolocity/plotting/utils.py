@@ -457,8 +457,7 @@ def set_artist_frame(ax, length=0.2, figsize=None):
     ax.xaxis.label.set_size(ax.xaxis.label.get_size() / 1.2)
     ax.yaxis.label.set_size(ax.yaxis.label.get_size() / 1.2)
 
-    from mpl_toolkits.axes_grid1.anchored_artists import \
-        AnchoredDirectionArrows
+    from mpl_toolkits.axes_grid1.anchored_artists import AnchoredDirectionArrows
 
     kwargs = dict(loc=3, pad=-1, back_length=0, fontsize=0, aspect_ratio=aspect_ratio)
     kwargs.update({"text_props": {"ec": "k", "fc": "k", "lw": 0.1}})
