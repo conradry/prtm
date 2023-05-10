@@ -18,10 +18,10 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from openfold.model.primitives import LayerNorm, Linear
-from openfold.utils.chunk_utils import chunk_layer
-from openfold.utils.precision_utils import is_fp16_enabled
-from openfold.utils.tensor_utils import add, permute_final_dims
+from proteome.models.folding.openfold.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.folding.openfold.openfold.utils.chunk_utils import chunk_layer
+from proteome.models.folding.openfold.openfold.utils.precision_utils import is_fp16_enabled
+from proteome.models.folding.openfold.openfold.utils.tensor_utils import add, permute_final_dims
 
 
 class TriangleMultiplicativeUpdate(nn.Module):

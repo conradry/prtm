@@ -19,18 +19,18 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
-from openfold.model.pair_transition import PairTransition
-from openfold.model.primitives import Attention, LayerNorm, Linear
-from openfold.model.triangular_attention import (TriangleAttentionEndingNode,
+from proteome.models.folding.openfold.openfold.model.dropout import DropoutColumnwise, DropoutRowwise
+from proteome.models.folding.openfold.openfold.model.pair_transition import PairTransition
+from proteome.models.folding.openfold.openfold.model.primitives import Attention, LayerNorm, Linear
+from proteome.models.folding.openfold.openfold.model.triangular_attention import (TriangleAttentionEndingNode,
                                                  TriangleAttentionStartingNode)
-from openfold.model.triangular_multiplicative_update import (
+from proteome.models.folding.openfold.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
-from openfold.utils.checkpointing import checkpoint_blocks
-from openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
-from openfold.utils.feats import (build_template_angle_feat,
+from proteome.models.folding.openfold.openfold.utils.checkpointing import checkpoint_blocks
+from proteome.models.folding.openfold.openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
+from proteome.models.folding.openfold.openfold.utils.feats import (build_template_angle_feat,
                                   build_template_pair_feat)
-from openfold.utils.tensor_utils import (add, flatten_final_dims,
+from proteome.models.folding.openfold.openfold.utils.tensor_utils import (add, flatten_final_dims,
                                          permute_final_dims, tensor_tree_map)
 
 

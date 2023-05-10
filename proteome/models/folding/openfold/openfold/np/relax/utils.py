@@ -18,7 +18,7 @@ import io
 
 import numpy as np
 from Bio import PDB
-from openfold.np import residue_constants
+from proteome.models.folding.openfold.openfold.np import residue_constants
 
 try:
     # openmm >= 7.6

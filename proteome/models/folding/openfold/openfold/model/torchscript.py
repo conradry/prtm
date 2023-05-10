@@ -16,19 +16,19 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
-from openfold.model.evoformer import EvoformerBlock, EvoformerStack
-from openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
+from proteome.models.folding.openfold.openfold.model.dropout import DropoutColumnwise, DropoutRowwise
+from proteome.models.folding.openfold.openfold.model.evoformer import EvoformerBlock, EvoformerStack
+from proteome.models.folding.openfold.openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
                                 MSARowAttentionWithPairBias)
-from openfold.model.outer_product_mean import OuterProductMean
-from openfold.model.pair_transition import PairTransition
-from openfold.model.primitives import Attention, GlobalAttention
-from openfold.model.structure_module import (BackboneUpdate,
+from proteome.models.folding.openfold.openfold.model.outer_product_mean import OuterProductMean
+from proteome.models.folding.openfold.openfold.model.pair_transition import PairTransition
+from proteome.models.folding.openfold.openfold.model.primitives import Attention, GlobalAttention
+from proteome.models.folding.openfold.openfold.model.structure_module import (BackboneUpdate,
                                              InvariantPointAttention)
-from openfold.model.template import TemplatePairStackBlock
-from openfold.model.triangular_attention import (TriangleAttentionEndingNode,
+from proteome.models.folding.openfold.openfold.model.template import TemplatePairStackBlock
+from proteome.models.folding.openfold.openfold.model.triangular_attention import (TriangleAttentionEndingNode,
                                                  TriangleAttentionStartingNode)
-from openfold.model.triangular_multiplicative_update import (
+from proteome.models.folding.openfold.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 
 

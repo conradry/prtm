@@ -21,10 +21,10 @@ from typing import Collection, Optional, Sequence
 
 import ml_collections
 import numpy as np
-import openfold.utils.loss as loss
+import proteome.models.folding.openfold.openfold.utils.loss as loss
 from absl import logging
-from openfold.np import protein, residue_constants
-from openfold.np.relax import cleanup, utils
+from proteome.models.folding.openfold.openfold.np import protein, residue_constants
+from proteome.models.folding.openfold.openfold.np.relax import cleanup, utils
 
 try:
     # openmm >= 7.6

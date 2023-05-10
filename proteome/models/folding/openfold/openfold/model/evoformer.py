@@ -19,20 +19,20 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
-from openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
+from proteome.models.folding.openfold.openfold.model.dropout import DropoutColumnwise, DropoutRowwise
+from proteome.models.folding.openfold.openfold.model.msa import (MSAColumnAttention, MSAColumnGlobalAttention,
                                 MSARowAttentionWithPairBias)
-from openfold.model.outer_product_mean import OuterProductMean
-from openfold.model.pair_transition import PairTransition
-from openfold.model.primitives import LayerNorm, Linear
-from openfold.model.triangular_attention import (TriangleAttention,
+from proteome.models.folding.openfold.openfold.model.outer_product_mean import OuterProductMean
+from proteome.models.folding.openfold.openfold.model.pair_transition import PairTransition
+from proteome.models.folding.openfold.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.folding.openfold.openfold.model.triangular_attention import (TriangleAttention,
                                                  TriangleAttentionEndingNode,
                                                  TriangleAttentionStartingNode)
-from openfold.model.triangular_multiplicative_update import (
+from proteome.models.folding.openfold.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
-from openfold.utils.checkpointing import checkpoint_blocks, get_checkpoint_fn
-from openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
-from openfold.utils.tensor_utils import add
+from proteome.models.folding.openfold.openfold.utils.checkpointing import checkpoint_blocks, get_checkpoint_fn
+from proteome.models.folding.openfold.openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
+from proteome.models.folding.openfold.openfold.utils.tensor_utils import add
 
 
 class MSATransition(nn.Module):

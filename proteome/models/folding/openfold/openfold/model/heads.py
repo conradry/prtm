@@ -15,10 +15,10 @@
 
 import torch
 import torch.nn as nn
-from openfold.model.primitives import LayerNorm, Linear
-from openfold.utils.loss import (compute_plddt,
+from proteome.models.folding.openfold.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.folding.openfold.openfold.utils.loss import (compute_plddt,
                                  compute_predicted_aligned_error, compute_tm)
-from openfold.utils.precision_utils import is_fp16_enabled
+from proteome.models.folding.openfold.openfold.utils.precision_utils import is_fp16_enabled
 
 
 class AuxiliaryHeads(nn.Module):

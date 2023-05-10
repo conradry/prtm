@@ -18,9 +18,9 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from openfold.model.primitives import Linear
-from openfold.utils.chunk_utils import chunk_layer
-from openfold.utils.precision_utils import is_fp16_enabled
+from proteome.models.folding.openfold.openfold.model.primitives import Linear
+from proteome.models.folding.openfold.openfold.utils.chunk_utils import chunk_layer
+from proteome.models.folding.openfold.openfold.utils.precision_utils import is_fp16_enabled
 
 
 class OuterProductMean(nn.Module):
