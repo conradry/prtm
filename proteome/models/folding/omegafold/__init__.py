@@ -20,8 +20,8 @@
 # =============================================================================
 # Imports
 # =============================================================================
-from omegafold.config import make_config
-from omegafold.model import OmegaFold
+from proteome.models.folding.omegafold.config import make_config
+from proteome.models.folding.omegafold.model import OmegaFold
 
 # =============================================================================
 # Constants

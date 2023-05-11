@@ -24,9 +24,10 @@ import argparse
 import typing
 
 import torch
-from omegafold import (confidence, decode, embedders, geoformer, modules,
-                       omegaplm, utils)
-from omegafold.utils import residue_constants as rc
+from proteome.models.folding.omegafold import (confidence, decode, embedders,
+                                               geoformer, modules, omegaplm,
+                                               utils)
+from proteome.models.folding.omegafold.utils import residue_constants as rc
 from torch import nn
 
 # =============================================================================

@@ -24,8 +24,8 @@ import argparse
 import typing
 
 import torch
-from omegafold import modules, utils
-from omegafold.utils import residue_constants as rc
+from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold.utils import residue_constants as rc
 from torch import nn
 
 

@@ -26,7 +26,7 @@ import os
 import sys
 import time
 
-import omegafold as of
+import proteome.models.folding.omegafold as of
 import torch
 
 from . import pipeline

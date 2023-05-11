@@ -29,8 +29,10 @@ https://github.com/deepmind/alphafold/blob/main/alphafold/model/all_atom.py
 from typing import List, Tuple, Union
 
 import torch
-from omegafold.utils.protein_utils import functions as f
-from omegafold.utils.protein_utils import residue_constants as rc
+from proteome.models.folding.omegafold.utils.protein_utils import \
+    functions as f
+from proteome.models.folding.omegafold.utils.protein_utils import \
+    residue_constants as rc
 from torch.nn import functional as F
 
 # =============================================================================

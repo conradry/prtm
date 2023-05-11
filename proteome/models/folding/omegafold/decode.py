@@ -25,7 +25,7 @@ import math
 import typing
 
 import torch
-from omegafold import modules, utils
+from proteome.models.folding.omegafold import modules, utils
 from torch import nn
 
 # =============================================================================

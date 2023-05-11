@@ -23,14 +23,16 @@
 from typing import Dict, Union
 
 import torch
-from omegafold.utils.protein_utils import residue_constants
-from omegafold.utils.protein_utils.aaframe import AAFrame
-from omegafold.utils.protein_utils.functions import (bit_wise_not,
-                                                     create_pseudo_beta,
-                                                     get_norm,
-                                                     robust_normalize)
-from omegafold.utils.torch_utils import (mask2bias, masked_mean, normalize,
-                                         recursive_to)
+from proteome.models.folding.omegafold.utils.protein_utils import \
+    residue_constants
+from proteome.models.folding.omegafold.utils.protein_utils.aaframe import \
+    AAFrame
+from proteome.models.folding.omegafold.utils.protein_utils.functions import (
+    bit_wise_not, create_pseudo_beta, get_norm, robust_normalize)
+from proteome.models.folding.omegafold.utils.torch_utils import (mask2bias,
+                                                                 masked_mean,
+                                                                 normalize,
+                                                                 recursive_to)
 
 # =============================================================================
 # Constants

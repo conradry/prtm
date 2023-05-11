@@ -34,8 +34,9 @@ import typing
 import torch
 from Bio import PDB as PDB
 from Bio.PDB import StructureBuilder
-from omegafold import utils
-from omegafold.utils.protein_utils import residue_constants as rc
+from proteome.models.folding.omegafold import utils
+from proteome.models.folding.omegafold.utils.protein_utils import \
+    residue_constants as rc
 from torch import hub
 from torch.backends import cuda, cudnn
 from torch.utils.hipify import hipify_python
