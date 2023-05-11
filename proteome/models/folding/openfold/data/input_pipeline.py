@@ -16,7 +16,7 @@
 from functools import partial
 
 import torch
-from proteome.models.folding.openfold.openfold.data import data_transforms
+from proteome.models.folding.openfold.data import data_transforms
 
 
 def nonensembled_transform_fns(common_cfg, mode_cfg):

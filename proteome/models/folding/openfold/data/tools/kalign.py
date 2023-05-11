@@ -19,7 +19,7 @@ import subprocess
 from typing import Sequence
 
 from absl import logging
-from proteome.models.folding.openfold.openfold.data.tools import utils
+from proteome.models.folding.openfold.data.tools import utils
 
 
 def _to_a3m(sequences: Sequence[str]) -> str:

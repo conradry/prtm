@@ -20,7 +20,7 @@ import os
 import subprocess
 from typing import Sequence
 
-from proteome.models.folding.openfold.openfold.data.tools import utils
+from proteome.models.folding.openfold.data.tools import utils
 
 
 class HHSearch:

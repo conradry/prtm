@@ -17,12 +17,12 @@ import math
 from typing import Dict
 
 import numpy as np
-import proteome.models.folding.openfold.openfold.np.residue_constants as rc
+import proteome.models.folding.openfold.np.residue_constants as rc
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.np import protein
-from proteome.models.folding.openfold.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+from proteome.models.folding.openfold.np import protein
+from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.folding.openfold.utils.tensor_utils import (
     batched_gather,
     one_hot,
     tensor_tree_map,

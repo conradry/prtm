@@ -19,21 +19,21 @@ from multiprocessing import cpu_count
 from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
-from proteome.models.folding.openfold.openfold.data import (
+from proteome.models.folding.openfold.data import (
     mmcif_parsing,
     parsers,
     templates,
 )
-from proteome.models.folding.openfold.openfold.data.templates import (
+from proteome.models.folding.openfold.data.templates import (
     get_custom_template_features,
 )
-from proteome.models.folding.openfold.openfold.data.tools import (
+from proteome.models.folding.openfold.data.tools import (
     hhblits,
     hhsearch,
     jackhmmer,
 )
-from proteome.models.folding.openfold.openfold.data.tools.utils import to_date
-from proteome.models.folding.openfold.openfold.np import protein, residue_constants
+from proteome.models.folding.openfold.data.tools.utils import to_date
+from proteome.models.folding.openfold.np import protein, residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 

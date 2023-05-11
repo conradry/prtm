@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import tensor_tree_map
+from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
 
 
 class ExponentialMovingAverage:

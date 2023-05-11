@@ -19,40 +19,40 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.model.dropout import (
+from proteome.models.folding.openfold.model.dropout import (
     DropoutColumnwise,
     DropoutRowwise,
 )
-from proteome.models.folding.openfold.openfold.model.msa import (
+from proteome.models.folding.openfold.model.msa import (
     MSAColumnAttention,
     MSAColumnGlobalAttention,
     MSARowAttentionWithPairBias,
 )
-from proteome.models.folding.openfold.openfold.model.outer_product_mean import (
+from proteome.models.folding.openfold.model.outer_product_mean import (
     OuterProductMean,
 )
-from proteome.models.folding.openfold.openfold.model.pair_transition import (
+from proteome.models.folding.openfold.model.pair_transition import (
     PairTransition,
 )
-from proteome.models.folding.openfold.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.folding.openfold.openfold.model.triangular_attention import (
+from proteome.models.folding.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.folding.openfold.model.triangular_attention import (
     TriangleAttention,
     TriangleAttentionEndingNode,
     TriangleAttentionStartingNode,
 )
-from proteome.models.folding.openfold.openfold.model.triangular_multiplicative_update import (
+from proteome.models.folding.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming,
     TriangleMultiplicationOutgoing,
 )
-from proteome.models.folding.openfold.openfold.utils.checkpointing import (
+from proteome.models.folding.openfold.utils.checkpointing import (
     checkpoint_blocks,
     get_checkpoint_fn,
 )
-from proteome.models.folding.openfold.openfold.utils.chunk_utils import (
+from proteome.models.folding.openfold.utils.chunk_utils import (
     ChunkSizeTuner,
     chunk_layer,
 )
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import add
+from proteome.models.folding.openfold.utils.tensor_utils import add
 
 
 class MSATransition(nn.Module):

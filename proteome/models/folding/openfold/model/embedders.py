@@ -17,8 +17,8 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import add, one_hot
+from proteome.models.folding.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.folding.openfold.utils.tensor_utils import add, one_hot
 
 
 class InputEmbedder(nn.Module):

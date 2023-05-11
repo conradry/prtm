@@ -6,10 +6,10 @@ import time
 
 import numpy
 import torch
-from proteome.models.folding.openfold.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.openfold.np import protein, residue_constants
-from proteome.models.folding.openfold.openfold.np.relax import relax
-from proteome.models.folding.openfold.openfold.utils.import_weights import (
+from proteome.models.folding.openfold.model.model import AlphaFold
+from proteome.models.folding.openfold.np import protein, residue_constants
+from proteome.models.folding.openfold.np.relax import relax
+from proteome.models.folding.openfold.utils.import_weights import (
     import_jax_weights_,
 )
 from pytorch_lightning.utilities.deepspeed import (

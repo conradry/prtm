@@ -29,7 +29,7 @@ import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
 from Bio.PDB import PDBParser
-from proteome.models.folding.openfold.openfold.np import residue_constants
+from proteome.models.folding.openfold.np import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.

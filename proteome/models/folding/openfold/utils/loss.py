@@ -21,10 +21,10 @@ import ml_collections
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.np import residue_constants
-from proteome.models.folding.openfold.openfold.utils import feats
-from proteome.models.folding.openfold.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+from proteome.models.folding.openfold.np import residue_constants
+from proteome.models.folding.openfold.utils import feats
+from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.folding.openfold.utils.tensor_utils import (
     batched_gather,
     masked_mean,
     permute_final_dims,

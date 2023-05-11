@@ -19,15 +19,15 @@ from operator import add
 
 import numpy as np
 import torch
-from proteome.models.folding.openfold.openfold.config import (
+from proteome.models.folding.openfold.config import (
     NUM_EXTRA_SEQ,
     NUM_MSA_SEQ,
     NUM_RES,
     NUM_TEMPLATES,
 )
-from proteome.models.folding.openfold.openfold.np import residue_constants as rc
-from proteome.models.folding.openfold.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+from proteome.models.folding.openfold.np import residue_constants as rc
+from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.folding.openfold.utils.tensor_utils import (
     batched_gather,
     tensor_tree_map,
     tree_map,

@@ -15,39 +15,39 @@
 import weakref
 from functools import partial
 
-import proteome.models.folding.openfold.openfold.np.residue_constants as residue_constants
+import proteome.models.folding.openfold.np.residue_constants as residue_constants
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.openfold.model.embedders import (
+from proteome.models.folding.openfold.model.embedders import (
     ExtraMSAEmbedder,
     InputEmbedder,
     RecyclingEmbedder,
     TemplateAngleEmbedder,
     TemplatePairEmbedder,
 )
-from proteome.models.folding.openfold.openfold.model.evoformer import (
+from proteome.models.folding.openfold.model.evoformer import (
     EvoformerStack,
     ExtraMSAStack,
 )
-from proteome.models.folding.openfold.openfold.model.heads import AuxiliaryHeads
-from proteome.models.folding.openfold.openfold.model.structure_module import (
+from proteome.models.folding.openfold.model.heads import AuxiliaryHeads
+from proteome.models.folding.openfold.model.structure_module import (
     StructureModule,
 )
-from proteome.models.folding.openfold.openfold.model.template import (
+from proteome.models.folding.openfold.model.template import (
     TemplatePairStack,
     TemplatePointwiseAttention,
     embed_templates_average,
     embed_templates_offload,
 )
-from proteome.models.folding.openfold.openfold.utils.feats import (
+from proteome.models.folding.openfold.utils.feats import (
     atom14_to_atom37,
     build_extra_msa_feat,
     build_template_angle_feat,
     build_template_pair_feat,
     pseudo_beta_fn,
 )
-from proteome.models.folding.openfold.openfold.utils.loss import compute_plddt
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+from proteome.models.folding.openfold.utils.loss import compute_plddt
+from proteome.models.folding.openfold.utils.tensor_utils import (
     add,
     dict_multimap,
     tensor_tree_map,
@@ -249,7 +249,6 @@ class AlphaFold(nn.Module):
 
         # m: [*, S_c, N, C_m]
         # z: [*, N, N, C_z]
-        print("target feat shape", feats["target_feat"].shape)
         m, z = self.input_embedder(
             feats["target_feat"],
             feats["residue_index"],
@@ -500,7 +499,6 @@ class AlphaFold(nn.Module):
         # Main recycling loop
         num_iters = batch["aatype"].shape[-1]
         for cycle_no in range(num_iters):
-            print("Runing cycle", cycle_no, "of", num_iters, "recycling iterations")
             # Select the features for the current recycling cycle
             fetch_cur_batch = lambda t: t[..., cycle_no]
             feats = tensor_tree_map(fetch_cur_batch, batch)

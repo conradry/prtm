@@ -10,13 +10,13 @@ import ml_collections as mlc
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from proteome.models.folding.openfold.openfold.data import (
+from proteome.models.folding.openfold.data import (
     data_pipeline,
     feature_pipeline,
     mmcif_parsing,
     templates,
 )
-from proteome.models.folding.openfold.openfold.utils.tensor_utils import (
+from proteome.models.folding.openfold.utils.tensor_utils import (
     dict_multimap,
     tensor_tree_map,
 )
