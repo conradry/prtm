@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.functional import normalize
 
-from .network import GRUResNet
+from proteome.models.folding.dmpfold2.network import GRUResNet
 
 default_device = "cpu"
 default_iterations = 10
