@@ -3,7 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Transformer import AxialEncoderLayer, Encoder, EncoderLayer, LayerNorm
+from transformer import AxialEncoderLayer, Encoder, EncoderLayer, LayerNorm
 
 # Initial embeddings for target sequence, msa, template info
 # positional encoding
@@ -14,7 +14,7 @@ from Transformer import AxialEncoderLayer, Encoder, EncoderLayer, LayerNorm
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, p_drop=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
-        self.drop = nn.Dropout(p_drop, inplace=True)
+        self.drop = nn.Dropout(p_drop)
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len).unsqueeze(1)

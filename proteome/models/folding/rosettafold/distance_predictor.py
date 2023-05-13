@@ -1,19 +1,28 @@
 import torch
 import torch.nn as nn
 from resnet import ResidualNetwork
-from Transformer import LayerNorm
+from transformer import LayerNorm
 
 # predict distance map from pair features
 # based on simple 2D ResNet
 
 
 class DistanceNetwork(nn.Module):
-    def __init__(self, n_feat, n_block=1, block_type="orig", p_drop=0.0):
+    def __init__(
+            self, 
+            n_feat, 
+            n_block=1, 
+            block_type="orig", 
+            p_drop=0.0,
+            proj_in = False,
+        ):
         super(DistanceNetwork, self).__init__()
-        self.norm = LayerNorm(n_feat)
-        self.proj = nn.Linear(n_feat, n_feat)
-        self.drop = nn.Dropout(p_drop)
-        #
+        if proj_in:
+            self.norm = LayerNorm(n_feat)
+            self.proj = nn.Linear(n_feat, n_feat)
+            self.drop = nn.Dropout(p_drop)
+        self.proj_in = proj_in
+
         self.resnet_dist = ResidualNetwork(
             n_block, n_feat, n_feat, 37, block_type=block_type, p_drop=p_drop
         )
@@ -29,9 +38,10 @@ class DistanceNetwork(nn.Module):
 
     def forward(self, x):
         # input: pair info (B, L, L, C)
-        x = self.norm(x)
-        x = self.drop(self.proj(x))
-        x = x.permute(0, 3, 1, 2).contiguous()
+        if self.proj_in:
+            x = self.norm(x)
+            x = self.drop(self.proj(x))
+            x = x.permute(0, 3, 1, 2).contiguous()
 
         # predict theta, phi (non-symmetric)
         logits_theta = self.resnet_theta(x)
