@@ -7,7 +7,11 @@ from esm.modules import (
     LearnedPositionalEmbedding,
     TransformerLayer,
 )
-from proteome.models.lm.protein_sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET
+from proteome.models.lm.protein_sequence_models.constants import (
+    MASK,
+    PAD,
+    PROTEIN_ALPHABET,
+)
 from torch.utils.checkpoint import checkpoint
 
 

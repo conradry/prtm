@@ -1,9 +1,19 @@
 import torch
 import torch.nn as nn
-from proteome.models.lm.protein_sequence_models.collaters import BGCCollater, SimpleCollater, StructureCollater
-from proteome.models.lm.protein_sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET
+from proteome.models.lm.protein_sequence_models.collaters import (
+    BGCCollater,
+    SimpleCollater,
+    StructureCollater,
+)
+from proteome.models.lm.protein_sequence_models.constants import (
+    MASK,
+    PAD,
+    PROTEIN_ALPHABET,
+)
 from proteome.models.lm.protein_sequence_models.convolutional import ByteNetLM
-from proteome.models.lm.protein_sequence_models.gnn import BidirectionalStruct2SeqDecoder
+from proteome.models.lm.protein_sequence_models.gnn import (
+    BidirectionalStruct2SeqDecoder,
+)
 
 CARP_URL = "https://zenodo.org/record/6564798/files/"
 MIF_URL = "https://zenodo.org/record/6573779/files/"
