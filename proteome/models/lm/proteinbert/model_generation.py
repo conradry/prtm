@@ -4,8 +4,8 @@ from numbers import Number
 import numpy as np
 from tensorflow import keras
 
-from .shared_utils.util import log
-from .tokenization import additional_token_to_index, n_tokens, tokenize_seq
+from proteome.models.lm.proteinbert.shared_utils.util import log
+from proteome.models.lm.proteinbert.tokenization import additional_token_to_index, n_tokens, tokenize_seq
 
 
 class ModelGenerator:

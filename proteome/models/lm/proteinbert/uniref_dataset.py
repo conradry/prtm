@@ -10,7 +10,7 @@ import pandas as pd
 from lxml import etree
 from pyfaidx import Faidx
 
-from .shared_utils.util import log, to_chunks
+from proteome.models.lm.proteinbert.shared_utils.util import log, to_chunks
 
 
 class UnirefToSqliteParser:

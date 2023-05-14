@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from .shared_utils.util import log
-from .tokenization import ADDED_TOKENS_PER_SEQ
+from proteome.models.lm.proteinbert.shared_utils.util import log
+from proteome.models.lm.proteinbert.tokenization import ADDED_TOKENS_PER_SEQ
 
 
 class OutputType:
