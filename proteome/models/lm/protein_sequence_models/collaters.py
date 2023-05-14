@@ -21,7 +21,7 @@ from proteome.models.lm.protein_sequence_models.gnn import (
     get_node_features,
     replace_nan,
 )
-from proteome.models.lm.protein_sequence_models.trRosetta_utils import trRosettaPreprocessing
+from proteome.models.lm.protein_sequence_models.trrosetta_utils import trRosettaPreprocessing
 from proteome.models.lm.protein_sequence_models.utils import Tokenizer
 
 
