@@ -1,0 +1,40 @@
+description: CATH canonical angles with zero centering and increased timesteps, shortened sequence length
+
+target:
+  service: sing  # Target service platform
+  name: msrresrchvc  # reference to cluster and its corresponding fields
+  workspace_name: msrresrchws  # AML workspace name to use
+
+environment: # https://singularitydocs.azurewebsites.net/docs/container_images/
+  image: amlt-sing/pytorch-1.11.0
+  # core packages
+  # numpy - included
+  # pandas - included
+  # tqdm - included
+  # matplotlib - included
+  # seaborn - installed here
+  # mpl-scatter-density - installed here
+  # astropy - installed here
+  # pytorch - included
+  # pytorch lightning - installed here 
+  # transformers - installed here
+  setup:
+    - pip install seaborn  # https://seaborn.pydata.org/installing.html
+    - pip install mpl-scatter-density  # https://github.com/astrofrog/mpl-scatter-density
+    - pip install astropy  # https://docs.astropy.org/en/stable/install.html
+    - pip install transformers==4.11.3  # https://huggingface.co/docs/transformers/installation
+    - pip install pytorch-lightning==1.6.4  # https://www.pytorchlightning.ai/
+    - pip install sequence-models  # https://github.com/microsoft/protein-sequence-models
+    - pip install biotite==0.34
+
+code:
+  local_dir: $CONFIG_DIR/..  # elative to config file directory
+
+jobs:
+- name: cath_canonical_angles_linear_warmup_zero_centered_500_steps_short_seq  # Unique name for each job
+  sku: 16G2-V100 # 16G4-V100 = 16GB memory with 4 V100s. For more run amlt target list singularity -v
+  priority: high
+  sla_tier: premium
+  command:
+  - tar -xzf data/cath/cath-dataset-nonredundant-S40.pdb.tgz -C data/cath
+  - python bin/train.py config_jsons/full_run_canonical_angles_only_zero_centered_1000_timesteps_reduced_len.json -o $$AMLT_OUTPUT_DIR/results --dryrun  
