@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import torch
 from scipy.spatial.distance import cdist, hamming, pdist, squareform
-from sequence_models.constants import (
+from proteome.models.lm.protein_sequence_models.constants import (
     DIST_BINS,
     OMEGA_BINS,
     PAD,
@@ -22,9 +22,9 @@ from sequence_models.constants import (
     THETA_BINS,
     trR_ALPHABET,
 )
-from sequence_models.gnn import bins_to_vals
-from sequence_models.pdb_utils import process_coords
-from sequence_models.utils import Tokenizer, parse_fasta
+from proteome.models.lm.protein_sequence_models.gnn import bins_to_vals
+from proteome.models.lm.protein_sequence_models.pdb_utils import process_coords
+from proteome.models.lm.protein_sequence_models.utils import Tokenizer, parse_fasta
 from torch.utils.data import Dataset
 
 

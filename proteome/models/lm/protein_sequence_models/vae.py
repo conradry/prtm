@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from apex import amp
-from sequence_models.layers import FCStack
-from sequence_models.losses import VAELoss
-from sequence_models.metrics import UngappedAccuracy
+from proteome.models.lm.protein_sequence_models.layers import FCStack
+from proteome.models.lm.protein_sequence_models.losses import VAELoss
+from proteome.models.lm.protein_sequence_models.metrics import UngappedAccuracy
 from torch import nn as nn
 
 

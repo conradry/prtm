@@ -5,9 +5,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sequence_models.constants import DIST_BINS, OMEGA_BINS, PHI_BINS, THETA_BINS
-from sequence_models.layers import PositionalEncoding
-from sequence_models.structure import Attention1d
+from proteome.models.lm.protein_sequence_models.constants import DIST_BINS, OMEGA_BINS, PHI_BINS, THETA_BINS
+from proteome.models.lm.protein_sequence_models.layers import PositionalEncoding
+from proteome.models.lm.protein_sequence_models.structure import Attention1d
 
 ######################## UTILS FROM ORIGINAL PAPER ########################
 

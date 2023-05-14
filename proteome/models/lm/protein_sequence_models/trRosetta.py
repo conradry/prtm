@@ -4,9 +4,9 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sequence_models.constants import WEIGHTS_DIR
-from sequence_models.layers import MaskedInstanceNorm2d
-from sequence_models.trRosetta_utils import *
+from proteome.models.lm.protein_sequence_models.constants import WEIGHTS_DIR
+from proteome.models.lm.protein_sequence_models.layers import MaskedInstanceNorm2d
+from proteome.models.lm.protein_sequence_models.trRosetta_utils import *
 
 
 def pad_size(d, k, s):

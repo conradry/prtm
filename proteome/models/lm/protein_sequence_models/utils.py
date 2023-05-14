@@ -3,7 +3,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
-from sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET, START, STOP
+from proteome.models.lm.protein_sequence_models.constants import MASK, PAD, PROTEIN_ALPHABET, START, STOP
 
 
 def warmup(n_warmup_steps):
