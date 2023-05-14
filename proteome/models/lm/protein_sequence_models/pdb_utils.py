@@ -3,7 +3,7 @@ import gzip
 import numpy as np
 import scipy
 from scipy.spatial.distance import pdist, squareform
-from sequence_models.constants import IUPAC_CODES
+from proteome.models.lm.protein_sequence_models.constants import IUPAC_CODES
 
 
 def get_dihedrals(a, b, c, d):

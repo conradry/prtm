@@ -5,7 +5,7 @@ import tarfile
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sequence_models.constants import (
+from proteome.models.lm.protein_sequence_models.constants import (
     DIST_BINS,
     OMEGA_BINS,
     PHI_BINS,

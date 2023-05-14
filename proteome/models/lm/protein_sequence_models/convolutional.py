@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sequence_models.layers import (
+from proteome.models.lm.protein_sequence_models.layers import (
     DoubleEmbedding,
     PositionFeedForward,
     PositionFeedForward2d,

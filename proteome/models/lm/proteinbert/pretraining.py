@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 
-from .model_generation import PretrainingModelGenerator
-from .shared_utils.util import log
-from .tokenization import (
+from proteome.models.lm.proteinbert.model_generation import PretrainingModelGenerator
+from proteome.models.lm.proteinbert.shared_utils.util import log
+from proteome.models.lm.proteinbert.tokenization import (
     ADDED_TOKENS_PER_SEQ,
     additional_token_to_index,
     n_tokens,

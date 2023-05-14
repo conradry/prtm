@@ -5,8 +5,8 @@ from urllib.request import urlopen
 
 from tensorflow import keras
 
-from . import conv_and_global_attention_model
-from .model_generation import load_pretrained_model_from_dump
+from proteome.models.lm.proteinbert import conv_and_global_attention_model
+from proteome.models.lm.proteinbert.model_generation import load_pretrained_model_from_dump
 
 DEFAULT_LOCAL_MODEL_DUMP_DIR = "~/proteinbert_models"
 DEFAULT_LOCAL_MODEL_DUMP_FILE_NAME = "default.pkl"

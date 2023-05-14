@@ -4,7 +4,7 @@ from typing import Any, Iterable, List
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sequence_models.constants import (
+from proteome.models.lm.protein_sequence_models.constants import (
     ALL_AAS,
     GAP,
     MASK,
@@ -14,15 +14,17 @@ from sequence_models.constants import (
     START,
     STOP,
 )
-from sequence_models.gnn import (
+from proteome.models.lm.protein_sequence_models.gnn import (
     get_edge_features,
     get_k_neighbors,
     get_mask,
     get_node_features,
     replace_nan,
 )
-from sequence_models.trRosetta_utils import trRosettaPreprocessing
-from sequence_models.utils import Tokenizer
+from proteome.models.lm.protein_sequence_models.trrosetta_utils import (
+    trRosettaPreprocessing,
+)
+from proteome.models.lm.protein_sequence_models.utils import Tokenizer
 
 
 def _pad(tokenized: List[torch.Tensor], value: int) -> torch.Tensor:
@@ -652,7 +654,7 @@ class MSAAbsorbingCollater(object):
         alphabet: str,
             protein alphabet to use
         pad_token: str,
-            pad_token to use to pad MSAs, default is PAD token from sequence_models.constants
+            pad_token to use to pad MSAs, default is PAD token from proteome.models.lm.protein_sequence_models.constants
         num_seqs: int,
             number of sequences to include in each MSA
 

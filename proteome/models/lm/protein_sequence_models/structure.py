@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from sequence_models.convolutional import (
+from proteome.models.lm.protein_sequence_models.convolutional import (
     ByteNet,
     ByteNet2d,
     ConditionedByteNetDecoder,
     MaskedConv1d,
     MaskedConv2d,
 )
-from sequence_models.layers import PositionFeedForward
+from proteome.models.lm.protein_sequence_models.layers import PositionFeedForward
 from torch.utils.checkpoint import checkpoint
 
 
