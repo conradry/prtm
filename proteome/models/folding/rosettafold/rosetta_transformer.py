@@ -4,7 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from performer_pytorch import SelfAttention
+from proteome.models.folding.rosettafold.performer_pytorch import SelfAttention
 
 
 def _get_clones(module, N):
@@ -357,10 +357,9 @@ class EncoderLayer(nn.Module):
     ):
         super(EncoderLayer, self).__init__()
         assert not is_2track and use_tied
-        self.use_performer = performer_opts is not None
         self.use_tied = use_tied
         # multihead attention
-        if self.use_performer:
+        if performer_opts is not None:
             self.attn = SelfAttention(
                 dim=d_model,
                 heads=heads,
@@ -403,6 +402,7 @@ class EncoderLayer(nn.Module):
             src2, att = self.attn(src2, src2, src2, return_att=return_att)
         else:
             src2 = self.attn(src2, src2, src2)
+            att = None
 
         src2 = src2.reshape(B, N, L, -1)
         src = src + self.dropout1(src2)
@@ -435,7 +435,6 @@ class AxialEncoderLayer(nn.Module):
         use_soft_row=False,
     ):
         super(AxialEncoderLayer, self).__init__()
-        self.use_performer = performer_opts is not None
         self.use_tied_row = use_tied_row
         self.use_tied_col = use_tied_col
         self.use_soft_row = use_soft_row
@@ -445,7 +444,7 @@ class AxialEncoderLayer(nn.Module):
         elif use_soft_row:
             self.attn_L = SoftTiedMultiheadAttention(d_model, heads, dropout=p_drop)
         else:
-            if self.use_performer:
+            if performer_opts is not None:
                 self.attn_L = SelfAttention(
                     dim=d_model,
                     heads=heads,
@@ -458,7 +457,7 @@ class AxialEncoderLayer(nn.Module):
         if use_tied_col:
             self.attn_N = TiedMultiheadAttention(d_model, heads, dropout=p_drop)
         else:
-            if self.use_performer:
+            if performer_opts is not None:
                 self.attn_N = SelfAttention(
                     dim=d_model,
                     heads=heads,
@@ -528,10 +527,9 @@ class Encoder(nn.Module):
 class CrossEncoderLayer(nn.Module):
     def __init__(self, d_model, d_ff, heads, d_k, d_v, performer_opts=None, p_drop=0.1):
         super(CrossEncoderLayer, self).__init__()
-        self.use_performer = performer_opts is not None
 
         # multihead attention
-        if self.use_performer:
+        if performer_opts is not None:
             self.attn = SelfAttention(
                 dim=d_model,
                 k_dim=d_k,
@@ -623,60 +621,6 @@ class CrossEncoder(nn.Module):
         for layer in self.layers:
             output = layer(src, output)
         return output
-    
-
-class InterEncoderLayer(nn.Module):
-    def __init__(self, d_model, d_ff, heads, d_k, d_v, p_drop=0.1):
-        super(InterEncoderLayer, self).__init__()
-        # multihead attention
-        self.attn = MultiheadAttention(
-            d_model, heads, k_dim=d_k, v_dim=d_v, dropout=p_drop
-        )
-        # feedforward
-        self.linear1 = nn.Linear(d_model, d_ff)
-        self.dropout = nn.Dropout(p_drop)
-        self.linear2 = nn.Linear(d_ff, d_model)
-
-        # normalization module
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout1 = nn.Dropout(p_drop)
-        self.dropout2 = nn.Dropout(p_drop)
-
-    def forward(self, src, tgt):
-        # Input:
-        #   For MSA to Pair: src (N, L, K), tgt (L, L, C)
-        #   For Pair to MSA: src (L, L, C), tgt (N, L, K)
-        # Input shape for multihead attention: (SRCLEN, BATCH, EMB)
-        # multihead attention
-        # pre-normalization
-        tgt2 = self.norm1(tgt)
-        tgt2 = self.attn(
-            tgt2, src, src
-        )  # projection to query, key, value are done in MultiheadAttention module
-        tgt = tgt + self.dropout1(tgt2)
-
-        G  # feed-forward
-        tgt2 = self.norm2(tgt)
-        tgt2 = self.linear2(self.dropout(F.relu_(self.linear1(tgt2))))
-        tgt = tgt + self.dropout2(tgt2)
-        tgt = self.norm2(tgt)
-        return tgt
-
-
-class InterEncoder(nn.Module):
-    def __init__(self, enc_layer, n_layer, d_model):
-        super(InterEncoder, self).__init__()
-        self.layers = _get_clones(enc_layer, n_layer)
-        self.n_layer = n_layer
-        # self.norm = nn.LayerNorm(d_model)
-
-    def forward(self, src, tgt):
-        output = tgt
-        for layer in self.layers:
-            output, att = layer(src, output)
-        return output, att
-        # return self.norm(output), att
 
 
 class SpecialEncoderLayer(nn.Module):

@@ -192,7 +192,7 @@ def c6d_to_bins(c6d, params=PARAMS):
     tb[db == params["DBINS"]] = params["ABINS"]
     pb[db == params["DBINS"]] = params["ABINS"] // 2
 
-    return torch.stack([db, ob, tb, pb], axis=-1).to(torch.uint8)
+    return torch.stack([db, ob, tb, pb], dim=-1).to(torch.uint8)
 
 
 # ============================================================
@@ -229,4 +229,4 @@ def c6d_to_bins2(c6d, params=PARAMS):
     tb[db == params["DBINS"]] = params["ABINS"]
     pb[db == params["DBINS"]] = params["ABINS"] // 2
 
-    return torch.stack([db, ob, tb, pb], axis=-1).long()
+    return torch.stack([db, ob, tb, pb], dim=-1).long()

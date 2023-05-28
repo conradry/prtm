@@ -1,14 +1,11 @@
-import os
-import random
 import re
 import string
 
 import numpy as np
-import scipy
 import scipy.spatial
 import torch
 import util
-from ffindex import *
+from proteome.models.folding.rosettafold.ffindex import *
 
 to1letter = {
     "ALA": "A",
@@ -275,7 +272,7 @@ def parse_templates(ffdb, hhr_fn, atab_fn, n_templ=10):
         counter += 1
 
     xyz = np.vstack(xyz).astype(np.float32)
-    qmap = np.vstack(qmap).astype(np.long)
+    qmap = np.vstack(qmap).astype(np.int64)
     f0d = np.vstack(f0d).astype(np.float32)
     f1d = np.vstack(f1d).astype(np.float32)
     ids = ids

@@ -23,6 +23,7 @@ immutabledict
 jax
 joblib
 #kalign2>=2.04
+lie_learn
 louvain>=0.6.1
 matplotlib
 ml-collections

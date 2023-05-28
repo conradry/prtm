@@ -1,13 +1,22 @@
 import dgl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import Transformer
-from InitStrGenerator import InitStr_Network
-from resnet import ResidualNetwork
-from SE3_network import SE3Transformer
-from Transformer import *
-from Transformer import _get_clones
+from proteome.models.folding.rosettafold.init_str_generator import InitStr_Network
+from proteome.models.folding.rosettafold.resnet import ResidualNetwork
+from proteome.models.folding.rosettafold.se3_network import SE3Transformer
+from proteome.models.folding.rosettafold.rosetta_transformer import (
+    AxialEncoderLayer,
+    CrossEncoder,
+    DirectEncoderLayer,
+    Encoder,
+    EncoderLayer,
+    FeedForwardLayer,
+    MaskedDirectMultiheadAttention,
+    SequenceWeight,
+    SpecialEncoder,
+    SpecialEncoderLayer,
+    _get_clones,
+)
 
 # Attention module based on AlphaFold2's idea written by Minkyung Baek
 #  - Iterative MSA feature extraction
@@ -95,7 +104,7 @@ class CoevolExtractor(nn.Module):
     def __init__(self, n_feat_proj, n_feat_out, p_drop=0.1):
         super(CoevolExtractor, self).__init__()
 
-        self.norm_2d = LayerNorm(n_feat_proj * n_feat_proj)
+        self.norm_2d = nn.LayerNorm(n_feat_proj * n_feat_proj)
         # project down to output dimension (pair feature dimension)
         self.proj_2 = nn.Linear(n_feat_proj**2, n_feat_out)
 
@@ -122,19 +131,26 @@ class MSA2Pair(nn.Module):
         n_resblock=1,
         p_drop=0.1,
         n_att_head=8,
+        network_2track=False,
     ):
         super(MSA2Pair, self).__init__()
         # project down embedding dimension (n_feat --> n_feat_proj)
-        self.norm_1 = LayerNorm(n_feat)
+        self.norm_1 = nn.LayerNorm(n_feat)
         self.proj_1 = nn.Linear(n_feat, n_feat_proj)
+        self.network_2track = network_2track
+        if self.network_2track:
+            self.norm_2d = nn.LayerNorm(n_feat_proj * n_feat_proj)
+            self.proj_2 = nn.Linear(n_feat_proj**2, n_feat_out)
+            n_att_head = 0
+        else:
+            self.encoder = SequenceWeight(n_feat_proj, 1, dropout=p_drop)
+            self.coevol = CoevolExtractor(n_feat_proj, n_feat_out)
 
-        self.encoder = SequenceWeight(n_feat_proj, 1, dropout=p_drop)
-        self.coevol = CoevolExtractor(n_feat_proj, n_feat_out)
 
         # ResNet to update pair features
-        self.norm_down = LayerNorm(n_feat_proj)
-        self.norm_orig = LayerNorm(n_feat_out)
-        self.norm_new = LayerNorm(n_feat_out)
+        self.norm_down = nn.LayerNorm(n_feat_proj)
+        self.norm_orig = nn.LayerNorm(n_feat_out)
+        self.norm_new = nn.LayerNorm(n_feat_out)
         self.update = ResidualNetwork(
             n_resblock,
             n_feat_out * 2 + n_feat_proj * 4 + n_att_head,
@@ -143,7 +159,7 @@ class MSA2Pair(nn.Module):
             p_drop=p_drop,
         )
 
-    def forward(self, msa, pair_orig, att):
+    def forward(self, msa, pair_orig, att=None):
         # Input: MSA embeddings (B, N, L, K), original pair embeddings (B, L, L, C)
         # Output: updated pair info (B, L, L, C)
         B, N, L, _ = msa.shape
@@ -151,15 +167,23 @@ class MSA2Pair(nn.Module):
         msa = self.norm_1(msa)
         x_down = self.proj_1(msa)  # (B, N, L, n_feat_proj)
 
-        # get sequence weight
-        x_down = self.norm_down(x_down)
-        w_seq = self.encoder(x_down).reshape(B, L, 1, N).permute(0, 3, 1, 2)
-        feat_1d = w_seq * x_down
+        if not self.network_2track:
+            # get sequence weight
+            x_down = self.norm_down(x_down)
+            w_seq = self.encoder(x_down).reshape(B, L, 1, N).permute(0, 3, 1, 2)
+            feat_1d = w_seq * x_down
 
-        pair = self.coevol(x_down, feat_1d)
-
-        # average pooling over N of given MSA info
-        feat_1d = feat_1d.sum(1)
+            pair = self.coevol(x_down, feat_1d)
+            feat_1d = feat_1d.sum(1)
+        else:
+            pair = torch.einsum(
+                "abij,ablm->ailjm", x_down, x_down / float(N)
+            )  # outer-product & average pool
+            pair = pair.reshape(B, L, L, -1)
+            pair = self.norm_2d(pair)
+            pair = self.proj_2(pair)  # (B, L, L, n_feat_out)
+            x_down = self.norm_down(x_down)
+            feat_1d = x_down.mean(1)  # (B,L,K)
 
         # query sequence info
         query = x_down[:, 0]  # (B,L,K)
@@ -170,7 +194,10 @@ class MSA2Pair(nn.Module):
         # update original pair features through convolutions after concat
         pair_orig = self.norm_orig(pair_orig)
         pair = self.norm_new(pair)
-        pair = torch.cat((pair_orig, pair, left, right, att), -1)
+        if att is not None:
+            pair = torch.cat((pair_orig, pair, left, right, att), -1)
+        else:
+            pair = torch.cat((pair_orig, pair, left, right), -1)
         pair = pair.permute(0, 3, 1, 2).contiguous()  # prep for convolution layer
         pair = self.update(pair)
         pair = pair.permute(0, 2, 3, 1).contiguous()  # (B, L, L, C)
@@ -188,37 +215,60 @@ class MSA2MSA(nn.Module):
         p_drop=0.1,
         performer_N_opts=None,
         performer_L_opts=None,
+        network_2track=False,
     ):
         super(MSA2MSA, self).__init__()
-        # attention along L
-        enc_layer_1 = EncoderLayer(
-            d_model=n_feat,
-            d_ff=n_feat * r_ff,
-            heads=n_att_head,
-            p_drop=p_drop,
-            use_tied=True,
-        )
-        # performer_opts=performer_L_opts)
-        self.encoder_1 = Encoder(enc_layer_1, n_layer)
+        self.network_2track = network_2track
+        if not network_2track:
+            enc_layer_1 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                use_tied=True,
+                is_2track=False,
+            )
+            enc_layer_2 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_N_opts,
+                is_2track=False,
+            )
+        else:
+            enc_layer_1 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_N_opts,
+                is_2track=True,
+            )
+            enc_layer_2 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_L_opts,
+                is_2track=True,
+            )
 
-        # attention along N
-        enc_layer_2 = EncoderLayer(
-            d_model=n_feat,
-            d_ff=n_feat * r_ff,
-            heads=n_att_head,
-            p_drop=p_drop,
-            performer_opts=performer_N_opts,
-        )
+        self.encoder_1 = Encoder(enc_layer_1, n_layer)
         self.encoder_2 = Encoder(enc_layer_2, n_layer)
 
     def forward(self, x):
         # Input: MSA embeddings (B, N, L, K)
         # Output: updated MSA embeddings (B, N, L, K)
         B, N, L, _ = x.shape
-        # attention along L
-        x, att = self.encoder_1(x, return_att=True)
-        # attention along N
-        x = x.permute(0, 2, 1, 3).contiguous()
+        if not self.network_2track:
+            x, att = self.encoder_1(x, return_att=True)
+        else:
+            # attention along N
+            x = x.permute(0, 2, 1, 3).contiguous()
+            x = self.encoder_1(x)
+            att = None
+
         x = self.encoder_2(x)
         x = x.permute(0, 2, 1, 3).contiguous()
         return x, att
@@ -226,17 +276,34 @@ class MSA2MSA(nn.Module):
 
 class Pair2MSA(nn.Module):
     def __init__(
-        self, n_layer=1, n_att_head=4, n_feat_in=128, n_feat_out=256, r_ff=4, p_drop=0.1
+        self, 
+        n_layer=1, 
+        n_att_head=4, 
+        n_feat_in=128, 
+        n_feat_out=256, 
+        r_ff=4, 
+        p_drop=0.1,
+        network_2track=False,
     ):
         super(Pair2MSA, self).__init__()
-        enc_layer = DirectEncoderLayer(
-            heads=n_att_head,
-            d_in=n_feat_in,
-            d_out=n_feat_out,
-            d_ff=n_feat_out * r_ff,
-            p_drop=p_drop,
-        )
-        self.encoder = CrossEncoder(enc_layer, n_layer)
+        if not network_2track:
+            enc_layer = DirectEncoderLayer(
+                heads=n_att_head,
+                d_in=n_feat_in,
+                d_out=n_feat_out,
+                d_ff=n_feat_out * r_ff,
+                p_drop=p_drop,
+            )
+            self.encoder = CrossEncoder(enc_layer, n_layer)
+        else:
+            enc_layer = SpecialEncoderLayer(
+                heads=n_att_head,
+                d_in=n_feat_in,
+                d_out=n_feat_out,
+                d_ff=n_feat_out * r_ff,
+                p_drop=p_drop,
+            )
+            self.encoder = SpecialEncoder(enc_layer, n_layer, n_feat_out)
 
     def forward(self, pair, msa):
         out = self.encoder(pair, msa)  # (B, N, L, K)
@@ -252,19 +319,48 @@ class Pair2Pair(nn.Module):
         r_ff=4,
         p_drop=0.1,
         performer_L_opts=None,
+        network_2track=False,
     ):
         super(Pair2Pair, self).__init__()
-        enc_layer = AxialEncoderLayer(
-            d_model=n_feat,
-            d_ff=n_feat * r_ff,
-            heads=n_att_head,
-            p_drop=p_drop,
-            performer_opts=performer_L_opts,
-        )
-        self.encoder = Encoder(enc_layer, n_layer)
+        self.network_2track = network_2track
+        if not self.network_2track:
+            enc_layer = AxialEncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_L_opts,
+            )
+            self.encoder = Encoder(enc_layer, n_layer)
+        else:
+            enc_layer_1 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_L_opts,
+            )
+            self.encoder_1 = Encoder(enc_layer_1, n_layer)
+            enc_layer_2 = EncoderLayer(
+                d_model=n_feat,
+                d_ff=n_feat * r_ff,
+                heads=n_att_head,
+                p_drop=p_drop,
+                performer_opts=performer_L_opts,
+            )
+            self.encoder_2 = Encoder(enc_layer_2, n_layer)
 
     def forward(self, x):
-        return self.encoder(x)
+        if not self.network_2track:
+            x = self.encoder(x)
+        else:
+            B, L = x.shape[:2]
+            x = self.encoder_1(x)  # attention over column
+            x = x.permute(0, 2, 1, 3).contiguous()
+            x = self.encoder_2(x)  # attention over row
+            x = x.permute(0, 2, 1, 3).contiguous()
+
+        return x
 
 
 class Str2Str(nn.Module):
@@ -282,15 +378,15 @@ class Str2Str(nn.Module):
         super(Str2Str, self).__init__()
 
         # initial node & pair feature process
-        self.norm_msa = LayerNorm(d_msa)
-        self.norm_pair = LayerNorm(d_pair)
+        self.norm_msa = nn.LayerNorm(d_msa)
+        self.norm_pair = nn.LayerNorm(d_pair)
         self.encoder_seq = SequenceWeight(d_msa, 1, dropout=p_drop)
 
         self.embed_x = nn.Linear(d_msa + 21, SE3_param["l0_in_features"])
         self.embed_e = nn.Linear(d_pair, SE3_param["num_edge_features"])
 
-        self.norm_node = LayerNorm(SE3_param["l0_in_features"])
-        self.norm_edge = LayerNorm(SE3_param["num_edge_features"])
+        self.norm_node = nn.LayerNorm(SE3_param["l0_in_features"])
+        self.norm_edge = nn.LayerNorm(SE3_param["num_edge_features"])
 
         self.se3 = SE3Transformer(**SE3_param)
 
@@ -343,14 +439,14 @@ class Str2MSA(nn.Module):
         self.distbin = distbin
         n_att_head = len(distbin)
 
-        self.norm_state = LayerNorm(d_state)
-        self.norm1 = LayerNorm(d_msa)
+        self.norm_state = nn.LayerNorm(d_state)
+        self.norm1 = nn.LayerNorm(d_msa)
         self.attn = MaskedDirectMultiheadAttention(
             d_state, d_msa, n_att_head, d_k=inner_dim, dropout=p_drop
         )
         self.dropout1 = nn.Dropout(p_drop, inplace=True)
 
-        self.norm2 = LayerNorm(d_msa)
+        self.norm2 = nn.LayerNorm(d_msa)
         self.ff = FeedForwardLayer(d_msa, d_msa * r_ff, p_drop=p_drop)
         self.dropout2 = nn.Dropout(p_drop, inplace=True)
 
@@ -387,6 +483,7 @@ class IterBlock(nn.Module):
         p_drop=0.1,
         performer_L_opts=None,
         performer_N_opts=None,
+        network_2track=False,
     ):
         super(IterBlock, self).__init__()
 
@@ -398,6 +495,7 @@ class IterBlock(nn.Module):
             p_drop=p_drop,
             performer_N_opts=performer_N_opts,
             performer_L_opts=performer_L_opts,
+            network_2track=network_2track,
         )
         self.msa2pair = MSA2Pair(
             n_feat=d_msa,
@@ -406,6 +504,7 @@ class IterBlock(nn.Module):
             n_resblock=n_resblock,
             p_drop=p_drop,
             n_att_head=n_head_msa,
+            network_2track=network_2track,
         )
         self.pair2pair = Pair2Pair(
             n_layer=n_layer,
@@ -414,14 +513,17 @@ class IterBlock(nn.Module):
             r_ff=r_ff,
             p_drop=p_drop,
             performer_L_opts=performer_L_opts,
+            network_2track=network_2track,
         )
+        pair2msa_att_head = n_head_pair if network_2track else 4
         self.pair2msa = Pair2MSA(
             n_layer=n_layer,
-            n_att_head=4,
+            n_att_head=pair2msa_att_head,
             n_feat_in=d_pair,
             n_feat_out=d_msa,
             r_ff=r_ff,
             p_drop=p_drop,
+            network_2track=network_2track,
         )
 
     def forward(self, msa, pair):
@@ -444,9 +546,10 @@ class IterBlock(nn.Module):
         return msa, pair
 
 
-class IterBlock_w_Str(nn.Module):
+class IterBlockShare(nn.Module):
     def __init__(
         self,
+        n_module=4,
         n_layer=1,
         d_msa=64,
         d_pair=128,
@@ -462,9 +565,10 @@ class IterBlock_w_Str(nn.Module):
             "l0_out_features": 16,
             "num_edge_features": 32,
         },
+        network_2track=False,
     ):
-        super(IterBlock_w_Str, self).__init__()
-
+        super(IterBlockShare, self).__init__()
+        self.n_module = n_module if network_2track else 1
         self.msa2msa = MSA2MSA(
             n_layer=n_layer,
             n_att_head=n_head_msa,
@@ -473,6 +577,7 @@ class IterBlock_w_Str(nn.Module):
             p_drop=p_drop,
             performer_N_opts=performer_N_opts,
             performer_L_opts=performer_L_opts,
+            network_2track=network_2track,
         )
         self.msa2pair = MSA2Pair(
             n_feat=d_msa,
@@ -481,6 +586,7 @@ class IterBlock_w_Str(nn.Module):
             n_resblock=n_resblock,
             p_drop=p_drop,
             n_att_head=n_head_msa,
+            network_2track=network_2track,
         )
         self.pair2pair = Pair2Pair(
             n_layer=n_layer,
@@ -489,43 +595,56 @@ class IterBlock_w_Str(nn.Module):
             r_ff=r_ff,
             p_drop=p_drop,
             performer_L_opts=performer_L_opts,
+            network_2track=network_2track,
         )
+        pair2msa_att_head = n_head_pair if network_2track else 4
         self.pair2msa = Pair2MSA(
             n_layer=n_layer,
-            n_att_head=4,
+            n_att_head=pair2msa_att_head,
             n_feat_in=d_pair,
             n_feat_out=d_msa,
             r_ff=r_ff,
             p_drop=p_drop,
-        )
-        self.str2str = Str2Str(
-            d_msa=d_msa, d_pair=d_pair, SE3_param=SE3_param, p_drop=p_drop
-        )
-        self.str2msa = Str2MSA(
-            d_msa=d_msa, d_state=SE3_param["l0_out_features"], r_ff=r_ff, p_drop=p_drop
+            network_2track=network_2track,
         )
 
-    def forward(self, msa, pair, xyz, seq1hot, idx, top_k=64):
+        self.network_2track = network_2track
+        if not self.network_2track:
+            self.str2str = Str2Str(
+                d_msa=d_msa, d_pair=d_pair, SE3_param=SE3_param, p_drop=p_drop
+            )
+            self.str2msa = Str2MSA(
+                d_msa=d_msa, d_state=SE3_param["l0_out_features"], r_ff=r_ff, p_drop=p_drop
+            )
+
+    def forward(self, msa, pair, xyz=None, seq1hot=None, idx=None, top_k=64):
         # input:
         #   msa: initial MSA embeddings (N, L, d_msa)
         #   pair: initial residue pair embeddings (L, L, d_pair)
 
-        # 1. process MSA features
-        msa, att = self.msa2msa(msa)
+        for i_m in range(self.n_module):
+            # 1. process MSA features
+            msa, att = self.msa2msa(msa)
 
-        # 2. update pair features using given MSA
-        pair = self.msa2pair(msa, pair, att)
+            # 2. update pair features using given MSA
+            pair = self.msa2pair(msa, pair, att)
 
-        # 3. process pair features
-        pair = self.pair2pair(pair)
+            # 3. process pair features
+            pair = self.pair2pair(pair)
 
-        # 4. update MSA features using updated pair features
-        msa = self.pair2msa(pair, msa)
+            # 4. update MSA features using updated pair features
+            msa = self.pair2msa(pair, msa)
 
-        xyz, state = self.str2str(
-            msa.float(), pair.float(), xyz.float(), seq1hot, idx, top_k=top_k
-        )
-        msa = self.str2msa(msa, xyz, state)
+        if not self.network_2track:
+            assert xyz is not None
+            assert seq1hot is not None
+            assert idx is not None
+            xyz, state = self.str2str(
+                msa.float(), pair.float(), xyz.float(), seq1hot, idx, top_k=top_k
+            )
+            msa = self.str2msa(msa, xyz, state)
+        else:
+            xyz = None
 
         return msa, pair, xyz
 
@@ -559,6 +678,7 @@ class FinalBlock(nn.Module):
             p_drop=p_drop,
             performer_N_opts=performer_N_opts,
             performer_L_opts=performer_L_opts,
+            network_2track=False,
         )
         self.msa2pair = MSA2Pair(
             n_feat=d_msa,
@@ -567,6 +687,7 @@ class FinalBlock(nn.Module):
             n_resblock=n_resblock,
             p_drop=p_drop,
             n_att_head=n_head_msa,
+            network_2track=False,
         )
         self.pair2pair = Pair2Pair(
             n_layer=n_layer,
@@ -575,6 +696,7 @@ class FinalBlock(nn.Module):
             r_ff=r_ff,
             p_drop=p_drop,
             performer_L_opts=performer_L_opts,
+            network_2track=False,
         )
         self.pair2msa = Pair2MSA(
             n_layer=n_layer,
@@ -583,11 +705,12 @@ class FinalBlock(nn.Module):
             n_feat_out=d_msa,
             r_ff=r_ff,
             p_drop=p_drop,
+            network_2track=False,
         )
         self.str2str = Str2Str(
             d_msa=d_msa, d_pair=d_pair, SE3_param=SE3_param, p_drop=p_drop
         )
-        self.norm_state = LayerNorm(SE3_param["l0_out_features"])
+        self.norm_state = nn.LayerNorm(SE3_param["l0_out_features"])
         self.pred_lddt = nn.Linear(SE3_param["l0_out_features"], 1)
 
     def forward(self, msa, pair, xyz, seq1hot, idx):
@@ -619,6 +742,7 @@ class IterativeFeatureExtractor(nn.Module):
         self,
         n_module=4,
         n_module_str=4,
+        n_diff_module=2,
         n_layer=4,
         d_msa=256,
         d_pair=128,
@@ -635,10 +759,14 @@ class IterativeFeatureExtractor(nn.Module):
             "l0_out_features": 16,
             "num_edge_features": 32,
         },
+        network_2track=False,
     ):
         super(IterativeFeatureExtractor, self).__init__()
         self.n_module = n_module
+        self.n_diff_module = n_diff_module
         self.n_module_str = n_module_str
+        self.n_share_module = n_module - n_diff_module
+        self.network_2track = network_2track
         #
         self.initial = Pair2Pair(
             n_layer=n_layer,
@@ -647,9 +775,11 @@ class IterativeFeatureExtractor(nn.Module):
             r_ff=r_ff,
             p_drop=p_drop,
             performer_L_opts=performer_L_opts,
+            network_2track=network_2track,
         )
 
-        if self.n_module > 0:
+        n_iterblock = self.n_diff_module if network_2track else self.n_module
+        if n_iterblock > 0:
             self.iter_block_1 = _get_clones(
                 IterBlock(
                     n_layer=n_layer,
@@ -662,23 +792,26 @@ class IterativeFeatureExtractor(nn.Module):
                     p_drop=p_drop,
                     performer_N_opts=performer_N_opts,
                     performer_L_opts=performer_L_opts,
+                    network_2track=network_2track,
                 ),
-                n_module,
+                n_iterblock,
             )
 
-        self.init_str = InitStr_Network(
-            node_dim_in=d_msa,
-            node_dim_hidden=d_hidden,
-            edge_dim_in=d_pair,
-            edge_dim_hidden=d_hidden,
-            nheads=4,
-            nblocks=3,
-            dropout=p_drop,
-        )
+        if not network_2track:
+            self.init_str = InitStr_Network(
+                node_dim_in=d_msa,
+                node_dim_hidden=d_hidden,
+                edge_dim_in=d_pair,
+                edge_dim_hidden=d_hidden,
+                nheads=4,
+                nblocks=3,
+                dropout=p_drop,
+            )
 
-        if self.n_module_str > 0:
+        if self.n_module_str > 0 and not network_2track:
             self.iter_block_2 = _get_clones(
-                IterBlock_w_Str(
+                IterBlockShare(
+                    n_module=1,
                     n_layer=n_layer,
                     d_msa=d_msa,
                     d_pair=d_pair,
@@ -690,45 +823,74 @@ class IterativeFeatureExtractor(nn.Module):
                     performer_N_opts=performer_N_opts,
                     performer_L_opts=performer_L_opts,
                     SE3_param=SE3_param,
+                    network_2track=network_2track,
                 ),
                 n_module_str,
             )
+            self.final = FinalBlock(
+                n_layer=n_layer,
+                d_msa=d_msa,
+                d_pair=d_pair,
+                n_head_msa=n_head_msa,
+                n_head_pair=n_head_pair,
+                r_ff=r_ff,
+                n_resblock=n_resblock,
+                p_drop=p_drop,
+                performer_L_opts=performer_L_opts,
+                performer_N_opts=performer_N_opts,
+                SE3_param=SE3_param,
+            )
+        elif self.n_share_module > 0 and self.network_2track:
+            self.iter_block_2track = IterBlockShare(
+                n_module=self.n_share_module,
+                n_layer=n_layer,
+                d_msa=d_msa,
+                d_pair=d_pair,
+                n_head_msa=n_head_msa,
+                n_head_pair=n_head_pair,
+                r_ff=r_ff,
+                n_resblock=n_resblock,
+                p_drop=p_drop,
+                performer_N_opts=performer_N_opts,
+                performer_L_opts=performer_L_opts,
+            )
+        else:
+            self.iter_block_2 = None
+            self.iter_block_2track = None
 
-        self.final = FinalBlock(
-            n_layer=n_layer,
-            d_msa=d_msa,
-            d_pair=d_pair,
-            n_head_msa=n_head_msa,
-            n_head_pair=n_head_pair,
-            r_ff=r_ff,
-            n_resblock=n_resblock,
-            p_drop=p_drop,
-            performer_L_opts=performer_L_opts,
-            performer_N_opts=performer_N_opts,
-            SE3_param=SE3_param,
-        )
-
-    def forward(self, msa, pair, seq1hot, idx):
+    def forward(self, msa, pair, seq1hot=None, idx=None):
         # input:
         #   msa: initial MSA embeddings (N, L, d_msa)
         #   pair: initial residue pair embeddings (L, L, d_pair)
 
         pair_s = list()
         pair = self.initial(pair)
-        if self.n_module > 0:
-            for i_m in range(self.n_module):
-                # extract features from MSA & update original pair features
-                msa, pair = self.iter_block_1[i_m](msa, pair)
+        if not self.network_2track:
+            if self.n_module > 0:
+                for i_m in range(self.n_module):
+                    # extract features from MSA & update original pair features
+                    msa, pair = self.iter_block_1[i_m](msa, pair)
 
-        xyz = self.init_str(seq1hot, idx, msa, pair)
+            xyz = self.init_str(seq1hot, idx, msa, pair)
 
-        top_ks = [128, 128, 64, 64]
-        if self.n_module_str > 0:
-            for i_m in range(self.n_module_str):
-                msa, pair, xyz = self.iter_block_2[i_m](
-                    msa, pair, xyz, seq1hot, idx, top_k=top_ks[i_m]
-                )
+            top_ks = [128, 128, 64, 64]
+            if self.iter_block_2 is not None:
+                for i_m in range(self.n_module_str):
+                    msa, pair, xyz = self.iter_block_2[i_m](
+                        msa, pair, xyz, seq1hot, idx, top_k=top_ks[i_m]
+                    )
 
-        msa, pair, xyz, lddt = self.final(msa, pair, xyz, seq1hot, idx)
+            msa, pair, xyz, lddt = self.final(msa, pair, xyz, seq1hot, idx)
+            msa = msa[:, 0]
+        else:
+            if self.n_diff_module > 0:
+                for i_m in range(self.n_diff_module):
+                    # extract features from MSA & update original pair features
+                    msa, pair = self.iter_block_1[i_m](msa, pair)
+            if self.iter_block_2track is not None:
+                msa, pair = self.iter_block_2track(msa, pair)
 
-        return msa[:, 0], pair, xyz, lddt
+            xyz = None
+            lddt = None
+
+        return msa, pair, xyz, lddt

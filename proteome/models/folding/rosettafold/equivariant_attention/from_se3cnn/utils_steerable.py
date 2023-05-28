@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 import torch
-from equivariant_attention.from_se3cnn.cache_file import cached_dirpklgz
-from equivariant_attention.from_se3cnn.representations import SphericalHarmonics
-from equivariant_attention.from_se3cnn.SO3 import irr_repr, torch_default_dtype
+from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.cache_file import cached_dirpklgz
+from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.representations import SphericalHarmonics
+from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.so3 import irr_repr, torch_default_dtype
 
 ################################################################################
 # Solving the constraint coming from the stabilizer of 0 and e
@@ -212,7 +212,7 @@ def spherical_harmonics(order, alpha, beta, dtype=None):
     # Y = [tesseral_harmonics(order, m, theta=math.pi - beta, phi=alpha) for m in range(-order, order + 1)]
     # Y = torch.stack(Y, -1)
     # Y should have dimension 2*order + 1
-    return SphericalHarmonics.get(order, theta=math.pi - beta, phi=alpha)
+    return SphericalHarmonics().get(l=order, theta=math.pi - beta, phi=alpha)
 
 
 def kron(a, b):
@@ -225,7 +225,7 @@ def kron(a, b):
     :type b: torch.Tensor
     :rtype: torch.Tensor
     """
-    siz1 = torch.Size(torch.tensor(a.shape[-2:]) * torch.tensor(b.shape[-2:]))
+    siz1 = (torch.tensor(a.shape[-2:]) * torch.tensor(b.shape[-2:])).size()
     res = a.unsqueeze(-1).unsqueeze(-3) * b.unsqueeze(-2).unsqueeze(-4)
     siz0 = res.shape[:-4]
     return res.reshape(siz0 + siz1)
