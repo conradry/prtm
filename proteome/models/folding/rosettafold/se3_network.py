@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from equivariant_attention.fibers import Fiber
-from equivariant_attention.modules import (
+from proteome.models.folding.rosettafold.equivariant_attention.fibers import Fiber
+from proteome.models.folding.rosettafold.equivariant_attention.modules import (
     GConvSE3,
     GNormBias,
     GNormSE3,

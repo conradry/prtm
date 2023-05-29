@@ -1,12 +1,7 @@
 import copy
-import math
-from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from utils.utils_profiling import *  # load before other local modules
 
 
 class Fiber(object):
@@ -14,9 +9,9 @@ class Fiber(object):
 
     def __init__(
         self,
-        num_degrees: int = None,
-        num_channels: int = None,
-        structure: List[Tuple[int, int]] = None,
+        num_degrees=0,
+        num_channels=0,
+        structure=None,
         dictionary=None,
     ):
         """
@@ -28,6 +23,7 @@ class Fiber(object):
         :param structure: e.g. [(32, 0),(16, 1),(16,2)]
         :param dictionary: e.g. {0:32, 1:16, 2:16}
         """
+        self.degrees = num_degrees
         if structure:
             self.structure = structure
         elif dictionary:
@@ -49,7 +45,7 @@ class Fiber(object):
             self.feature_indices[d] = (idx, idx + length)
             idx += length
 
-    def copy_me(self, multiplicity: int = None):
+    def copy_me(self, multiplicity=None):
         s = copy.deepcopy(self.structure)
         if multiplicity is not None:
             # overwrite multiplicities
@@ -100,7 +96,7 @@ class Fiber(object):
         """
         struc_out = Fiber.combine(struc1, struc2)
         val_out = {}
-        for k in struc_out.degrees:
+        for k in range(struc_out.degrees):
             if k in struc1.degrees:
                 if k in struc2.degrees:
                     val_out[k] = torch.cat([val1[k], val2[k]], -2)

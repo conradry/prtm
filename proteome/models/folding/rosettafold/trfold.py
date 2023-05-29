@@ -151,6 +151,7 @@ class TRFold:
         return coef
 
     def fold(self, xyz, batch=32, lr=0.8, nsteps=100):
+        assert nsteps > 0
         pd, po, pt, pp = self.pred
         L = pd.shape[-1]
 

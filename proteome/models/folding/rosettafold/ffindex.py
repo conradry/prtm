@@ -9,7 +9,6 @@ Created on Apr 30, 2014
 
 
 import mmap
-import sys
 from collections import namedtuple
 
 FFindexEntry = namedtuple("FFindexEntry", "name, offset, length")
@@ -89,7 +88,7 @@ def write_entries_to_db(entries, ffindex_filename):
 
 
 def write_entry_to_file(entry, data, file):
-    lines = read_lines(entry, data)
+    lines = read_entry_lines(entry, data)
 
     fh = open(file, "w")
     for line in lines:

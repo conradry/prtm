@@ -23,6 +23,8 @@ immutabledict
 jax
 joblib
 #kalign2>=2.04
+lie_learn
+lifelines
 louvain>=0.6.1
 matplotlib
 ml-collections
@@ -40,6 +42,7 @@ optax
 packaging>=21.3
 pandas>=1.5.0
 #pdbfixer
+prettytable
 protobuf>=3.6.1
 py3Dmol
 pyaml>=21.10.1
@@ -73,3 +76,4 @@ tqdm>=4.32.1
 transformers>=4.11.3
 typing-extensions>=3.10.0.2
 urllib3>=1.26.14
+wget

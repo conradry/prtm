@@ -9,10 +9,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dgl.nn.pytorch.glob import AvgPooling, MaxPooling
 from dgl.nn.pytorch.softmax import edge_softmax
-from equivariant_attention.fibers import Fiber, fiber2head
-from equivariant_attention.from_se3cnn import utils_steerable
+from proteome.models.folding.rosettafold.equivariant_attention.fibers import Fiber, fiber2head
+from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn import utils_steerable
 from packaging import version
-from utils.utils_logging import log_gradient_norm
 
 
 def get_basis(G, max_degree, compute_gradients):
@@ -40,7 +39,6 @@ def get_basis(G, max_degree, compute_gradients):
 
         if G.edata["d"].requires_grad:
             cloned_d.requires_grad_()
-            log_gradient_norm(cloned_d, "Basis computation flow")
 
         # Relative positional encodings (vector)
         r_ij = utils_steerable.get_spherical_from_cartesian_torch(cloned_d)
@@ -73,7 +71,6 @@ def get_r(G):
 
     if G.edata["d"].requires_grad:
         cloned_d.requires_grad_()
-        log_gradient_norm(cloned_d, "Neural networks flow")
 
     return torch.sqrt(torch.sum(cloned_d**2, -1, keepdim=True))
 

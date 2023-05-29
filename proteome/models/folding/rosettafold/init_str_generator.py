@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer import Encoder, EncoderLayer
-import torch_geometric
+from proteome.models.folding.rosettafold.rosetta_transformer import Encoder, EncoderLayer
 from torch_geometric.data import Data
 from torch_geometric.nn import TransformerConv
-from Transformer import LayerNorm, SequenceWeight
+from proteome.models.folding.rosettafold.rosetta_transformer import SequenceWeight
 
 
 def get_seqsep(idx, clamp=False):
@@ -97,7 +96,7 @@ class UniMPBlock(nn.Module):
         self.TConv = TransformerConv(
             node_dim, node_dim, heads, dropout=dropout, edge_dim=edge_dim
         )
-        self.LNorm = LayerNorm(node_dim * heads)
+        self.LNorm = nn.LayerNorm(node_dim * heads)
         self.Linear = nn.Linear(node_dim * heads, node_dim)
         self.Activ = nn.ELU(inplace=True)
 
@@ -125,8 +124,8 @@ class InitStr_Network(nn.Module):
         super(InitStr_Network, self).__init__()
 
         # embedding layers for node and edge features
-        self.norm_node = LayerNorm(node_dim_in)
-        self.norm_edge = LayerNorm(edge_dim_in)
+        self.norm_node = nn.LayerNorm(node_dim_in)
+        self.norm_edge = nn.LayerNorm(edge_dim_in)
         self.encoder_seq = SequenceWeight(node_dim_in, 1, dropout=dropout)
 
         self.embed_x = nn.Sequential(
@@ -177,7 +176,6 @@ class InitStr_Network2Track(nn.Module):
         d_out=64,
         d_attn=50,
         d_msa=64,
-        n_rnn_layer=2,
         n_layers=2,
         n_att_head=4,
         r_ff=2,
@@ -196,8 +194,9 @@ class InitStr_Network2Track(nn.Module):
             heads=n_att_head,
             p_drop=p_drop,
             performer_opts=performer_opts,
+            is_2track=True,
         )
-        self.encoder_1 = Encoder(enc_layer_1, n_layers, d_hidden)
+        self.encoder_1 = Encoder(enc_layer_1, n_layers)
 
         enc_layer_2 = EncoderLayer(
             d_model=d_hidden,
@@ -205,8 +204,9 @@ class InitStr_Network2Track(nn.Module):
             heads=n_att_head,
             p_drop=p_drop,
             performer_opts=performer_opts,
+            is_2track=True,
         )
-        self.encoder_2 = Encoder(enc_layer_2, n_layers, d_hidden)
+        self.encoder_2 = Encoder(enc_layer_2, n_layers)
 
         self.attn = Attention(d_model=d_hidden * 2, d_attn=d_attn)
         self.proj = nn.Linear(d_hidden * 2, d_out)
@@ -218,7 +218,7 @@ class InitStr_Network2Track(nn.Module):
             p_drop=p_drop,
             performer_opts=performer_opts,
         )
-        self.encoder_3 = Encoder(enc_layer_3, n_layers, d_out)
+        self.encoder_3 = Encoder(enc_layer_3, n_layers)
 
         self.proj_crd = nn.Linear(d_out, 9)  # predict BB coordinates
 

@@ -1,7 +1,5 @@
-import torch
 import torch.nn as nn
-from resnet import ResidualNetwork
-from transformer import LayerNorm
+from proteome.models.folding.rosettafold.resnet import ResidualNetwork
 
 # predict distance map from pair features
 # based on simple 2D ResNet
@@ -9,16 +7,16 @@ from transformer import LayerNorm
 
 class DistanceNetwork(nn.Module):
     def __init__(
-            self, 
-            n_feat, 
-            n_block=1, 
-            block_type="orig", 
-            p_drop=0.0,
-            proj_in = False,
-        ):
+        self, 
+        n_feat, 
+        n_block=1, 
+        block_type="orig", 
+        p_drop=0.0,
+        proj_in = False,
+    ):
         super(DistanceNetwork, self).__init__()
         if proj_in:
-            self.norm = LayerNorm(n_feat)
+            self.norm = nn.LayerNorm(n_feat)
             self.proj = nn.Linear(n_feat, n_feat)
             self.drop = nn.Dropout(p_drop)
         self.proj_in = proj_in
