@@ -2,13 +2,13 @@ import warnings
 
 import numpy as np
 from anndata import AnnData
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity import settings
+from proteome.models.evaluation.evolocity.preprocessing.utils import \
+    get_initial_size
 from scanpy import Neighbors
 from scanpy.preprocessing import pca
 from scipy.sparse import coo_matrix, issparse
-
-from .. import logging as logg
-from .. import settings
-from .utils import get_initial_size
 
 
 def neighbors(

@@ -1,19 +1,13 @@
 import numpy as np
 from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity.preprocessing.neighbors import (
+    compute_connectivities_umap, get_neighs, verify_neighbors)
+from proteome.models.evaluation.evolocity.preprocessing.utils import sum_var
+from proteome.models.evaluation.evolocity.tools.velocity_model import \
+    velocity_model
 from scipy.sparse import coo_matrix
 from tqdm import tqdm
-
-from .. import logging as logg
-from ..preprocessing.neighbors import (
-    compute_connectivities_umap,
-    get_neighs,
-    neighbors,
-    verify_neighbors,
-)
-from ..preprocessing.utils import sum_var
-from .utils import scale
-from .velocity_model import velocity_model
 
 # Choices of scoring functions.
 SCORE_CHOICES = {
@@ -87,7 +81,8 @@ def get_indices(dist, n_neighbors=None, mode_neighbors="distances"):
 # Compute likelihoods across entire sequence with masked language model.
 def predict_sequence_prob(seq_of_interest, vocabulary, model, verbose=False):
     if "esm" in model.name_:
-        from .fb_semantics import predict_sequence_prob_fb
+        from proteome.models.evaluation.evolocity.tools.fb_semantics import \
+            predict_sequence_prob_fb
 
         return predict_sequence_prob_fb(
             seq_of_interest,
@@ -97,7 +92,8 @@ def predict_sequence_prob(seq_of_interest, vocabulary, model, verbose=False):
             verbose=verbose,
         )
     elif model.name_ == "tape":
-        from .tape_semantics import predict_sequence_prob_tape
+        from proteome.models.evaluation.evolocity.tools.tape_semantics import \
+            predict_sequence_prob_tape
 
         return predict_sequence_prob_tape(seq_of_interest, model)
     else:

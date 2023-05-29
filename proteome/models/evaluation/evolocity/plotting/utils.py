@@ -12,15 +12,14 @@ from matplotlib.colors import ListedColormap, cnames, is_color_like, to_rgb
 from matplotlib.gridspec import SubplotSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from pandas import Index, unique
+from pandas import Index
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity import settings
+from proteome.models.evaluation.evolocity.plotting import palettes
+from proteome.models.evaluation.evolocity.tools.utils import \
+    strings_to_categoricals
 from scipy.sparse import issparse
 from scipy.stats import pearsonr
-
-from .. import logging as logg
-from .. import settings
-from ..preprocessing.neighbors import get_connectivities
-from ..tools.utils import strings_to_categoricals
-from . import palettes
 
 """helper functions"""
 
@@ -457,7 +456,8 @@ def set_artist_frame(ax, length=0.2, figsize=None):
     ax.xaxis.label.set_size(ax.xaxis.label.get_size() / 1.2)
     ax.yaxis.label.set_size(ax.yaxis.label.get_size() / 1.2)
 
-    from mpl_toolkits.axes_grid1.anchored_artists import AnchoredDirectionArrows
+    from mpl_toolkits.axes_grid1.anchored_artists import \
+        AnchoredDirectionArrows
 
     kwargs = dict(loc=3, pad=-1, back_length=0, fontsize=0, aspect_ratio=aspect_ratio)
     kwargs.update({"text_props": {"ec": "k", "fc": "k", "lw": 0.1}})
@@ -697,8 +697,8 @@ def set_colors_for_categorical_obs(adata, value_to_plot, palette=None):
         eg. RGB, RGBS, hex, or a cycler object with key='color'
     """
     from matplotlib.colors import to_hex
-
-    from .palettes import additional_colors
+    from proteome.models.evaluation.evolocity.plotting.palettes import \
+        additional_colors
 
     color_key = f"{value_to_plot}_colors"
     valid = True
@@ -1400,7 +1400,7 @@ def hist(
     if pdf is not None:
         fits = []
         for i, pd in enumerate(pdf):
-            from scipy import stats
+            pass
 
             xt = ax.get_xticks()
             xmin, xmax = min(xt), max(xt)
@@ -1561,10 +1561,12 @@ def make_unique_valid_list(adata, keys):
 
 
 def get_temporal_connectivities(adata, tkey, n_convolve=30):
-    from ..tools.evolocity_tools import vals_to_csr
-    from ..tools.utils import normalize
+    from proteome.models.evaluation.evolocity.plotting.tools.evolocity_tools import \
+        vals_to_csr
+    from proteome.models.evaluation.evolocity.plotting.tools.utils import \
+        normalize
 
-    # from ..tools.utils import get_indices
+    # from proteome.models.evaluation.evolocity.plotting.tools.utils import get_indices
     # c_idx = get_indices(get_connectivities(adata, recurse_neighbors=True))[0]
     # lspace = np.linspace(0, len(c_idx) - 1, len(c_idx), dtype=int)
     # c_idx = np.hstack([c_idx, lspace[:, None]])

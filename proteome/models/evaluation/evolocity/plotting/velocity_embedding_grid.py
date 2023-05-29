@@ -1,14 +1,15 @@
 import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib import rcParams
+from proteome.models.evaluation.evolocity.plotting.docs import (doc_params,
+                                                                doc_scatter)
+from proteome.models.evaluation.evolocity.plotting.scatter import scatter
+from proteome.models.evaluation.evolocity.plotting.utils import *
+from proteome.models.evaluation.evolocity.tools.utils import groups_to_bool
+from proteome.models.evaluation.evolocity.tools.velocity_embedding import (
+    quiver_autoscale, velocity_embedding)
 from scipy.stats import norm as normal
 from sklearn.neighbors import NearestNeighbors
-
-from ..tools.utils import groups_to_bool
-from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
-from .docs import doc_params, doc_scatter
-from .scatter import scatter
-from .utils import *
 
 
 def compute_velocity_on_grid(

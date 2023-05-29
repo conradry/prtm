@@ -3,9 +3,9 @@ from inspect import signature
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-
-from .docs import doc_params, doc_scatter
-from .utils import *
+from proteome.models.evaluation.evolocity.plotting.docs import (doc_params,
+                                                                doc_scatter)
+from proteome.models.evaluation.evolocity.plotting.utils import *
 
 
 @doc_params(scatter=doc_scatter)
@@ -311,7 +311,7 @@ def scatter(
             if use_raw is None and basis not in adata.var_names:
                 use_raw = layer is None and adata.raw is not None
             if projection == "3d":
-                from mpl_toolkits.mplot3d import Axes3D
+                pass
 
             ax, show = get_ax(ax, show, figsize, dpi, projection)
 

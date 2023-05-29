@@ -1,13 +1,15 @@
 import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib import rcParams
-
-from ..tools.utils import groups_to_bool
-from ..tools.velocity_embedding import velocity_embedding
-from .docs import doc_params, doc_scatter
-from .scatter import scatter
-from .utils import *
-from .velocity_embedding_grid import compute_velocity_on_grid
+from proteome.models.evaluation.evolocity.plotting.docs import (doc_params,
+                                                                doc_scatter)
+from proteome.models.evaluation.evolocity.plotting.scatter import scatter
+from proteome.models.evaluation.evolocity.plotting.utils import *
+from proteome.models.evaluation.evolocity.plotting.velocity_embedding_grid import \
+    compute_velocity_on_grid
+from proteome.models.evaluation.evolocity.tools.utils import groups_to_bool
+from proteome.models.evaluation.evolocity.tools.velocity_embedding import \
+    velocity_embedding
 
 
 @doc_params(scatter=doc_scatter)

@@ -1,10 +1,11 @@
 import numpy as np
 import scipy.stats as ss
+from proteome.models.evaluation.evolocity.tools.terminal_states import \
+    terminal_states
+from proteome.models.evaluation.evolocity.tools.utils import (
+    groups_to_bool, scale, strings_to_categoricals)
 from scanpy.tools._dpt import DPT
-from scipy.sparse import coo_matrix, issparse, linalg, spdiags
-
-from .terminal_states import terminal_states
-from .utils import groups_to_bool, scale, strings_to_categoricals
+from scipy.sparse import issparse, linalg, spdiags
 
 
 class VPT(DPT):

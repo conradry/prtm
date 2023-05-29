@@ -122,7 +122,8 @@ def scale(X, min=0, max=1):
 
 
 def get_indices(dist, n_neighbors=None, mode_neighbors="distances"):
-    from ..preprocessing.neighbors import compute_connectivities_umap
+    from proteome.models.evaluation.evolocity.preprocessing.neighbors import \
+        compute_connectivities_umap
 
     D = dist.copy()
     D.data += 1e-6
@@ -224,8 +225,10 @@ def randomized_velocity(adata, vkey="velocity", add_key="velocity_random"):
         )
     adata.layers[add_key] = V_rnd
 
-    from .evolocity_tools import velocity_graph
-    from .velocity_embedding import velocity_embedding
+    from proteome.models.evaluation.evolocity.tools.evolocity_tools import \
+        velocity_graph
+    from proteome.models.evaluation.evolocity.tools.velocity_embedding import \
+        velocity_embedding
 
     velocity_graph(adata, vkey=add_key)
     velocity_embedding(adata, vkey=add_key, autoscale=False)
@@ -252,7 +255,8 @@ def extract_int_from_str(array):
 def strings_to_categoricals(adata):
     """Transform string annotations to categoricals."""
     from pandas import Categorical
-    from pandas.api.types import is_bool_dtype, is_integer_dtype, is_string_dtype
+    from pandas.api.types import (is_bool_dtype, is_integer_dtype,
+                                  is_string_dtype)
 
     def is_valid_dtype(values):
         return (
@@ -459,7 +463,8 @@ def indices_to_bool(indices, n):
 
 
 def convolve(adata, x):
-    from ..preprocessing.neighbors import get_connectivities
+    from proteome.models.evaluation.evolocity.preprocessing.neighbors import \
+        get_connectivities
 
     conn = get_connectivities(adata)
     if isinstance(x, str) and x in adata.layers.keys():

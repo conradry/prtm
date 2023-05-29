@@ -109,9 +109,3 @@ def _plot_color_cylce(clists: Mapping[str, Sequence[str]]):
     for ax in axes:
         ax.set_axis_off()
     fig.show()
-
-
-if __name__ == "__main__":
-    _plot_color_cylce(
-        {name: colors for name, colors in globals().items() if isinstance(colors, list)}
-    )

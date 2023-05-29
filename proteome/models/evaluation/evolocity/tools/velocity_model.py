@@ -1,4 +1,4 @@
-from ..preprocessing import get_model
+from proteome.models.evaluation.evolocity.preprocessing import get_model
 
 
 def velocity_model(

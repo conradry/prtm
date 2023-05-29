@@ -1,5 +1,6 @@
 import torch
-from esm import Alphabet, FastaBatchedDataset, ProteinBertModel, pretrained
+from proteome.models.folding.esm import pretrained
+from proteome.models.folding.esm.model.esm1 import ProteinBertModel
 
 
 class FBModel(object):

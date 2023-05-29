@@ -4,21 +4,20 @@ from collections import Counter
 
 import numpy as np
 from anndata import AnnData
-
-from .. import logging as logg
-from .utils import mkdir_p
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity.preprocessing.utils import mkdir_p
 
 
 def get_model(model_name):
     if model_name == "esm1":
-        from ..tools.fb_model import FBModel
+        from proteome.models.evaluation.evolocity.tools.fb_model import FBModel
 
         model = FBModel(
             "esm1_t34_670M_UR50S",
             repr_layer=[-1],
         )
     elif model_name == "esm1b":
-        from ..tools.fb_model import FBModel
+        from proteome.models.evaluation.evolocity.tools.fb_model import FBModel
 
         model = FBModel(
             "esm1b_t33_650M_UR50S",
@@ -32,7 +31,7 @@ def get_model(model_name):
             repr_layer=[-1],
         )
     elif model_name == "esm1b-rand":
-        from ..tools.fb_model import FBModel
+        from proteome.models.evaluation.evolocity.tools.fb_model import FBModel
 
         model = FBModel(
             "esm1b_t33_650M_UR50S",
@@ -40,7 +39,8 @@ def get_model(model_name):
             random_init=True,
         )
     elif model_name == "tape":
-        from ..tools.tape_model import TAPEModel
+        from proteome.models.evaluation.evolocity.tools.tape_model import \
+            TAPEModel
 
         model = TAPEModel(
             "bert-base",
@@ -58,7 +58,8 @@ def embed_seqs(
     verbose=True,
 ):
     if "esm" in model.name_:
-        from ..tools.fb_semantics import embed_seqs_fb
+        from proteome.models.evaluation.evolocity.tools.fb_semantics import \
+            embed_seqs_fb
 
         seqs_fb = sorted([seq for seq in seqs])
         embedded = embed_seqs_fb(

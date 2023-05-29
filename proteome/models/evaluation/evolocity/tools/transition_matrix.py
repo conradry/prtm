@@ -2,11 +2,11 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from proteome.models.evaluation.evolocity.preprocessing.neighbors import (
+    get_connectivities, get_neighs)
+from proteome.models.evaluation.evolocity.tools.utils import normalize
 from scipy.sparse import SparseEfficiencyWarning, csr_matrix
 from scipy.spatial.distance import pdist, squareform
-
-from ..preprocessing.neighbors import get_connectivities, get_neighs
-from .utils import normalize
 
 warnings.simplefilter("ignore", SparseEfficiencyWarning)
 

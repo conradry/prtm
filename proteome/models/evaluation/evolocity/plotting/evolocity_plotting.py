@@ -1,13 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
-import scipy.stats as ss
 import seaborn as sns
 from anndata import AnnData
-
-from .. import logging as logg
-from ..preprocessing.neighbors import get_neighs
-from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity.preprocessing.neighbors import \
+    get_neighs
 
 
 def shortest_path(

@@ -1,12 +1,11 @@
 import warnings
 
 import numpy as np
-from scipy.sparse import issparse
-
-from .. import logging as logg
-from .. import settings
-from .transition_matrix import transition_matrix
-from .utils import norm
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity import settings
+from proteome.models.evaluation.evolocity.tools.transition_matrix import \
+    transition_matrix
+from proteome.models.evaluation.evolocity.tools.utils import norm
 
 
 def quiver_autoscale(X_emb, V_emb):

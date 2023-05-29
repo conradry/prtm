@@ -1,11 +1,13 @@
 import numpy as np
 import scipy.special
-
-from .. import logging as logg
-from .. import settings
-from ..preprocessing.neighbors import verify_neighbors
-from .transition_matrix import transition_matrix
-from .utils import groups_to_bool, strings_to_categoricals
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity import settings
+from proteome.models.evaluation.evolocity.preprocessing.neighbors import \
+    verify_neighbors
+from proteome.models.evaluation.evolocity.tools.transition_matrix import \
+    transition_matrix
+from proteome.models.evaluation.evolocity.tools.utils import (
+    groups_to_bool, strings_to_categoricals)
 
 
 def random_walk(

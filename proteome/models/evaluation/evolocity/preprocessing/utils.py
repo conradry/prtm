@@ -3,12 +3,8 @@ import os
 import warnings
 
 import numpy as np
-import pandas as pd
-from anndata import AnnData
+from proteome.models.evaluation.evolocity import logging as logg
 from scipy.sparse import issparse
-from sklearn.utils import sparsefuncs
-
-from .. import logging as logg
 
 
 def sum_obs(A):

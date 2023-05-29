@@ -2,8 +2,7 @@ import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-
-from .utils import mkdir_p
+from proteome.models.evaluation.evolocity.tools.utils import mkdir_p
 
 
 def onehot_msa(
@@ -178,7 +177,8 @@ def residue_scores(
             f'Could not find basis "{basis}", ' "consider running onehot_msa() first."
         )
 
-    from .velocity_embedding import velocity_embedding
+    from proteome.models.evaluation.evolocity.tools.velocity_embedding import \
+        velocity_embedding
 
     velocity_embedding(
         adata,

@@ -1,11 +1,13 @@
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, linalg
-
-from .. import logging as logg
-from .. import settings
-from ..preprocessing.neighbors import get_connectivities, verify_neighbors
-from .transition_matrix import transition_matrix
-from .utils import get_plasticity_score, groups_to_bool, scale, strings_to_categoricals
+from proteome.models.evaluation.evolocity import logging as logg
+from proteome.models.evaluation.evolocity import settings
+from proteome.models.evaluation.evolocity.preprocessing.neighbors import (
+    get_connectivities, verify_neighbors)
+from proteome.models.evaluation.evolocity.tools.transition_matrix import \
+    transition_matrix
+from proteome.models.evaluation.evolocity.tools.utils import (
+    groups_to_bool, scale, strings_to_categoricals)
+from scipy.sparse import csr_matrix, linalg
 
 
 def eigs(T, k=10, eps=1e-3, perc=None, random_state=None, v0=None):

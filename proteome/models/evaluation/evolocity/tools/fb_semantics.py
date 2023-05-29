@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from esm import Alphabet, FastaBatchedDataset, ProteinBertModel, pretrained
+from proteome.models.folding.esm.data import FastaBatchedDataset
 
 
 def predict_sequence_prob_fb(
