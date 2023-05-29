@@ -9,7 +9,7 @@ from functools import partial
 import esm
 import torch
 import torch.nn as nn
-from proteome.models.folding.esm import Alphabet
+from proteome.models.folding.esm.data import Alphabet
 from proteome.models.folding.esm.esmfold.v1.categorical_mixture import categorical_lddt
 from proteome.models.folding.esm.esmfold.v1.misc import (
     batch_encode_sequences,
