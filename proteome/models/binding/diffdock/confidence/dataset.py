@@ -1,5 +1,4 @@
 import copy
-import itertools
 import math
 import os
 import pickle
@@ -8,17 +7,20 @@ from argparse import Namespace
 from functools import partial
 
 import numpy as np
-import pandas as pd
 import torch
 import yaml
-from datasets.pdbbind import PDBBind
+from proteome.models.binding.diffdock.utils.diffusion_utils import \
+    get_t_schedule
+from proteome.models.binding.diffdock.utils.diffusion_utils import \
+    t_to_sigma as t_to_sigma_compl
+from proteome.models.binding.diffdock.utils.sampling import (
+    randomize_position, sampling)
+from proteome.models.binding.diffdock.utils.utils import get_model
 from torch_geometric.data import Data, Dataset
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
-from utils.diffusion_utils import get_t_schedule
-from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl
-from utils.sampling import randomize_position, sampling
-from utils.utils import get_model
+
+from datasets.pdbbind import PDBBind
 
 
 class ListDataset(Dataset):

@@ -1,9 +1,11 @@
 import numpy as np
 import torch
+from proteome.models.binding.diffdock.utils.diffusion_utils import (
+    modify_conformer, set_time)
+from proteome.models.binding.diffdock.utils.torsion import \
+    modify_conformer_torsion_angles
 from scipy.spatial.transform import Rotation as R
 from torch_geometric.loader import DataLoader
-from utils.diffusion_utils import modify_conformer, set_time
-from utils.torsion import modify_conformer_torsion_angles
 
 
 def randomize_position(data_list, no_torsion, no_random, tr_sigma_max):

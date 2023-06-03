@@ -5,7 +5,7 @@ import numpy as np
 import rdkit.Chem
 import torch
 from rdkit import Geometry
-from rdkit.Chem.rdmolfiles import MolToPDBBlock, MolToPDBFile
+from rdkit.Chem.rdmolfiles import MolToPDBBlock
 
 
 class PDBFile:

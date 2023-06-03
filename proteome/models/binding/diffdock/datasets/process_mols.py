@@ -8,7 +8,8 @@ import torch
 import torch.nn.functional as F
 from Bio.PDB import PDBParser
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
-from datasets.conformer_matching import get_torsion_angles, optimize_rotatable_bonds
+from proteome.models.binding.diffdock.utils.torsion import \
+    get_transformation_mask
 from rdkit import Chem
 from rdkit.Chem import AllChem, GetPeriodicTable, RemoveHs
 from rdkit.Chem.rdchem import BondType as BT
@@ -16,7 +17,9 @@ from rdkit.Geometry import Point3D
 from scipy import spatial
 from scipy.special import softmax
 from torch_cluster import radius_graph
-from utils.torsion import get_transformation_mask
+
+from datasets.conformer_matching import (get_torsion_angles,
+                                         optimize_rotatable_bonds)
 
 biopython_parser = PDBParser()
 periodic_table = GetPeriodicTable()

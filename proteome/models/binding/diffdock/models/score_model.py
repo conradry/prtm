@@ -1,15 +1,14 @@
-import math
 
-import numpy as np
 import torch
-from datasets.process_mols import lig_feature_dims, rec_residue_feature_dims
 from e3nn import o3
 from e3nn.nn import BatchNorm
+from proteome.models.binding.diffdock.utils import so3, torus
 from torch import nn
 from torch.nn import functional as F
 from torch_cluster import radius, radius_graph
 from torch_scatter import scatter, scatter_mean
-from utils import so3, torus
+
+from datasets.process_mols import lig_feature_dims, rec_residue_feature_dims
 
 
 class AtomEncoder(torch.nn.Module):

@@ -8,13 +8,15 @@ from datetime import datetime
 import numpy as np
 import torch
 import yaml
-from models.all_atom_score_model import TensorProductScoreModel as AAScoreModel
-from models.score_model import TensorProductScoreModel as CGScoreModel
+from proteome.models.binding.diffdock.utils.diffusion_utils import \
+    get_timestep_embedding
 from rdkit import Chem
 from rdkit.Chem import MolToPDBFile, RemoveHs
 from spyrmsd import molecule, rmsd
 from torch_geometric.nn.data_parallel import DataParallel
-from utils.diffusion_utils import get_timestep_embedding
+
+from models.all_atom_score_model import TensorProductScoreModel as AAScoreModel
+from models.score_model import TensorProductScoreModel as CGScoreModel
 
 
 def get_obrmsd(mol1_path, mol2_path, cache_name=None):

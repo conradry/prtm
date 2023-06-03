@@ -2,12 +2,15 @@ import copy
 
 import numpy as np
 import torch
-from confidence.dataset import ListDataset
+from proteome.models.binding.diffdock.utils import so3, torus
+from proteome.models.binding.diffdock.utils.diffusion_utils import \
+    get_t_schedule
+from proteome.models.binding.diffdock.utils.sampling import (
+    randomize_position, sampling)
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
-from utils import so3, torus
-from utils.diffusion_utils import get_t_schedule
-from utils.sampling import randomize_position, sampling
+
+from confidence.dataset import ListDataset
 
 
 def loss_function(

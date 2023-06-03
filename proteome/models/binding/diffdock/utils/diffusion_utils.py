@@ -3,10 +3,11 @@ import math
 import numpy as np
 import torch
 import torch.nn.functional as F
-from scipy.stats import beta
+from proteome.models.binding.diffdock.utils.geometry import (
+    axis_angle_to_matrix, rigid_transform_Kabsch_3D_torch)
+from proteome.models.binding.diffdock.utils.torsion import \
+    modify_conformer_torsion_angles
 from torch import nn
-from utils.geometry import axis_angle_to_matrix, rigid_transform_Kabsch_3D_torch
-from utils.torsion import modify_conformer_torsion_angles
 
 
 def t_to_sigma(t_tr, t_rot, t_tor, args):

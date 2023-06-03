@@ -1,7 +1,6 @@
 import binascii
 import copy
 import glob
-import hashlib
 import os
 import pickle
 import random
@@ -10,23 +9,21 @@ from multiprocessing import Pool
 
 import numpy as np
 import torch
-from datasets.process_mols import (
-    extract_receptor_structure,
-    generate_conformer,
-    get_lig_graph_with_matching,
-    get_rec_graph,
-    parse_pdb_from_path,
-    parse_receptor,
-    read_molecule,
-)
-from rdkit.Chem import AddHs, MolFromSmiles, MolToSmiles
+from proteome.models.binding.diffdock.utils import so3, torus
+from proteome.models.binding.diffdock.utils.diffusion_utils import (
+    modify_conformer, set_time)
+from proteome.models.binding.diffdock.utils.utils import read_strings_from_txt
+from rdkit.Chem import AddHs, MolFromSmiles
 from torch_geometric.data import Dataset, HeteroData
 from torch_geometric.loader import DataListLoader, DataLoader
 from torch_geometric.transforms import BaseTransform
 from tqdm import tqdm
-from utils import so3, torus
-from utils.diffusion_utils import modify_conformer, set_time
-from utils.utils import read_strings_from_txt
+
+from datasets.process_mols import (extract_receptor_structure,
+                                   generate_conformer,
+                                   get_lig_graph_with_matching, get_rec_graph,
+                                   parse_pdb_from_path, parse_receptor,
+                                   read_molecule)
 
 
 class NoiseTransform(BaseTransform):
