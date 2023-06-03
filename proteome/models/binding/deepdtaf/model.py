@@ -1,9 +1,10 @@
-import metrics
 import numpy as np
 import torch
 import torch.nn as nn
-from dataset import PT_FEATURE_SIZE
+from proteome.models.binding.deepdtaf.dataset import PT_FEATURE_SIZE
 from tqdm import tqdm
+
+import metrics
 
 CHAR_SMI_SET_LEN = 64
 

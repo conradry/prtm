@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -77,7 +76,7 @@ PT_FEATURE_SIZE = 40
 
 
 def label_smiles(line, max_smi_len):
-    X = np.zeros(max_smi_len, dtype=np.int)
+    X = np.zeros(max_smi_len, dtype=np.int64)
     for i, ch in enumerate(line[:max_smi_len]):
         X[i] = CHAR_SMI_SET[ch] - 1
 
