@@ -1,9 +1,9 @@
 import torch
-from genie.diffusion.diffusion import Diffusion
-from genie.diffusion.schedule import get_betas
-from genie.utils.affine_utils import T
-from genie.utils.geo_utils import compute_frenet_frames
-from genie.utils.loss import rmsd
+from proteome.models.design.genie.diffusion.diffusion import Diffusion
+from proteome.models.design.genie.diffusion.schedule import get_betas
+from proteome.models.design.genie.utils.affine_utils import T
+from proteome.models.design.genie.utils.geo_utils import compute_frenet_frames
+from proteome.models.design.genie.utils.loss import rmsd
 
 
 class Genie(Diffusion):

@@ -1,5 +1,5 @@
 import torch
-from genie.utils.geo_utils import dihedral, distance
+from proteome.models.design.genie.utils.geo_utils import distance
 
 
 def get_template_fn(template):

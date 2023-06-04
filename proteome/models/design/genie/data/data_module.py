@@ -1,8 +1,7 @@
-import glob
 import os
 
-from genie.data.dataset import SCOPeDataset
-from genie.utils.data_io import load_filepaths
+from proteome.models.design.genie.data.dataset import SCOPeDataset
+from proteome.models.design.genie.utils.data_io import load_filepaths
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 

@@ -1,8 +1,9 @@
-import torch
-from genie.model.pair_feature_net import PairFeatureNet
-from genie.model.pair_transform_net import PairTransformNet
-from genie.model.single_feature_net import SingleFeatureNet
-from genie.model.structure_net import StructureNet
+from proteome.models.design.genie.model.pair_feature_net import PairFeatureNet
+from proteome.models.design.genie.model.pair_transform_net import \
+    PairTransformNet
+from proteome.models.design.genie.model.single_feature_net import \
+    SingleFeatureNet
+from proteome.models.design.genie.model.structure_net import StructureNet
 from torch import nn
 
 

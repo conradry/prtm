@@ -19,8 +19,8 @@ from functools import partialmethod
 
 import torch
 import torch.nn as nn
-from genie.model.modules.primitives import Attention, Linear
-from genie.utils.tensor_utils import chunk_layer, flatten_final_dims, permute_final_dims
+from proteome.models.design.genie.model.modules.primitives import Attention, Linear
+from proteome.models.design.genie.utils.tensor_utils import chunk_layer, flatten_final_dims, permute_final_dims
 
 
 class TriangleAttention(nn.Module):

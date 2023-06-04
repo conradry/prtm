@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import torch
-from genie.model.model import Denoiser
+from proteome.models.design.genie.model.model import Denoiser
 from pytorch_lightning.core import LightningModule
 from torch.optim import Adam
 from tqdm import tqdm

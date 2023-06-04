@@ -1,4 +1,3 @@
-import os
 
 int_or_none = lambda x: int(x) if x is not None else None
 str_list_or_none = lambda x: x.strip().split(",") if x is not None else None

@@ -1,5 +1,5 @@
 import numpy as np
-from genie.utils.data_io import load_coord
+from proteome.models.design.genie.utils.data_io import load_coord
 from torch.utils.data import Dataset
 
 

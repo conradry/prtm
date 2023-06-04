@@ -1,13 +1,11 @@
-from genie.model.modules.dropout import DropoutColumnwise, DropoutRowwise
-from genie.model.modules.pair_transition import PairTransition
-from genie.model.modules.triangular_attention import (
-    TriangleAttentionEndingNode,
-    TriangleAttentionStartingNode,
-)
-from genie.model.modules.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming,
-    TriangleMultiplicationOutgoing,
-)
+from proteome.models.design.genie.model.modules.dropout import (
+    DropoutColumnwise, DropoutRowwise)
+from proteome.models.design.genie.model.modules.pair_transition import \
+    PairTransition
+from proteome.models.design.genie.model.modules.triangular_attention import (
+    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+from proteome.models.design.genie.model.modules.triangular_multiplicative_update import (
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 from torch import nn
 
 

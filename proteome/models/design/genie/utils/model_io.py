@@ -3,8 +3,8 @@ import os
 import sys
 
 import numpy as np
-from genie.config import Config
-from genie.diffusion.genie import Genie
+from proteome.models.design.genie.config import Config
+from proteome.models.design.genie.diffusion.genie import Genie
 
 
 def get_versions(rootdir, name):
