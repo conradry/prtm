@@ -1,23 +1,26 @@
 import logging
 import os
-import sys
 
 import numpy as np
 import torch
 import torch.nn.functional as nn
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from rfdiffusion import util
-from rfdiffusion.chemical import seq2chars
-from rfdiffusion.contigs import ContigMap
-from rfdiffusion.diffusion import Diffuser
-from rfdiffusion.inference import symmetry
-from rfdiffusion.inference import utils as iu
-from rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
-from rfdiffusion.model_input_logger import pickle_function_call
-from rfdiffusion.potentials.manager import PotentialManager
-from rfdiffusion.RoseTTAFoldModel import RoseTTAFoldModule
-from rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.design.rfdiffusion import util
+from proteome.models.design.rfdiffusion.chemical import seq2chars
+from proteome.models.design.rfdiffusion.contigs import ContigMap
+from proteome.models.design.rfdiffusion.diffusion import Diffuser
+from proteome.models.design.rfdiffusion.inference import symmetry
+from proteome.models.design.rfdiffusion.inference import utils as iu
+from proteome.models.design.rfdiffusion.kinematics import (get_init_xyz,
+                                                           xyz_to_t2d)
+from proteome.models.design.rfdiffusion.model_input_logger import \
+    pickle_function_call
+from proteome.models.design.rfdiffusion.potentials.manager import \
+    PotentialManager
+from proteome.models.design.rfdiffusion.rosettafold_model import \
+    RoseTTAFoldModule
+from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 

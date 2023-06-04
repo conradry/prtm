@@ -2,8 +2,6 @@ import random
 
 import numpy as np
 import torch
-from icecream import ic
-from rfdiffusion.chemical import INIT_CRDS
 
 
 def th_min_angle(start, end, radians=False):

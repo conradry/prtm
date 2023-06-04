@@ -2,7 +2,6 @@ import random
 import sys
 
 import numpy as np
-from icecream import ic
 
 
 class ContigMap:

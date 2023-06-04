@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from opt_einsum import contract as einsum
-from rfdiffusion.util_module import init_lecun_normal
+from proteome.models.design.rfdiffusion.util_module import init_lecun_normal
 
 
 class FeedForwardLayer(nn.Module):

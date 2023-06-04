@@ -57,27 +57,3 @@ def pickle_function_call(instance, method, subdir):
     )
     wrap_it(pickle_function_call_wrapper, instance, method, output_dir=output_dir)
     return output_dir
-
-
-# For testing
-if __name__ == "__main__":
-    import glob
-
-    class Dog:
-        def __init__(self, name):
-            self.name = name
-
-        def bark(self, arg, kwarg=None):
-            print(f"{self.name}:{arg}:{kwarg}")
-
-    dog = Dog("fido")
-    dog.bark("ruff")
-
-    output_dir = pickle_function_call(dog, "bark", "debugging")
-
-    dog.bark("ruff", kwarg="wooof")
-
-    for p in glob.glob(os.path.join(output_dir, "*")):
-        print(p)
-        with open(p, "rb") as fh:
-            print(pickle.load(fh))

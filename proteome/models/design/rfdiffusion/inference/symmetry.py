@@ -6,7 +6,6 @@ import string
 
 import numpy as np
 import torch
-from pyrsistent import v
 from scipy.spatial.transform import Rotation
 
 format_rots = lambda r: torch.tensor(r).float()

@@ -1,7 +1,8 @@
 import torch.utils.checkpoint as checkpoint
-from rfdiffusion.Attention_module import *
-from rfdiffusion.SE3_network import SE3TransformerWrapper
-from rfdiffusion.util_module import *
+from proteome.models.design.rfdiffusion.attention_module import *
+from proteome.models.design.rfdiffusion.se3_network import \
+    SE3TransformerWrapper
+from proteome.models.design.rfdiffusion.util_module import *
 
 # Components for three-track blocks
 # 1. MSA -> MSA update (biased attention. bias from pair & structure)

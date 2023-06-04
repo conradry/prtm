@@ -5,13 +5,12 @@ import random
 
 import numpy as np
 import torch
-import torch.nn.functional as nn
 from omegaconf import DictConfig
-from rfdiffusion import util
-from rfdiffusion.diffusion import get_beta_schedule
-from rfdiffusion.inference import model_runners
-from rfdiffusion.util import rigid_from_3_points
-from rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.design.rfdiffusion import util
+from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
+from proteome.models.design.rfdiffusion.inference import model_runners
+from proteome.models.design.rfdiffusion.util import rigid_from_3_points
+from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 from scipy.spatial.transform import Rotation as scipy_R
 
 ###########################################################

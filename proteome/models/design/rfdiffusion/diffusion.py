@@ -6,9 +6,9 @@ import time
 
 import numpy as np
 import torch
-from rfdiffusion import igso3
-from rfdiffusion.util import rigid_from_3_points
-from rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.design.rfdiffusion import igso3
+from proteome.models.design.rfdiffusion.util import rigid_from_3_points
+from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 from scipy.spatial.transform import Rotation as scipy_R
 
 torch.set_printoptions(sci_mode=False)

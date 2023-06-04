@@ -1,6 +1,6 @@
 import scipy.sparse
-from rfdiffusion.chemical import *
-from rfdiffusion.scoring import *
+from proteome.models.design.rfdiffusion.chemical import *
+from proteome.models.design.rfdiffusion.scoring import *
 
 
 def generate_Cbeta(N, Ca, C):

@@ -4,17 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from icecream import ic
-from opt_einsum import contract as einsum
-from rfdiffusion.Attention_module import Attention, AttentionWithBias, FeedForwardLayer
-from rfdiffusion.Track_module import PairStr2Pair
-from rfdiffusion.util import get_tips
-from rfdiffusion.util_module import (
-    Dropout,
-    create_custom_forward,
-    init_lecun_normal,
-    rbf,
-)
+from proteome.models.design.rfdiffusion.attention_module import (
+    Attention, AttentionWithBias, FeedForwardLayer)
+from proteome.models.design.rfdiffusion.track_module import PairStr2Pair
+from proteome.models.design.rfdiffusion.util_module import (
+    create_custom_forward, init_lecun_normal, rbf)
 
 # Module contains classes and functions to generate initial embeddings
 
