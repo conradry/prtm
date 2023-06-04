@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from biotite.sequence import ProteinSequence
 from biotite.structure.io.pdb import PDBFile
-from foldingdiff import nerf
+from proteome.models.design.foldingdiff import nerf
 
 EXHAUSTIVE_ANGLES = ["phi", "psi", "omega", "tau", "CA:C:1N", "C:1N:1CA"]
 EXHAUSTIVE_DISTS = ["0C:1N", "N:CA", "CA:C"]
@@ -432,12 +432,3 @@ def add_sidechains_to_backbone(
     sink.set_structure(struc.array(full_atoms))
     sink.write(out_fname)
     return out_fname
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    # test_reverse_dihedral()
-    # backbone = collect_aa_sidechain_angles(
-    #     os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/1CRN.pdb")
-    # )
-    # print(build_aa_sidechain_dict())

@@ -16,8 +16,9 @@ from typing import *
 
 import pytorch_lightning as pl
 import torch
-from foldingdiff import losses, nerf
-from foldingdiff.datasets import FEATURE_SET_NAMES_TO_ANGULARITY
+from proteome.models.design.foldingdiff import losses, nerf
+from proteome.models.design.foldingdiff.datasets import \
+    FEATURE_SET_NAMES_TO_ANGULARITY
 from torch import nn
 from torch.nn import functional as F
 from tqdm.auto import tqdm
@@ -1001,19 +1002,3 @@ class BertForAutoregressive(BertForAutoregressiveBase, pl.LightningModule):
                 raise ValueError(f"Unknown lr scheduler {self.lr_scheduler}")
 
         return retval
-
-
-def main():
-    """on the fly testing"""
-    m = BertForAutoregressiveBase.from_dir(
-        "/home/wukevin/projects/protdiff_results/models/ar_baseline/results"
-    )
-    # rand samples uniformly from [0, 1) so we expand the range and shift it
-    rand_angles = torch.rand(size=(32, 128, 6)) * 2 * torch.pi - torch.pi
-    rand_lens = torch.randint(low=40, high=128, size=(32,))
-    m.sample(seed_angles=rand_angles, seq_lengths=rand_lens)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    main()

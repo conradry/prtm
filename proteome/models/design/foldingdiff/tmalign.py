@@ -76,12 +76,3 @@ def max_tm_across_refs(
         values = list(itertools.starmap(run_tmalign, args))
 
     return np.nanmax(values), references[np.argmax(values)]
-
-
-def main():
-    """On the fly testing"""
-    run_tmalign("data/7PFL.pdb", "data/7ZYA.pdb")
-
-
-if __name__ == "__main__":
-    main()

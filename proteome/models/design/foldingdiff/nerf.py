@@ -7,7 +7,6 @@ References:
 https://benjamin-computer.medium.com/protein-loops-in-tensorflow-a-i-bio-part-2-f1d802ef8300
 https://www.biotite-python.org/examples/gallery/structure/peptide_assembly.html
 """
-import os
 from functools import cached_property
 from typing import *
 
@@ -290,24 +289,3 @@ def nerf_build_batch(
         assert coords.shape[-1] == 3 and coords.shape[0] == batch
 
     return coords
-
-
-def main():
-    """On the fly testing"""
-    import biotite.structure as struc
-    from biotite.structure.io.pdb import PDBFile
-
-    source = PDBFile.read(
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/1CRN.pdb")
-    )
-    source_struct = source.get_structure()
-    # print(source_struct[0])
-    phi, psi, omega = [torch.tensor(x) for x in struc.dihedral_backbone(source_struct)]
-
-    builder = NERFBuilder(phi, psi, omega)
-    print(builder.cartesian_coords)
-    print(builder.cartesian_coords.shape)
-
-
-if __name__ == "__main__":
-    main()

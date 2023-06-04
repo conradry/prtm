@@ -4,7 +4,7 @@ Loss functions!
 from typing import Optional, Sequence, Tuple
 
 import torch
-from foldingdiff import utils
+from proteome.models.design.foldingdiff import utils
 from torch.nn import functional as F
 
 
@@ -155,10 +155,3 @@ def main():
 
     l = pairwise_dist_loss(x, y, lengths)
     print(l)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
-    main()

@@ -28,12 +28,12 @@ CATH_DIR = LOCAL_DATA_DIR / "cath"
 ALPHAFOLD_DIR = LOCAL_DATA_DIR / "alphafold"
 
 
-from foldingdiff import beta_schedules
-from foldingdiff import custom_metrics as cm
-from foldingdiff import utils
-from foldingdiff.angles_and_coords import (EXHAUSTIVE_ANGLES, EXHAUSTIVE_DISTS,
-                                           canonical_distances_and_dihedrals,
-                                           extract_backbone_coords)
+from proteome.models.design.foldingdiff import beta_schedules
+from proteome.models.design.foldingdiff import custom_metrics as cm
+from proteome.models.design.foldingdiff import utils
+from proteome.models.design.foldingdiff.angles_and_coords import (
+    EXHAUSTIVE_ANGLES, EXHAUSTIVE_DISTS, canonical_distances_and_dihedrals,
+    extract_backbone_coords)
 
 TRIM_STRATEGIES = Literal["leftalign", "randomcrop", "discard"]
 
@@ -1208,8 +1208,3 @@ def main():
     for k, v in x.items():
         print(k)
         print(v)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    main()

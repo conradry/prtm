@@ -3,7 +3,6 @@ Utility functions for plotting
 """
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
@@ -179,7 +178,3 @@ def plot_consecutive_heatmap(
     if fname is not None:
         fig.savefig(fname, bbox_inches="tight")
     return fig
-
-
-if __name__ == "__main__":
-    plot_losses(sys.argv[1], out_fname=sys.argv[2], simple=True)

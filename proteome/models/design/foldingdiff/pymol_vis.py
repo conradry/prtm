@@ -17,7 +17,6 @@ import biotite.structure as struc
 import biotite.structure.io as strucio
 import imageio
 import pymol
-from tqdm.auto import tqdm
 
 
 def pdb2png(pdb_fname: str, png_fname: str) -> str:
@@ -171,14 +170,3 @@ def build_parser():
     png_batch_parser.set_defaults(func=pdb2png_dir_from_args)
 
     return parser
-
-
-def main():
-    """Run this as an interactive script"""
-    parser = build_parser()
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()

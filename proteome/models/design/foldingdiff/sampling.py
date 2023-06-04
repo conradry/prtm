@@ -12,11 +12,12 @@ from typing import *
 import numpy as np
 import pandas as pd
 import torch
-from foldingdiff import angles_and_coords as ac
-from foldingdiff import beta_schedules
-from foldingdiff import datasets as dsets
-from foldingdiff import modelling, sampling, tmalign, utils
 from huggingface_hub import snapshot_download
+from proteome.models.design.foldingdiff import angles_and_coords as ac
+from proteome.models.design.foldingdiff import beta_schedules
+from proteome.models.design.foldingdiff import datasets as dsets
+from proteome.models.design.foldingdiff import (modelling, sampling, tmalign,
+                                                utils)
 from torch import nn
 from torch.utils.data import default_collate
 from tqdm.auto import tqdm
@@ -342,10 +343,3 @@ def get_reconstruction_error(
     pool.join()
     scores, coord_scores = zip(*results)
     return np.array(scores), np.array(coord_scores)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    s = sample_simple("wukevin/foldingdiff_cath", n=1, sweep_lengths=(50, 55))
-    for i, x in enumerate(s):
-        print(x.shape)

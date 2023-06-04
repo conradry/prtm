@@ -2,8 +2,7 @@
 Describe beta schedules
 """
 import logging
-import os
-from typing import Dict, Literal, get_args
+from typing import Dict, Literal
 
 import numpy as np
 import torch
@@ -99,16 +98,3 @@ def plot_variance_schedule(
         xlabel="Timestep",
     )
     fig.savefig(fname)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    from plotting import PLOT_DIR
-
-    var_plot_dir = os.path.join(PLOT_DIR, "variance_schedules")
-    if not os.path.isdir(var_plot_dir):
-        os.makedirs(var_plot_dir)
-    for s in get_args(SCHEDULES):
-        plot_variance_schedule(
-            os.path.join(var_plot_dir, f"{s}_var_schedule.pdf"), keyword=s
-        )
