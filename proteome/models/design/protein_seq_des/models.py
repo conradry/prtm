@@ -1,5 +1,4 @@
-import common.atoms
-import seq_des.util.data as data
+import proteome.models.design.protein_seq_des.util.data as data
 import torch
 import torch.nn as nn
 

@@ -1,16 +1,13 @@
 import glob
-import json
 import os
 import re
 
 import Bio.PDB
 import Bio.PDB.vectors
-import common.atoms
 import numpy as np
-import seq_des.util.canonicalize as canonicalize
-import seq_des.util.voxelize as voxelize
+import proteome.models.design.protein_seq_des.util.canonicalize as canonicalize
+import proteome.models.design.protein_seq_des.util.voxelize as voxelize
 import torch
-import torch.nn.functional as F
 from torch.utils import data
 
 CHI_BINS = np.linspace(-np.pi, np.pi, num=25)

@@ -1,8 +1,7 @@
-import common.atoms
 import numpy as np
-import seq_des.util.canonicalize as canonicalize
-import seq_des.util.data as data
-import seq_des.util.voxelize as voxelize
+import proteome.models.design.protein_seq_des.util.canonicalize as canonicalize
+import proteome.models.design.protein_seq_des.util.data as data
+import proteome.models.design.protein_seq_des.util.voxelize as voxelize
 import torch
 import torch.nn.functional as F
 from torch.distributions.categorical import Categorical

@@ -1,24 +1,16 @@
 import math
-import os
-import sys
 
-import common.atoms
 import numpy as np
-import seq_des.util.canonicalize as canonicalize
-import seq_des.util.data as data
-import seq_des.util.pyrosetta_util as putil
-import seq_des.util.resfile_util as resfile_util
-import seq_des.util.sampler_util as sampler_util
+import proteome.models.design.protein_seq_des.util.data as data
+import proteome.models.design.protein_seq_des.util.pyrosetta_util as putil
+import proteome.models.design.protein_seq_des.util.resfile_util as resfile_util
+import proteome.models.design.protein_seq_des.util.sampler_util as sampler_util
 import torch
-import torch.nn.functional as F
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
-from pyrosetta.rosetta.protocols.denovo_design.filters import (
-    ExposedHydrophobicsFilterCreator,
-)
+from pyrosetta.rosetta.protocols.denovo_design.filters import \
+    ExposedHydrophobicsFilterCreator
 from pyrosetta.rosetta.protocols.simple_filters import (
-    BuriedUnsatHbondFilterCreator,
-    PackStatFilterCreator,
-)
+    BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
 from torch.distributions.categorical import Categorical
 
 
