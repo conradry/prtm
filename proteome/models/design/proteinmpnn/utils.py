@@ -6,7 +6,6 @@ import time
 import numpy as np
 import torch
 from dateutil import parser
-from torch.utils.data import DataLoader
 
 
 class StructureDataset:

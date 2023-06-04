@@ -1,14 +1,6 @@
 from __future__ import print_function
 
-import copy
-import glob
-import itertools
-import json
-import os
 import random
-import shutil
-import sys
-import time
 
 import numpy as np
 import torch
@@ -16,9 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils
 import torch.utils.checkpoint
-from torch import optim
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import Subset, random_split
 
 
 def featurize(batch, device):
