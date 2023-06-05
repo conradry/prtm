@@ -5,6 +5,7 @@ channels:
   - pytorch
   - dglteam
   - pyg
+  - nvidia
 dependencies:
   - conda-forge::python=3.10
   - conda-forge::setuptools=59.5.0
@@ -18,6 +19,7 @@ dependencies:
   - bioconda::hhsuite==3.3.0
   - bioconda::kalign2==2.04
   - pytorch::pytorch==2.0.1
+  - pytorch-cuda=11.8
   - dglteam::dgl==1.1.0
   - pytorch-lightning==2.0.2
   - astropy==5.3
