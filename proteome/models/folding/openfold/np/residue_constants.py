@@ -17,11 +17,12 @@
 
 import collections
 import functools
-from importlib import resources
 from typing import List, Mapping, Tuple
 
 import numpy as np
 import tree
+
+from proteome.models.folding.openfold.resources.stereo_chemical_props import STEREO_CHEMICAL_PROPS
 
 # Internal import (35fd).
 
@@ -453,9 +454,7 @@ def load_stereo_chemical_props() -> (
       residue_bond_angles: dict that maps resname --> list of BondAngle tuples
     """
     # TODO: this file should be downloaded in a setup script
-    stereo_chemical_props = resources.read_text(
-        "openfold.resources", "stereo_chemical_props.txt"
-    )
+    stereo_chemical_props = STEREO_CHEMICAL_PROPS
 
     lines_iter = iter(stereo_chemical_props.splitlines())
     # Load bond lengths.

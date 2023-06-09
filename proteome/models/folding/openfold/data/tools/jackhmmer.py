@@ -15,11 +15,11 @@
 
 """Library to run Jackhmmer from Python."""
 
+from concurrent import futures
 import glob
 import logging
 import os
 import subprocess
-from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
@@ -71,9 +71,14 @@ class Jackhmmer:
         self.database_path = database_path
         self.num_streamed_chunks = num_streamed_chunks
 
-        if not os.path.exists(self.database_path) and num_streamed_chunks is None:
+        if (
+            not os.path.exists(self.database_path)
+            and num_streamed_chunks is None
+        ):
             logging.error("Could not find Jackhmmer database %s", database_path)
-            raise ValueError(f"Could not find Jackhmmer database {database_path}")
+            raise ValueError(
+                f"Could not find Jackhmmer database {database_path}"
+            )
 
         self.n_cpu = n_cpu
         self.n_iter = n_iter
@@ -91,7 +96,7 @@ class Jackhmmer:
         self, input_fasta_path: str, database_path: str
     ) -> Mapping[str, Any]:
         """Queries the database chunk using Jackhmmer."""
-        with utils.tmpdir_manager(base_dir="/tmp") as query_tmp_dir:
+        with utils.tmpdir_manager(base_dir="./") as query_tmp_dir:
             sto_path = os.path.join(query_tmp_dir, "output.sto")
 
             # The F1/F2/F3 are the expected proportion to pass each of the filtering
@@ -135,13 +140,19 @@ class Jackhmmer:
             if self.incdom_e is not None:
                 cmd_flags.extend(["--incdomE", str(self.incdom_e)])
 
-            cmd = [self.binary_path] + cmd_flags + [input_fasta_path, database_path]
+            cmd = (
+                [self.binary_path]
+                + cmd_flags
+                + [input_fasta_path, database_path]
+            )
 
             logging.info('Launching subprocess "%s"', " ".join(cmd))
             process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-            with utils.timing(f"Jackhmmer ({os.path.basename(database_path)}) query"):
+            with utils.timing(
+                f"Jackhmmer ({os.path.basename(database_path)}) query"
+            ):
                 _, stderr = process.communicate()
                 retcode = process.wait()
 
@@ -176,7 +187,7 @@ class Jackhmmer:
 
         db_basename = os.path.basename(self.database_path)
         db_remote_chunk = lambda db_idx: f"{self.database_path}.{db_idx}"
-        db_local_chunk = lambda db_idx: f"/tmp/ramdisk/{db_basename}.{db_idx}"
+        db_local_chunk = lambda db_idx: f"./{db_basename}.{db_idx}"
 
         # Remove existing files to prevent OOM
         for f in glob.glob(db_local_chunk("[0-9]*")):

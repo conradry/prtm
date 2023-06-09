@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Protein data type."""
+
 import dataclasses
 import io
 import re
