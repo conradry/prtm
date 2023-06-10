@@ -25,6 +25,12 @@ from proteome.models.folding.openfold.data.tools import utils
 _HHBLITS_DEFAULT_P = 20
 _HHBLITS_DEFAULT_Z = 500
 
+try:
+    HHBLITS_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    assert os.path.isfile(HHBLITS_BINARY_PATH)
+except:
+    HHBLITS_BINARY_PATH = None
+
 
 class HHBlits:
     """Python wrapper of the HHblits binary."""
@@ -32,8 +38,8 @@ class HHBlits:
     def __init__(
         self,
         *,
-        binary_path: str,
         databases: Sequence[str],
+        binary_path: Optional[str] = HHBLITS_BINARY_PATH,
         n_cpu: int = 4,
         n_iter: int = 3,
         e_value: float = 0.001,
@@ -74,6 +80,9 @@ class HHBlits:
         Raises:
           RuntimeError: If HHblits binary not found within the path.
         """
+        assert (
+            binary_path is not None
+        ), "HHblits binary not found in conda env, please specify path"
         self.binary_path = binary_path
         self.databases = databases
 

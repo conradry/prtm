@@ -18,9 +18,15 @@ import glob
 import logging
 import os
 import subprocess
-from typing import Sequence
+from typing import Optional, Sequence
 
 from proteome.models.folding.openfold.data.tools import utils
+
+try:
+    HHSEARCH_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    assert os.path.isfile(HHSEARCH_BINARY_PATH)
+except:
+    HHSEARCH_BINARY_PATH = None
 
 
 class HHSearch:
@@ -29,8 +35,8 @@ class HHSearch:
     def __init__(
         self,
         *,
-        binary_path: str,
         databases: Sequence[str],
+        binary_path: Optional[str] = HHSEARCH_BINARY_PATH,
         n_cpu: int = 2,
         maxseq: int = 1_000_000,
     ):
@@ -48,6 +54,9 @@ class HHSearch:
         Raises:
           RuntimeError: If HHsearch binary not found within the path.
         """
+        assert (
+            binary_path is not None
+        ), "HHsearch binary not found in conda env, please specify path"
         self.binary_path = binary_path
         self.databases = databases
         self.n_cpu = n_cpu

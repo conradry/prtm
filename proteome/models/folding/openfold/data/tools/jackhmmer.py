@@ -15,15 +15,21 @@
 
 """Library to run Jackhmmer from Python."""
 
-from concurrent import futures
 import glob
 import logging
 import os
 import subprocess
+from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
 from proteome.models.folding.openfold.data.tools import utils
+
+try:
+    JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    assert os.path.isfile(JACKHMMER_BINARY_PATH)
+except:
+    JACKHMMER_BINARY_PATH = None
 
 
 class Jackhmmer:
@@ -32,8 +38,8 @@ class Jackhmmer:
     def __init__(
         self,
         *,
-        binary_path: str,
         database_path: str,
+        binary_path: Optional[str] = JACKHMMER_BINARY_PATH,
         n_cpu: int = 8,
         n_iter: int = 1,
         e_value: float = 0.0001,
@@ -67,18 +73,16 @@ class Jackhmmer:
           streaming_callback: Callback function run after each chunk iteration with
             the iteration number as argument.
         """
+        assert (
+            binary_path is not None
+        ), "Jackhmmer binary not found in conda env, please specify path"
         self.binary_path = binary_path
         self.database_path = database_path
         self.num_streamed_chunks = num_streamed_chunks
 
-        if (
-            not os.path.exists(self.database_path)
-            and num_streamed_chunks is None
-        ):
+        if not os.path.exists(self.database_path) and num_streamed_chunks is None:
             logging.error("Could not find Jackhmmer database %s", database_path)
-            raise ValueError(
-                f"Could not find Jackhmmer database {database_path}"
-            )
+            raise ValueError(f"Could not find Jackhmmer database {database_path}")
 
         self.n_cpu = n_cpu
         self.n_iter = n_iter
@@ -140,19 +144,13 @@ class Jackhmmer:
             if self.incdom_e is not None:
                 cmd_flags.extend(["--incdomE", str(self.incdom_e)])
 
-            cmd = (
-                [self.binary_path]
-                + cmd_flags
-                + [input_fasta_path, database_path]
-            )
+            cmd = [self.binary_path] + cmd_flags + [input_fasta_path, database_path]
 
             logging.info('Launching subprocess "%s"', " ".join(cmd))
             process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
-            with utils.timing(
-                f"Jackhmmer ({os.path.basename(database_path)}) query"
-            ):
+            with utils.timing(f"Jackhmmer ({os.path.basename(database_path)}) query"):
                 _, stderr = process.communicate()
                 retcode = process.wait()
 
