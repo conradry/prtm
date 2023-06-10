@@ -61,6 +61,8 @@ dependencies:
   - spyrmsd==0.5.2 
   - python-igraph==0.10.3
   - pip:
+      - boto3
+      - botocore
       - opt-einsum-fx>=0.1.4
       - opt-einsum>=3.3.0
       - charset-normalizer

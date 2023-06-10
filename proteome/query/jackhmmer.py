@@ -23,7 +23,7 @@ from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
-from proteome.models.folding.openfold.data.tools import utils
+from proteome.query import utils
 
 try:
     JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")

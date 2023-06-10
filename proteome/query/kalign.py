@@ -20,7 +20,7 @@ from typing import Optional, Sequence
 
 from absl import logging
 
-from proteome.models.folding.openfold.data.tools import utils
+from proteome.query import utils
 
 try:
     KALIGN_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")

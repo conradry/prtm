@@ -20,7 +20,7 @@ import os
 import subprocess
 from typing import Optional, Sequence
 
-from proteome.models.folding.openfold.data.tools import utils
+from proteome.query import utils
 
 try:
     HHSEARCH_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")

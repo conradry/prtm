@@ -20,7 +20,7 @@ import os
 import subprocess
 from typing import Any, Mapping, Optional, Sequence
 
-from proteome.models.folding.openfold.data.tools import utils
+from proteome.query import utils
 
 _HHBLITS_DEFAULT_P = 20
 _HHBLITS_DEFAULT_Z = 500
