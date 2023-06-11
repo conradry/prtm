@@ -23,7 +23,7 @@ from typing import Optional, Sequence
 from proteome.query import utils
 
 try:
-    HHSEARCH_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    HHSEARCH_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhsearch")
     assert os.path.isfile(HHSEARCH_BINARY_PATH)
 except:
     HHSEARCH_BINARY_PATH = None

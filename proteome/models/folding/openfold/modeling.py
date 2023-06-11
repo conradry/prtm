@@ -1,19 +1,20 @@
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import ml_collections as mlc
 import numpy as np
 import torch
 
 from proteome.models.folding.openfold import config, data
-from proteome.models.folding.openfold.data import (data_pipeline,
-                                                   feature_pipeline, parsers)
+from proteome.models.folding.openfold.data import (
+    data_pipeline,
+    feature_pipeline, 
+    parsers,
+)
 from proteome.models.folding.openfold.model import model
 from proteome.models.folding.openfold.np import protein
 from proteome.models.folding.openfold.np.relax import relax
 from proteome.models.folding.openfold.np.relax.utils import overwrite_b_factors
-from proteome.models.folding.openfold.utils.import_weights import \
-    import_jax_weights_
 from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
 from proteome.query import jackhmmer
 from proteome.utils import hub_s3
@@ -25,10 +26,14 @@ OPENFOLD_MODEL_URLS = {
     "finetuning_ptm-2": "s3://openfold/openfold_params/finetuning_ptm_2.pt",
     "finetuning_no_templ_ptm-1": "s3://openfold/openfold_params/finetuning_no_templ_ptm_1.pt",
 }
-NUM_JACKHMMER_CHUNKS = {
-    "uniref90": (59, 135301051),
-    "smallbfd": (17, 65984053),
-    "mgnify": (71, 304820129),
+JACKHMMER_DBS = {
+    # Order of tuple is (chunk_count, z_value, db_url)
+    #"uniref90": (59, 135301051, 'https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta'),
+    #"smallbfd": (17, 65984053, 'https://storage.googleapis.com/alphafold-colab-asia/latest/bfd-first_non_consensus_sequences.fasta'),
+    #"mgnify": (71, 304820129, 'https://storage.googleapis.com/alphafold-colab-asia/latest/mgy_clusters_2019_05.fasta'),
+    "uniref90": (2, 135301051, 'https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta'),
+    "smallbfd": (2, 65984053, 'https://storage.googleapis.com/alphafold-colab-asia/latest/bfd-first_non_consensus_sequences.fasta'),
+    "mgnify": (2, 304820129, 'https://storage.googleapis.com/alphafold-colab-asia/latest/mgy_clusters_2019_05.fasta'),
 }
 MGNIFY_MAX_HITS = 501
 
@@ -74,8 +79,7 @@ class OpenFoldForFolding:
     def load_weights(self, model, weights_url):
         """Load weights from a weights url."""
         weights = hub_s3.load_state_dict_from_s3_url(weights_url)
-        msg = model.load_state_dict(weights, strict=True)
-        print(msg)
+        msg = self.model.load_state_dict(weights, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
         """Validate that the input sequence is a valid amino acid sequence."""
@@ -97,16 +101,16 @@ class OpenFoldForFolding:
             f.write(f">query\n{sequence}")
 
         dbs = []
-        for db_name, (chunk_count, z_value) in NUM_JACKHMMER_CHUNKS.items():
+        for db_name, (chunk_count, z_value, db_url) in JACKHMMER_DBS.items():
             print(f"Running jackhmmer on {db_name} database...")
-            jackhmmer_uniref90_runner = jackhmmer.Jackhmmer(
-                database_path=f"https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta",
+            jackhmmer_runner = jackhmmer.Jackhmmer(
+                database_path=db_url,
                 get_tblout=True,
                 num_streamed_chunks=chunk_count,
                 streaming_callback=None,
                 z_value=z_value,
             )
-            dbs.append((db_name, jackhmmer_uniref90_runner.query("target.fasta")))
+            dbs.append((db_name, jackhmmer_runner.query("target.fasta")))
 
         os.remove("target.fasta")
 
@@ -174,7 +178,7 @@ class OpenFoldForFolding:
         return processed_feature_dict
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> protein.Protein:
+    def fold(self, sequence: str) -> Tuple[protein.Protein, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -185,5 +189,11 @@ class OpenFoldForFolding:
         # Prepare the input features for a given sequence and its MSAs and deletion matrices.
         feature_dict = self._featurize_input(sequence, msas, deletion_matrices)
 
-        # Run the model.
-        return self.model(feature_dict)
+        res = self.model(feature_dict)
+        
+        # Unpack to a protein and a plddt confidence metric.
+        mean_plddt = float(res['plddt'].mean())
+        b_factors = res['plddt'][:, None] * res['final_atom_mask']
+        predicted_protein = protein.from_prediction(feature_dict, res, b_factors=b_factors)
+
+        return predicted_protein, mean_plddt

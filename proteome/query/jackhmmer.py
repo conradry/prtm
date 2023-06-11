@@ -26,7 +26,7 @@ from urllib import request
 from proteome.query import utils
 
 try:
-    JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "jackhmmer")
     assert os.path.isfile(JACKHMMER_BINARY_PATH)
 except:
     JACKHMMER_BINARY_PATH = None

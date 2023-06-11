@@ -75,8 +75,10 @@ def load_state_dict_from_s3_url(
 
     cached_file = os.path.join(model_dir, os.path.basename(s3_url))
     if not os.path.exists(cached_file):
+        print(f"Downloading model from {s3_url}...")
         download_s3_url_to_file(
             s3_url, cached_file, boto_client_config=boto_client_config
         )
+        print(f"Model downloaded and cached in {cached_file}.")
 
     return torch.load(cached_file, map_location=map_location)

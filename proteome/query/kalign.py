@@ -23,7 +23,7 @@ from absl import logging
 from proteome.query import utils
 
 try:
-    KALIGN_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhblits")
+    KALIGN_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "kalign")
     assert os.path.isfile(KALIGN_BINARY_PATH)
 except:
     KALIGN_BINARY_PATH = None
