@@ -57,3 +57,38 @@ def insert_result_in_cache(hash, result):
     cur = con.cursor()
     cur.execute(f"INSERT INTO {TABLE_NAME} VALUES(?, ?)", (hash, str(result)))
     con.commit()
+
+
+def cache_query(hash_func_kwargs, hash_class_attrs):
+    """Class method decorator for query utilities"""
+    def wrapped_function(func):
+        def get_cached(*args, **kwargs):
+            """
+            Only execute the function if its value isn't stored
+            in cache already.
+            """
+            # First of args is self with given hash_class_attrs
+            class_attrs = args[0].__dict__
+            hash_class_args = [class_attrs[k] for k in hash_class_attrs]
+            hash_func_args = []
+            for v in args[1:]:
+                if isinstance(v, str):
+                    hash_func_args.append(v)
+                elif v and isinstance(v, list):
+                    if all(isinstance(el, str) for el in v):
+                        hash_func_args.append(v)
+                        
+            for func_kw in hash_func_kwargs:
+                if func_kw in kwargs:
+                    hash_func_args.append(kwargs[func_kw])
+                
+            hash = hash_args(*(hash_class_args + hash_func_args)).hexdigest()
+            cached_result = get_cached_query_result(hash)
+            if cached_result is None:
+                result = func(*args, **kwargs)
+                insert_result_in_cache(hash, result)
+                cached_result = result
+
+            return cached_result
+        return get_cached
+    return wrapped_function
