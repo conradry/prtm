@@ -23,7 +23,14 @@ from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
-from proteome.models.folding.openfold.data.tools import utils
+from proteome.query import utils
+from proteome.query.caching import cache_query
+
+try:
+    JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "jackhmmer")
+    assert os.path.isfile(JACKHMMER_BINARY_PATH)
+except:
+    JACKHMMER_BINARY_PATH = None
 
 
 class Jackhmmer:
@@ -32,8 +39,8 @@ class Jackhmmer:
     def __init__(
         self,
         *,
-        binary_path: str,
         database_path: str,
+        binary_path: Optional[str] = JACKHMMER_BINARY_PATH,
         n_cpu: int = 8,
         n_iter: int = 1,
         e_value: float = 0.0001,
@@ -67,6 +74,9 @@ class Jackhmmer:
           streaming_callback: Callback function run after each chunk iteration with
             the iteration number as argument.
         """
+        assert (
+            binary_path is not None
+        ), "Jackhmmer binary not found in conda env, please specify path"
         self.binary_path = binary_path
         self.database_path = database_path
         self.num_streamed_chunks = num_streamed_chunks
@@ -91,7 +101,7 @@ class Jackhmmer:
         self, input_fasta_path: str, database_path: str
     ) -> Mapping[str, Any]:
         """Queries the database chunk using Jackhmmer."""
-        with utils.tmpdir_manager(base_dir="/tmp") as query_tmp_dir:
+        with utils.tmpdir_manager(base_dir="./") as query_tmp_dir:
             sto_path = os.path.join(query_tmp_dir, "output.sto")
 
             # The F1/F2/F3 are the expected proportion to pass each of the filtering
@@ -169,6 +179,21 @@ class Jackhmmer:
 
         return raw_output
 
+    @cache_query(
+        hash_func_kwargs=["input_fasta_path"], 
+        hash_class_attrs=[
+            "binary_path", 
+            "database_path", 
+            "e_value", 
+            "z_value", 
+            "num_streamed_chunks",
+            "filter_f1",
+            "filter_f2",
+            "filter_f3",
+            "incdom_e",
+            "dom_e",
+        ]
+    )
     def query(self, input_fasta_path: str) -> Sequence[Mapping[str, Any]]:
         """Queries the database using Jackhmmer."""
         if self.num_streamed_chunks is None:
@@ -176,7 +201,7 @@ class Jackhmmer:
 
         db_basename = os.path.basename(self.database_path)
         db_remote_chunk = lambda db_idx: f"{self.database_path}.{db_idx}"
-        db_local_chunk = lambda db_idx: f"/tmp/ramdisk/{db_basename}.{db_idx}"
+        db_local_chunk = lambda db_idx: f"./{db_basename}.{db_idx}"
 
         # Remove existing files to prevent OOM
         for f in glob.glob(db_local_chunk("[0-9]*")):

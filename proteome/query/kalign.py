@@ -16,10 +16,18 @@
 """A Python wrapper for Kalign."""
 import os
 import subprocess
-from typing import Sequence
+from typing import Optional, Sequence
 
 from absl import logging
-from proteome.models.folding.openfold.data.tools import utils
+
+from proteome.query import utils
+from proteome.query.caching import cache_query
+
+try:
+    KALIGN_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "kalign")
+    assert os.path.isfile(KALIGN_BINARY_PATH)
+except:
+    KALIGN_BINARY_PATH = None
 
 
 def _to_a3m(sequences: Sequence[str]) -> str:
@@ -35,7 +43,7 @@ def _to_a3m(sequences: Sequence[str]) -> str:
 class Kalign:
     """Python wrapper of the Kalign binary."""
 
-    def __init__(self, *, binary_path: str):
+    def __init__(self, *, binary_path: Optional[str] = KALIGN_BINARY_PATH):
         """Initializes the Python Kalign wrapper.
 
         Args:
@@ -44,8 +52,14 @@ class Kalign:
         Raises:
           RuntimeError: If Kalign binary not found within the path.
         """
+        assert (
+            binary_path is not None
+        ), "kalign binary not found in conda env, please specify path"
         self.binary_path = binary_path
 
+    @cache_query(
+        hash_func_kwargs=["sequences"], hash_class_attrs=["binary_path"]
+    )
     def align(self, sequences: Sequence[str]) -> str:
         """Aligns the sequences and returns the alignment in A3M string.
 
