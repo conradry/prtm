@@ -73,7 +73,15 @@ def cache_query(hash_func_kwargs, hash_class_attrs):
             hash_func_args = []
             for v in args[1:]:
                 if isinstance(v, str):
-                    hash_func_args.append(v)
+                    if os.path.isfile(v):
+                        try:
+                            with open(v, mode="r") as f:
+                                hash_func_args.append(f.read())
+                        except:
+                            file_stats = os.stat(v)
+                            hash_func_args.append(str(file_stats.st_size) + str(file_stats.st_mtime))
+                    else:
+                        hash_func_args.append(v)
                 elif v and isinstance(v, list):
                     if all(isinstance(el, str) for el in v):
                         hash_func_args.append(v)
