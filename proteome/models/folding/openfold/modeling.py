@@ -4,13 +4,9 @@ from typing import Dict, List, Tuple
 import ml_collections as mlc
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold import config
-from proteome.models.folding.openfold.data import (
-    data_pipeline,
-    feature_pipeline, 
-    parsers,
-)
+from proteome.models.folding.openfold.data import (data_pipeline,
+                                                   feature_pipeline, parsers)
 from proteome.models.folding.openfold.model import model
 from proteome.models.folding.openfold.np import protein
 from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
@@ -26,9 +22,21 @@ OPENFOLD_MODEL_URLS = {
 }
 JACKHMMER_DBS = {
     # Order of tuple is (chunk_count, z_value, db_url)
-    "uniref90": (59, 135301051, 'https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta'),
-    "smallbfd": (17, 65984053, 'https://storage.googleapis.com/alphafold-colab-asia/latest/bfd-first_non_consensus_sequences.fasta'),
-    "mgnify": (71, 304820129, 'https://storage.googleapis.com/alphafold-colab-asia/latest/mgy_clusters_2019_05.fasta'),
+    "uniref90": (
+        59,
+        135301051,
+        "https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta",
+    ),
+    "smallbfd": (
+        17,
+        65984053,
+        "https://storage.googleapis.com/alphafold-colab-asia/latest/bfd-first_non_consensus_sequences.fasta",
+    ),
+    "mgnify": (
+        71,
+        304820129,
+        "https://storage.googleapis.com/alphafold-colab-asia/latest/mgy_clusters_2019_05.fasta",
+    ),
 }
 MGNIFY_MAX_HITS = 501
 
@@ -185,10 +193,10 @@ class OpenFoldForFolding:
         feature_dict = self._featurize_input(sequence, msas, deletion_matrices)
 
         res = self.model(feature_dict)
-        
+
         # Unpack to a protein and a plddt confidence metric.
-        mean_plddt = float(res['plddt'].mean())
-        b_factors = res['plddt'][:, None] * res['final_atom_mask']
-        predicted_protein = protein.from_prediction(feature_dict, res, b_factors=b_factors)
+        mean_plddt = float(res["plddt"].mean())
+        b_factors = res["plddt"][:, None] * res["final_atom_mask"]
+        predicted_protein = protein.from_prediction(feature_dict, res, b_factors=b_factors)  # type: ignore
 
         return predicted_protein, mean_plddt

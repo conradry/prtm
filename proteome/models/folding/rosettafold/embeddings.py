@@ -3,6 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from proteome.models.folding.rosettafold.attention_module import LayerNorm
 from proteome.models.folding.rosettafold.rosetta_transformer import (
     AxialEncoderLayer, Encoder, EncoderLayer)
 
@@ -114,8 +115,7 @@ class Templ_emb(nn.Module):
             performer_opts=performer_opts,
         )
         self.encoder_L = Encoder(enc_layer_L, 1)
-
-        self.norm = nn.LayerNorm(d_templ)
+        self.norm = LayerNorm(d_templ)
         self.to_attn = nn.Linear(d_templ, 1)
 
     def forward(self, t1d, t2d, idx):
@@ -157,7 +157,7 @@ class Pair_emb_w_templ(nn.Module):
         self.d_model = d_model
         self.d_emb = d_model // 2
         self.emb = nn.Embedding(d_seq, self.d_emb)
-        self.norm_templ = nn.LayerNorm(d_templ)
+        self.norm_templ = LayerNorm(d_templ)
         self.projection = nn.Linear(d_model + d_templ + 1, d_model)
         self.pos = PositionalEncoding2D(d_model, p_drop=p_drop)
 

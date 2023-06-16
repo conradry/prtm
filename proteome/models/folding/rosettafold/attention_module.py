@@ -6,8 +6,8 @@ from proteome.models.folding.rosettafold.init_str_generator import \
 from proteome.models.folding.rosettafold.resnet import ResidualNetwork
 from proteome.models.folding.rosettafold.rosetta_transformer import (
     AxialEncoderLayer, CrossEncoder, DirectEncoderLayer, Encoder, EncoderLayer,
-    FeedForwardLayer, MaskedDirectMultiheadAttention, SequenceWeight,
-    SpecialEncoder, SpecialEncoderLayer, _get_clones)
+    FeedForwardLayer, LayerNorm, MaskedDirectMultiheadAttention,
+    SequenceWeight, _get_clones)
 from proteome.models.folding.rosettafold.se3_network import SE3Transformer
 
 
@@ -88,7 +88,7 @@ class CoevolExtractor(nn.Module):
     def __init__(self, n_feat_proj, n_feat_out, p_drop=0.1):
         super(CoevolExtractor, self).__init__()
 
-        self.norm_2d = nn.LayerNorm(n_feat_proj * n_feat_proj)
+        self.norm_2d = LayerNorm(n_feat_proj * n_feat_proj)
         # project down to output dimension (pair feature dimension)
         self.proj_2 = nn.Linear(n_feat_proj**2, n_feat_out)
 
@@ -118,16 +118,16 @@ class MSA2Pair(nn.Module):
     ):
         super(MSA2Pair, self).__init__()
         # project down embedding dimension (n_feat --> n_feat_proj)
-        self.norm_1 = nn.LayerNorm(n_feat)
+        self.norm_1 = LayerNorm(n_feat)
         self.proj_1 = nn.Linear(n_feat, n_feat_proj)
 
         self.encoder = SequenceWeight(n_feat_proj, 1, dropout=p_drop)
         self.coevol = CoevolExtractor(n_feat_proj, n_feat_out)
 
         # ResNet to update pair features
-        self.norm_down = nn.LayerNorm(n_feat_proj)
-        self.norm_orig = nn.LayerNorm(n_feat_out)
-        self.norm_new = nn.LayerNorm(n_feat_out)
+        self.norm_down = LayerNorm(n_feat_proj)
+        self.norm_orig = LayerNorm(n_feat_out)
+        self.norm_new = LayerNorm(n_feat_out)
         self.update = ResidualNetwork(
             n_resblock,
             n_feat_out * 2 + n_feat_proj * 4 + n_att_head,
@@ -191,7 +191,6 @@ class MSA2MSA(nn.Module):
             p_drop=p_drop,
             use_tied=True,
         )
-        # performer_opts=performer_L_opts)
         self.encoder_1 = Encoder(enc_layer_1, n_layer)
 
         # attention along N
@@ -275,15 +274,15 @@ class Str2Str(nn.Module):
         super(Str2Str, self).__init__()
 
         # initial node & pair feature process
-        self.norm_msa = nn.LayerNorm(d_msa)
-        self.norm_pair = nn.LayerNorm(d_pair)
+        self.norm_msa = LayerNorm(d_msa)
+        self.norm_pair = LayerNorm(d_pair)
         self.encoder_seq = SequenceWeight(d_msa, 1, dropout=p_drop)
 
         self.embed_x = nn.Linear(d_msa + 21, SE3_param["l0_in_features"])
         self.embed_e = nn.Linear(d_pair, SE3_param["num_edge_features"])
 
-        self.norm_node = nn.LayerNorm(SE3_param["l0_in_features"])
-        self.norm_edge = nn.LayerNorm(SE3_param["num_edge_features"])
+        self.norm_node = LayerNorm(SE3_param["l0_in_features"])
+        self.norm_edge = LayerNorm(SE3_param["num_edge_features"])
 
         self.se3 = SE3Transformer(**SE3_param)
 
@@ -335,14 +334,14 @@ class Str2MSA(nn.Module):
         self.distbin = distbin
         n_att_head = len(distbin)
 
-        self.norm_state = nn.LayerNorm(d_state)
-        self.norm1 = nn.LayerNorm(d_msa)
+        self.norm_state = LayerNorm(d_state)
+        self.norm1 = LayerNorm(d_msa)
         self.attn = MaskedDirectMultiheadAttention(
             d_state, d_msa, n_att_head, d_k=inner_dim, dropout=p_drop
         )
         self.dropout1 = nn.Dropout(p_drop, inplace=True)
 
-        self.norm2 = nn.LayerNorm(d_msa)
+        self.norm2 = LayerNorm(d_msa)
         self.ff = FeedForwardLayer(d_msa, d_msa * r_ff, p_drop=p_drop)
         self.dropout2 = nn.Dropout(p_drop, inplace=True)
 
@@ -579,7 +578,7 @@ class FinalBlock(nn.Module):
         self.str2str = Str2Str(
             d_msa=d_msa, d_pair=d_pair, SE3_param=SE3_param, p_drop=p_drop
         )
-        self.norm_state = nn.LayerNorm(SE3_param["l0_out_features"])
+        self.norm_state = LayerNorm(SE3_param["l0_out_features"])
         self.pred_lddt = nn.Linear(SE3_param["l0_out_features"], 1)
 
     def forward(self, msa, pair, xyz, seq1hot, idx):

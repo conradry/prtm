@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from proteome.models.folding.rosettafold.rosetta_transformer import (
-    Encoder, EncoderLayer, SequenceWeight)
+    Encoder, EncoderLayer, LayerNorm, SequenceWeight)
 from torch_geometric.data import Data
 from torch_geometric.nn import TransformerConv
 
@@ -52,7 +52,7 @@ class UniMPBlock(nn.Module):
         self.TConv = TransformerConv(
             node_dim, node_dim, heads, dropout=dropout, edge_dim=edge_dim
         )
-        self.LNorm = nn.LayerNorm(node_dim * heads)
+        self.LNorm = LayerNorm(node_dim * heads)
         self.Linear = nn.Linear(node_dim * heads, node_dim)
         self.Activ = nn.ELU(inplace=True)
 
@@ -80,8 +80,8 @@ class InitStr_Network(nn.Module):
         super(InitStr_Network, self).__init__()
 
         # embedding layers for node and edge features
-        self.norm_node = nn.LayerNorm(node_dim_in)
-        self.norm_edge = nn.LayerNorm(edge_dim_in)
+        self.norm_node = LayerNorm(node_dim_in)
+        self.norm_edge = LayerNorm(edge_dim_in)
         self.encoder_seq = SequenceWeight(node_dim_in, 1, dropout=dropout)
 
         self.embed_x = nn.Sequential(

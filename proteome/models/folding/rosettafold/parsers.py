@@ -2,11 +2,9 @@ import re
 import string
 
 import numpy as np
-import scipy.spatial
+import proteome.models.folding.rosettafold.util as util
 import torch
 from proteome.models.folding.rosettafold.ffindex import *
-
-import util
 
 to1letter = {
     "ALA": "A",
