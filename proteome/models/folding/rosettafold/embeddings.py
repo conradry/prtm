@@ -3,7 +3,8 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.folding.rosettafold.rosetta_transformer import AxialEncoderLayer, Encoder, EncoderLayer
+from proteome.models.folding.rosettafold.rosetta_transformer import (
+    AxialEncoderLayer, Encoder, EncoderLayer)
 
 # Initial embeddings for target sequence, msa, template info
 # positional encoding
@@ -14,7 +15,7 @@ from proteome.models.folding.rosettafold.rosetta_transformer import AxialEncoder
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, p_drop=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
-        self.drop = nn.Dropout(p_drop)
+        self.drop = nn.Dropout(p_drop, inplace=True)
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len).unsqueeze(1)
@@ -29,7 +30,7 @@ class PositionalEncoding(nn.Module):
     def forward(self, x, idx_s):
         pe = list()
         for idx in idx_s:
-            pe.append(self.pe[:, idx, :])
+            pe.append(self.pe[:, idx, :])  # type: ignore
         pe = torch.stack(pe)
         x = x + torch.autograd.Variable(pe, requires_grad=False)
         return self.drop(x)
@@ -75,28 +76,17 @@ class QueryEncoding(nn.Module):
 
 
 class MSA_emb(nn.Module):
-    def __init__(
-        self, 
-        d_model=64, 
-        d_msa=21, 
-        p_drop=0.1, 
-        max_len=5000,
-        query_encoding=False,
-    ):
+    def __init__(self, d_model=64, d_msa=21, p_drop=0.1, max_len=5000):
         super(MSA_emb, self).__init__()
         self.emb = nn.Embedding(d_msa, d_model)
         self.pos = PositionalEncoding(d_model, p_drop=p_drop, max_len=max_len)
-        self.query_encoding = query_encoding
-        if query_encoding:
-            self.pos_q = QueryEncoding(d_model)
+        self.pos_q = QueryEncoding(d_model)
 
     def forward(self, msa, idx):
         B, N, L = msa.shape
         out = self.emb(msa)  # (B, N, L, K//2)
         out = self.pos(out, idx)  # add positional encoding
-        if self.query_encoding:
-            out = self.pos_q(out)
-        return out
+        return self.pos_q(out)  # add query encoding
 
 
 # pixel-wise attention based embedding (from trRosetta-tbm)
@@ -110,93 +100,66 @@ class Templ_emb(nn.Module):
         r_ff=4,
         performer_opts=None,
         p_drop=0.1,
-        network_2track=False,
+        max_len=5000,
     ):
         super(Templ_emb, self).__init__()
         self.proj = nn.Linear(d_t1d * 2 + d_t2d + 1, d_templ)
-        self.network_2track = network_2track
-        if not network_2track:
-            self.pos = PositionalEncoding2D(d_templ, p_drop=p_drop)
-            enc_layer = AxialEncoderLayer(
-                d_templ,
-                d_templ * r_ff,
-                n_att_head,
-                p_drop=p_drop,
-                performer_opts=performer_opts,
-            )
-            self.norm = nn.LayerNorm(d_templ)
-            self.to_attn = nn.Linear(d_templ, 1)
-        else:
-            enc_layer = EncoderLayer(
-                d_model=d_templ, d_ff=d_templ * r_ff, heads=n_att_head, p_drop=p_drop
-            )
-            self.to_v = nn.Linear(d_templ, d_templ)
-            self.to_u = nn.Linear(d_templ, 1, bias=False)
+        self.pos = PositionalEncoding2D(d_templ, p_drop=p_drop)
+        # attention along L
+        enc_layer_L = AxialEncoderLayer(
+            d_templ,
+            d_templ * r_ff,
+            n_att_head,
+            p_drop=p_drop,
+            performer_opts=performer_opts,
+        )
+        self.encoder_L = Encoder(enc_layer_L, 1)
 
-        self.encoder = Encoder(enc_layer, 1)
+        self.norm = nn.LayerNorm(d_templ)
+        self.to_attn = nn.Linear(d_templ, 1)
 
     def forward(self, t1d, t2d, idx):
         # Input
         #   - t1d: 1D template info (B, T, L, 2)
         #   - t2d: 2D template info (B, T, L, L, 10)
         B, T, L, _ = t1d.shape
-        left = t1d.unsqueeze(3).repeat(1, 1, 1, L, 1)
-        right = t1d.unsqueeze(2).repeat(1, 1, L, 1, 1)
+        left = t1d.unsqueeze(3).expand(-1, -1, -1, L, -1)
+        right = t1d.unsqueeze(2).expand(-1, -1, L, -1, -1)
         seqsep = torch.abs(idx[:, :, None] - idx[:, None, :]) + 1
         seqsep = (
             torch.log(seqsep.float())
             .view(B, L, L, 1)
             .unsqueeze(1)
-            .repeat(1, T, 1, 1, 1)
+            .expand(-1, T, -1, -1, -1)
         )
-        
+        #
         feat = torch.cat((t2d, left, right, seqsep), -1)
-        feat = self.proj(feat)
-        if not self.network_2track:
-            feat = feat.reshape(B * T, L, L, -1)
-            tmp = self.pos(feat, idx)  # add positional embedding
-        
-            # attention along L
-            feat = torch.empty_like(tmp)
-            for i_f in range(tmp.shape[0]):
-                feat[i_f] = self.encoder(tmp[i_f].view(1, L, L, -1))
-            del tmp
-            feat = feat.reshape(B, T, L, L, -1)
-            feat = feat.permute(0, 2, 3, 1, 4).contiguous().view(B, L * L, T, -1)
+        feat = self.proj(feat).reshape(B * T, L, L, -1)
+        tmp = self.pos(feat, idx)  # add positional embedding
+        #
+        # attention along L
+        feat = torch.empty_like(tmp)
+        for i_f in range(tmp.shape[0]):
+            feat[i_f] = self.encoder_L(tmp[i_f].view(1, L, L, -1))
+        del tmp
+        feat = feat.reshape(B, T, L, L, -1)
+        feat = feat.permute(0, 2, 3, 1, 4).contiguous().reshape(B, L * L, T, -1)
 
-            attn = self.to_attn(self.norm(feat))
-            attn = F.softmax(attn, dim=-2)  # (B, L*L, T, 1)
-            feat = torch.matmul(attn.transpose(-2, -1), feat)
-
-        if self.network_2track:
-            feat = feat.permute(0, 2, 3, 1, 4).contiguous().view(B, L * L, T, -1)
-            feat = self.encoder(feat).view(B * L * L, T, -1)
-            v = torch.tanh(self.to_v(feat))  # (B*L*L, T, A)
-            vu = self.to_u(v).view(B * L * L, T)
-            alphas = F.softmax(vu, dim=-1).view(B * L * L, T, 1)  # attention map
-            feat = torch.matmul(alphas.transpose(-2, -1), feat)
-
-        return feat.reshape(B, L, L, -1).view(B, L, L, -1)
+        attn = self.to_attn(self.norm(feat))
+        attn = F.softmax(attn, dim=-2)  # (B, L*L, T, 1)
+        feat = torch.matmul(attn.transpose(-2, -1), feat)
+        return feat.reshape(B, L, L, -1)
 
 
 class Pair_emb_w_templ(nn.Module):
-    def __init__(
-        self, 
-        d_model=128, 
-        d_seq=21, 
-        d_templ=64, 
-        p_drop=0.1,
-        network_2track=False,
-    ):
+    def __init__(self, d_model=128, d_seq=21, d_templ=64, p_drop=0.1):
         super(Pair_emb_w_templ, self).__init__()
         self.d_model = d_model
         self.d_emb = d_model // 2
         self.emb = nn.Embedding(d_seq, self.d_emb)
+        self.norm_templ = nn.LayerNorm(d_templ)
         self.projection = nn.Linear(d_model + d_templ + 1, d_model)
-        self.network_2track = network_2track
-        if not network_2track:
-            self.norm_templ = nn.LayerNorm(d_templ)
-            self.pos = PositionalEncoding2D(d_model, p_drop=p_drop)
+        self.pos = PositionalEncoding2D(d_model, p_drop=p_drop)
 
     def forward(self, seq, idx, templ):
         # input:
@@ -206,40 +169,27 @@ class Pair_emb_w_templ(nn.Module):
         #
         # get initial sequence pair features
         seq = self.emb(seq)  # (B, L, d_model//2)
-        left = seq.unsqueeze(2).repeat(1, 1, L, 1)
-        right = seq.unsqueeze(1).repeat(1, L, 1, 1)
+        left = seq.unsqueeze(2).expand(-1, -1, L, -1)
+        right = seq.unsqueeze(1).expand(-1, L, -1, -1)
         seqsep = torch.abs(idx[:, :, None] - idx[:, None, :]) + 1
         seqsep = torch.log(seqsep.float()).view(B, L, L, 1)
-        
-        if not self.network_2track:
-            templ = self.norm_templ(templ)
-            pair = torch.cat((left, right, seqsep, templ), dim=-1)
-        else:
-            pair = torch.cat((left, right, templ, seqsep), dim=-1)
-            
-        pair = self.projection(pair)
-        if not self.network_2track:
-            pair = self.pos(pair, idx)
-        return pair
+        #
+        templ = self.norm_templ(templ)
+        pair = torch.cat((left, right, seqsep, templ), dim=-1)
+        pair = self.projection(pair)  # (B, L, L, d_model)
+
+        return self.pos(pair, idx)
 
 
 class Pair_emb_wo_templ(nn.Module):
     # TODO: embedding without template info
-    def __init__(
-        self, 
-        d_model=128, 
-        d_seq=21, 
-        p_drop=0.1,
-        network_2track=False,
-    ):
+    def __init__(self, d_model=128, d_seq=21, p_drop=0.1):
         super(Pair_emb_wo_templ, self).__init__()
         self.d_model = d_model
         self.d_emb = d_model // 2
         self.emb = nn.Embedding(d_seq, self.d_emb)
         self.projection = nn.Linear(d_model + 1, d_model)
-        self.netwok_2track = network_2track
-        if not self.network_2track:
-            self.pos = PositionalEncoding2D(d_model, p_drop=p_drop)
+        self.pos = PositionalEncoding2D(d_model, p_drop=p_drop)
 
     def forward(self, seq, idx):
         # input:
@@ -247,13 +197,11 @@ class Pair_emb_wo_templ(nn.Module):
         B = seq.shape[0]
         L = seq.shape[1]
         seq = self.emb(seq)  # (B, L, d_model//2)
-        left = seq.unsqueeze(2).repeat(1, 1, L, 1)
-        right = seq.unsqueeze(1).repeat(1, L, 1, 1)
+        left = seq.unsqueeze(2).expand(-1, -1, L, -1)
+        right = seq.unsqueeze(1).expand(-1, L, -1, -1)
         seqsep = torch.abs(idx[:, :, None] - idx[:, None, :]) + 1
         seqsep = torch.log(seqsep.float()).view(B, L, L, 1)
-        
+        #
         pair = torch.cat((left, right, seqsep), dim=-1)
         pair = self.projection(pair)
-        if not self.network_2track:
-            pair = self.pos(pair, idx)
-        return pair
+        return self.pos(pair, idx)

@@ -191,7 +191,7 @@ class FastAttention(nn.Module):
     @torch.no_grad()
     def redraw_projection_matrix(self, device):
         projections = self.create_projection(device=device)
-        self.projection_matrix.copy_(projections)
+        self.projection_matrix.copy_(projections)  # type: ignore
         del projections
 
     def forward(self, q, k, v):
@@ -323,7 +323,7 @@ class SelfAttention(nn.Module):
 
         if (
             exists(self.feature_redraw_interval)
-            and self.calls_since_last_redraw >= self.feature_redraw_interval
+            and self.calls_since_last_redraw >= self.feature_redraw_interval  # type: ignore
         ):
             device = get_module_device(self)
 
@@ -331,10 +331,10 @@ class SelfAttention(nn.Module):
             for fast_attention in fast_attentions:
                 fast_attention.redraw_projection_matrix(device)
 
-            self.calls_since_last_redraw.zero_()
+            self.calls_since_last_redraw.zero_()  # type: ignore
             return
 
-        self.calls_since_last_redraw += 1
+        self.calls_since_last_redraw += 1  # type: ignore
 
     def _batched_forward(self, q, k, v):
         b1, h, n1 = q.shape[:3]

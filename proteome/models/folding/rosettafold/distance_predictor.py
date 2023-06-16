@@ -6,21 +6,12 @@ from proteome.models.folding.rosettafold.resnet import ResidualNetwork
 
 
 class DistanceNetwork(nn.Module):
-    def __init__(
-        self, 
-        n_feat, 
-        n_block=1, 
-        block_type="orig", 
-        p_drop=0.0,
-        proj_in = False,
-    ):
+    def __init__(self, n_feat, n_block=1, block_type="orig", p_drop=0.0):
         super(DistanceNetwork, self).__init__()
-        if proj_in:
-            self.norm = nn.LayerNorm(n_feat)
-            self.proj = nn.Linear(n_feat, n_feat)
-            self.drop = nn.Dropout(p_drop)
-        self.proj_in = proj_in
-
+        self.norm = nn.LayerNorm(n_feat)
+        self.proj = nn.Linear(n_feat, n_feat)
+        self.drop = nn.Dropout(p_drop)
+        #
         self.resnet_dist = ResidualNetwork(
             n_block, n_feat, n_feat, 37, block_type=block_type, p_drop=p_drop
         )
@@ -36,10 +27,9 @@ class DistanceNetwork(nn.Module):
 
     def forward(self, x):
         # input: pair info (B, L, L, C)
-        if self.proj_in:
-            x = self.norm(x)
-            x = self.drop(self.proj(x))
-            x = x.permute(0, 3, 1, 2).contiguous()
+        x = self.norm(x)
+        x = self.drop(self.proj(x))
+        x = x.permute(0, 3, 1, 2).contiguous()
 
         # predict theta, phi (non-symmetric)
         logits_theta = self.resnet_theta(x)

@@ -1,12 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
-from proteome.models.folding.rosettafold.attention_module import get_bonded_neigh
-from proteome.models.folding.rosettafold.attention_module import make_graph as make_graph_topk
+from proteome.models.folding.rosettafold.attention_module import \
+    get_bonded_neigh
+from proteome.models.folding.rosettafold.attention_module import \
+    make_graph as make_graph_topk
 from proteome.models.folding.rosettafold.attention_module import rbf
-from proteome.models.folding.rosettafold.init_str_generator import UniMPBlock, get_seqsep, make_graph
+from proteome.models.folding.rosettafold.init_str_generator import (UniMPBlock,
+                                                                    get_seqsep,
+                                                                    make_graph)
+from proteome.models.folding.rosettafold.rosetta_transformer import (
+    _get_clones, create_custom_forward)
 from proteome.models.folding.rosettafold.se3_network import SE3Transformer
-from proteome.models.folding.rosettafold.rosetta_transformer import _get_clones, create_custom_forward
 
 # Re-generate initial coordinates based on 1) final pair features 2) predicted distogram
 # Then, refine it through multiple SE3 transformer block
@@ -100,7 +105,6 @@ class Refine_Network(nn.Module):
 
         self.se3 = SE3Transformer(**SE3_param)
 
-    @torch.cuda.amp.autocast(enabled=False)
     def forward(self, msa, pair, xyz, state, seq1hot, idx, top_k=64):
         # process node & pair features
         B, L = msa.shape[:2]
@@ -211,7 +215,7 @@ class Refine_module(nn.Module):
                         state.float(),
                         seq1hot,
                         idx,
-                    )
+                    )  # type: ignore
                 else:
                     xyz, state = self.refine_net[i_m](
                         node.float(),
