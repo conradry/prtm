@@ -317,7 +317,7 @@ def atoms_to_pdb(seq, atoms, idx, bfactors=None):
 
     for i, s in enumerate(seq):
         if len(atoms.shape) == 2:
-            f.write(
+            pdb.append(
                 "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
                 % (
                     "ATOM",
@@ -337,7 +337,7 @@ def atoms_to_pdb(seq, atoms, idx, bfactors=None):
 
         elif atoms.shape[1] == 3:
             for j, atm_j in enumerate((" N  ", " CA ", " C  ")):
-                f.write(
+                pdb.append(
                     "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
                     % (
                         "ATOM",
@@ -357,7 +357,7 @@ def atoms_to_pdb(seq, atoms, idx, bfactors=None):
 
         elif atoms.shape[1] == 4:
             for j, atm_j in enumerate((" N  ", " CA ", " C  ", " O  ")):
-                f.write(
+                pdb.append(
                     "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
                     % (
                         "ATOM",
@@ -375,4 +375,4 @@ def atoms_to_pdb(seq, atoms, idx, bfactors=None):
                 )
                 ctr += 1
 
-    return pdb
+    return "".join(pdb)
