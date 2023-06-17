@@ -23,9 +23,10 @@ import os
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
-import proteome.models.folding.openfold.np.residue_constants as residue_constants
 from Bio import PDB
 from Bio.Data import SCOPData
+
+from proteome.constants import residue_constants
 from proteome.models.folding.openfold.data.errors import MultipleChainsError
 
 # Type aliases:

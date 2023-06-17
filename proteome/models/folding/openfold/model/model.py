@@ -15,43 +15,27 @@
 import weakref
 from functools import partial
 
-import proteome.models.folding.openfold.np.residue_constants as residue_constants
 import torch
 import torch.nn as nn
+
+from proteome.constants import residue_constants
 from proteome.models.folding.openfold.model.embedders import (
-    ExtraMSAEmbedder,
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateAngleEmbedder,
-    TemplatePairEmbedder,
-)
-from proteome.models.folding.openfold.model.evoformer import (
-    EvoformerStack,
-    ExtraMSAStack,
-)
+    ExtraMSAEmbedder, InputEmbedder, RecyclingEmbedder, TemplateAngleEmbedder,
+    TemplatePairEmbedder)
+from proteome.models.folding.openfold.model.evoformer import (EvoformerStack,
+                                                              ExtraMSAStack)
 from proteome.models.folding.openfold.model.heads import AuxiliaryHeads
-from proteome.models.folding.openfold.model.structure_module import (
-    StructureModule,
-)
+from proteome.models.folding.openfold.model.structure_module import \
+    StructureModule
 from proteome.models.folding.openfold.model.template import (
-    TemplatePairStack,
-    TemplatePointwiseAttention,
-    embed_templates_average,
-    embed_templates_offload,
-)
+    TemplatePairStack, TemplatePointwiseAttention, embed_templates_average,
+    embed_templates_offload)
 from proteome.models.folding.openfold.utils.feats import (
-    atom14_to_atom37,
-    build_extra_msa_feat,
-    build_template_angle_feat,
-    build_template_pair_feat,
-    pseudo_beta_fn,
-)
+    atom14_to_atom37, build_extra_msa_feat, build_template_angle_feat,
+    build_template_pair_feat, pseudo_beta_fn)
 from proteome.models.folding.openfold.utils.loss import compute_plddt
 from proteome.models.folding.openfold.utils.tensor_utils import (
-    add,
-    dict_multimap,
-    tensor_tree_map,
-)
+    add, dict_multimap, tensor_tree_map)
 
 
 class AlphaFold(nn.Module):

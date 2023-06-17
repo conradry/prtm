@@ -4,11 +4,12 @@ from typing import Dict, List, Tuple
 import ml_collections as mlc
 import numpy as np
 import torch
+
+from proteome import protein
 from proteome.models.folding.openfold import config
 from proteome.models.folding.openfold.data import (data_pipeline,
                                                    feature_pipeline, parsers)
 from proteome.models.folding.openfold.model import model
-from proteome.models.folding.openfold.np import protein
 from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
 from proteome.query import jackhmmer
 from proteome.utils import hub_s3
@@ -69,7 +70,7 @@ class OpenFoldForFolding:
         self.cfg = _get_model_config(model_name)
         self.model = model.AlphaFold(self.cfg)
 
-        self.load_weights(model, OPENFOLD_MODEL_URLS[model_name])
+        self.load_weights(OPENFOLD_MODEL_URLS[model_name])
 
         self.model.eval()
         if torch.cuda.is_available():
@@ -79,7 +80,7 @@ class OpenFoldForFolding:
 
         self.model = self.model.to(self.device)
 
-    def load_weights(self, model, weights_url):
+    def load_weights(self, weights_url):
         """Load weights from a weights url."""
         weights = hub_s3.load_state_dict_from_s3_url(weights_url)
         msg = self.model.load_state_dict(weights, strict=True)
@@ -197,6 +198,8 @@ class OpenFoldForFolding:
         # Unpack to a protein and a plddt confidence metric.
         mean_plddt = float(res["plddt"].mean())
         b_factors = res["plddt"][:, None] * res["final_atom_mask"]
-        predicted_protein = protein.from_prediction(feature_dict, res, b_factors=b_factors)  # type: ignore
+        predicted_protein = protein.from_openfold_prediction(
+            feature_dict, res, b_factors=b_factors  # type: ignore
+        )
 
         return predicted_protein, mean_plddt

@@ -20,12 +20,13 @@ from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
 
+from proteome import protein
+from proteome.constants import residue_constants
 from proteome.models.folding.openfold.data import (mmcif_parsing, parsers,
                                                    templates)
 from proteome.models.folding.openfold.data.templates import \
     get_custom_template_features
 from proteome.models.folding.openfold.data.utils import to_date
-from proteome.models.folding.openfold.np import protein, residue_constants
 from proteome.query import hhblits, hhsearch, jackhmmer
 
 FeatureDict = Mapping[str, np.ndarray]

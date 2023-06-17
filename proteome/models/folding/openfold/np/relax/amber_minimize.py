@@ -21,9 +21,11 @@ from typing import Collection, Optional, Sequence
 
 import ml_collections
 import numpy as np
-import proteome.models.folding.openfold.utils.loss as loss
 from absl import logging
-from proteome.models.folding.openfold.np import protein, residue_constants
+
+import proteome.models.folding.openfold.utils.loss as loss
+from proteome import protein
+from proteome.constants import residue_constants
 from proteome.models.folding.openfold.np.relax import cleanup, utils
 
 try:

@@ -2,8 +2,9 @@ import re
 import string
 
 import numpy as np
-import proteome.models.folding.rosettafold.util as util
 import torch
+
+import proteome.models.folding.rosettafold.util as util
 from proteome.models.folding.rosettafold.ffindex import *
 
 to1letter = {
@@ -303,3 +304,75 @@ def read_templates(qlen, ffdb, hhr_fn, atab_fn, n_templ=10):
             torch.stack([t0d[nt, 0] / 100.0, t0d[nt, 4] / 100.0, t0d[nt, 5]], dim=-1)
         )
     return xyz, f1d, torch.stack(f0d, dim=0)
+
+
+def atoms_to_pdb(seq, atoms, idx, bfactors=None):
+    L = len(seq)
+    ctr = 1
+    pdb = []
+    if bfactors == None:
+        bfactors = np.zeros(L)
+    else:
+        bfactors = torch.clamp(bfactors, 0, 1)
+
+    for i, s in enumerate(seq):
+        if len(atoms.shape) == 2:
+            f.write(
+                "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
+                % (
+                    "ATOM",
+                    ctr,
+                    " CA ",
+                    util.num2aa[s],
+                    "A",
+                    idx[i] + 1,
+                    atoms[i, 0],
+                    atoms[i, 1],
+                    atoms[i, 2],
+                    1.0,
+                    bfactors[i],
+                )
+            )
+            ctr += 1
+
+        elif atoms.shape[1] == 3:
+            for j, atm_j in enumerate((" N  ", " CA ", " C  ")):
+                f.write(
+                    "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
+                    % (
+                        "ATOM",
+                        ctr,
+                        atm_j,
+                        util.num2aa[s],
+                        "A",
+                        idx[i] + 1,
+                        atoms[i, j, 0],
+                        atoms[i, j, 1],
+                        atoms[i, j, 2],
+                        1.0,
+                        bfactors[i],
+                    )
+                )
+                ctr += 1
+
+        elif atoms.shape[1] == 4:
+            for j, atm_j in enumerate((" N  ", " CA ", " C  ", " O  ")):
+                f.write(
+                    "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
+                    % (
+                        "ATOM",
+                        ctr,
+                        atm_j,
+                        util.num2aa[s],
+                        "A",
+                        idx[i] + 1,
+                        atoms[i, j, 0],
+                        atoms[i, j, 1],
+                        atoms[i, j, 2],
+                        1.0,
+                        bfactors[i],
+                    )
+                )
+                ctr += 1
+
+    return pdb

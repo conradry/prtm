@@ -6,15 +6,15 @@ import time
 
 import numpy
 import torch
+from pytorch_lightning.utilities.deepspeed import \
+    convert_zero_checkpoint_to_fp32_state_dict
+
+from proteome import protein
+from proteome.constants import residue_constants
 from proteome.models.folding.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.np import protein, residue_constants
 from proteome.models.folding.openfold.np.relax import relax
-from proteome.models.folding.openfold.utils.import_weights import (
-    import_jax_weights_,
-)
-from pytorch_lightning.utilities.deepspeed import (
-    convert_zero_checkpoint_to_fp32_state_dict,
-)
+from proteome.models.folding.openfold.utils.import_weights import \
+    import_jax_weights_
 
 logging.basicConfig()
 logger = logging.getLogger(__file__)
