@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+import numpy as np
 import torch.nn as nn
 
 @dataclass
@@ -59,3 +60,25 @@ class RoseTTAFoldConfig:
     performer_L_opts: PerformerOptions = PerformerOptions(nb_features=64) 
     se3_config: SE3Config = SE3Config()
     refinement_config: RefinementConfig = RefinementConfig()
+
+
+@dataclass
+class TRFoldConfig:
+    """Base configuration for RoseTTAFold"""
+    sg7: np.ndarray = np.array([[[-2, 3, 6, 7, 6, 3, -2]]]) / 21
+    sg9: np.ndarray = np.array([[[-21, 14, 39, 54, 59, 54, 39, 14, -21]]]) / 231
+    dcut: float = 19.5
+    alpha: float = 1.57
+    ncac: np.ndarray = np.array(
+        [[-0.676, -1.294, 0.0], [0.0, 0.0, 0.0], [1.5, -0.174, 0.0]], dtype=np.float32
+    )
+    clash: float = 2.0
+    pcut: float = 0.5
+    dstep: float = 0.5
+    astep: float = np.deg2rad(10.0)
+    xyzrad: float = 7.5
+    wang: float = 0.1
+    wcst: float = 0.1
+
+    def __post_init__(self):
+        self.sg = self.sg9

@@ -1,7 +1,9 @@
 from dataclasses import asdict
+from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from proteome.models.folding.rosettafold.attention_module import \
     IterativeFeatureExtractor
 from proteome.models.folding.rosettafold.distance_predictor import \
@@ -63,6 +65,13 @@ class RoseTTAFold(nn.Module):
             p_drop=config.p_drop,
         )
 
+    def run_refinement(self, msa, seq, idx, prob_s=None):
+        """Runs only the refinement module."""
+        B, N, L = msa.shape
+        seq1hot = F.one_hot(seq, num_classes=21).float()
+        ref_xyz, ref_lddt = self.refine(msa, prob_s, seq1hot, idx)
+        return ref_xyz, ref_lddt.view(B, L)
+
     def forward(
         self,
         msa,
@@ -70,37 +79,27 @@ class RoseTTAFold(nn.Module):
         idx,
         t1d=None,
         t2d=None,
-        prob_s=None,
-        return_raw=False,
-        refine_only=False,
+        refine=False,
     ):
-        seq1hot = torch.nn.functional.one_hot(seq, num_classes=21).float()
+        seq1hot = F.one_hot(seq, num_classes=21).float()
         B, N, L = msa.shape
-        if refine_only:
-            ref_xyz, ref_lddt = self.refine(msa, prob_s, seq1hot, idx)
-            return ref_xyz, ref_lddt.view(B, L)
+        # Get embeddings
+        msa = self.msa_emb(msa, idx)
+        if self.use_templ:
+            tmpl = self.templ_emb(t1d, t2d, idx)
+            pair = self.pair_emb(seq, idx, tmpl)
         else:
-            # Get embeddings
-            msa = self.msa_emb(msa, idx)
-            if self.use_templ:
-                tmpl = self.templ_emb(t1d, t2d, idx)
-                pair = self.pair_emb(seq, idx, tmpl)
-            else:
-                pair = self.pair_emb(seq, idx)
-            #
-            # Extract features
-            msa, pair, xyz, lddt = self.feat_extractor(msa, pair, seq1hot, idx)
+            pair = self.pair_emb(seq, idx)
+     
+        # Extract features
+        msa, pair, xyz, lddt = self.feat_extractor(msa, pair, seq1hot, idx)
 
-            # Predict 6D coords
-            logits = self.c6d_predictor(pair)
+        # Predict 6D coords
+        logits = self.c6d_predictor(pair)
+        prob_s = tuple([F.softmax(l, dim=1) for l in logits])
+        if refine:
+            prob_s_refine = torch.cat(prob_s, dim=1)
+            prob_s_refine = prob_s_refine.permute(0, 2, 3, 1)
+            xyz, lddt = self.refine(msa, prob_s_refine, seq1hot, idx)
 
-            prob_s = list()
-            for l in logits:
-                prob_s.append(nn.Softmax(dim=1)(l))  # (B, C, L, L)
-            prob_s = torch.cat(prob_s, dim=1).permute(0, 2, 3, 1)
-
-            if return_raw:
-                return logits, msa, xyz, lddt.view(B, L)
-            else:
-                ref_xyz, ref_lddt = self.refine(msa, prob_s, seq1hot, idx)
-                return ref_xyz, ref_lddt.view(B, L)
+        return prob_s, xyz, lddt.view(B, L)
