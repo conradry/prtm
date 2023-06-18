@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from typing import Optional
+from typing import Dict, List, Tuple, Optional
 
 import torch
 import torch.nn as nn
@@ -73,14 +73,15 @@ class RoseTTAFold(nn.Module):
         return ref_xyz, ref_lddt.view(B, L)
 
     def forward(
-        self,
-        msa,
-        seq,
-        idx,
-        t1d=None,
-        t2d=None,
-        refine=False,
-    ):
+        self, batch: Dict[str, torch.Tensor], refine: bool = False,
+    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor, torch.Tensor]:
+        """Runs the full model."""
+        msa = batch["msa"]
+        seq = batch["seq"]
+        idx = batch["idx"]
+        t1d = batch["t1d"]
+        t2d = batch["t2d"]
+
         seq1hot = F.one_hot(seq, num_classes=21).float()
         B, N, L = msa.shape
         # Get embeddings
