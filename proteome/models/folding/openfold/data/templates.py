@@ -25,10 +25,11 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-from proteome.models.folding.openfold.data import mmcif_parsing, parsers
+from proteome import parsers
+from proteome.constants import residue_constants
+from proteome.models.folding.openfold.data import mmcif_parsing
 from proteome.models.folding.openfold.data.errors import Error
 from proteome.models.folding.openfold.data.utils import to_date
-from proteome.models.folding.openfold.np import residue_constants
 from proteome.query import kalign
 
 

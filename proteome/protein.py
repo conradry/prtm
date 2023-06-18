@@ -29,7 +29,7 @@ import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
 from Bio.PDB import PDBParser
-from proteome.models.folding.openfold.np import residue_constants
+from proteome.constants import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
@@ -547,7 +547,38 @@ def ideal_atom_mask(prot: Protein) -> np.ndarray:
     return residue_constants.STANDARD_ATOM_MASK[prot.aatype]
 
 
-def from_prediction(
+def add_oxygen_to_atom_positions(atom_positions: np.ndarray) -> np.ndarray:
+    """Adds oxygen atoms to the atom positions.
+    
+    Args:
+        atom_positions: A numpy array of shape [N, 3, 3] where N is the number of
+            atoms in the protein. The last dimension is the x, y, z coordinates
+            of the atoms.
+    Returns:
+        atom_positions_with_oxygen: A numpy array of shape [N, 4, 3].
+    """
+    assert atom_positions.shape[-1] == 3
+    # Constants for oxygen placement
+    L = 1.231
+    A = 2.108
+    D = -3.142
+
+    # Unpacking
+    N = np.roll(atom_positions[:, 0, :], -1, axis=0)
+    CA = atom_positions[:, 1, :]
+    C = atom_positions[:, 2, :]
+
+    unit_norm = lambda x: x / (1e-5 + np.linalg.norm(x, axis=1, keepdims=True))
+    bc = unit_norm(CA - C)
+    n = unit_norm(np.cross(CA - N, bc))
+    m = [bc, np.cross(n, bc), n]
+    d = [L * np.cos(A), L * np.sin(A) * np.cos(D), -L * np.sin(A) * np.sin(D)]
+
+    O = C + sum([m * d for m, d in zip(m, d)])
+    return np.concatenate((atom_positions, O[:, None, :]), axis=1)
+
+
+def from_openfold_prediction(
     features: FeatureDict,
     result: ModelOutput,
     b_factors: Optional[np.ndarray] = None,
@@ -576,7 +607,7 @@ def from_prediction(
         atom_positions=result["final_atom_positions"],
         atom_mask=result["final_atom_mask"],
         residue_index=features["residue_index"] + 1,
-        b_factors=b_factors,
+        b_factors=b_factors,  # type: ignore
         chain_index=chain_index,
         remark=remark,
         parents=parents,

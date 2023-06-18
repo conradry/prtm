@@ -674,7 +674,7 @@ class GConvSE3Partial(nn.Module):
             for d in self.f_out.degrees:
                 G.apply_edges(self.udf_u_mul_e(d))
 
-            return {f"{d}": G.edata[f"out{d}"] for d in self.f_out.degrees}
+            return {str(d): G.edata[f"out{d}"] for d in self.f_out.degrees}
 
 
 class GMABSE3(nn.Module):

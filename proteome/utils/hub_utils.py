@@ -1,10 +1,13 @@
+import io
 import os
+import tarfile
 from typing import Any, Dict, Optional
 
 import boto3
 import torch.hub
 from botocore import UNSIGNED
 from botocore.client import Config
+from torch.hub import download_url_to_file
 from torch.serialization import MAP_LOCATION
 
 __all__ = [
@@ -35,6 +38,37 @@ def download_s3_url_to_file(
 
     with open(dst, mode="wb") as f:
         client.download_fileobj(Bucket=bucket, Key=key, Fileobj=f)
+
+
+def download_extract_tar_gz(
+    url: str, 
+    dst: str, 
+    extract_member: str,
+) -> None:
+    r"""Download object at the given S3 URL to a local path.
+
+    Args:
+        s3_url (str): S3 URL of the object to download
+        dst (str): Full path where object will be saved, e.g. ``/tmp/temporary_file``
+        boto_client_config (botocore.client.Config):
+            boto3 client configuration. By default uses --no-sign-request config.
+
+    """
+    if not url.endswith(".tar.gz"):
+        raise ValueError("S3 URL must start with 's3://'.")
+
+    tmp_file = os.path.join(dst, "temp.tar.gz")
+    download_url_to_file(url, tmp_file)
+
+    with tarfile.open(tmp_file, "r:gz") as tar:
+        model_buffer = tar.extractfile(extract_member).read()  # type: ignore
+
+    model_bytes = io.BytesIO(model_buffer)
+    model_name = os.path.basename(extract_member)
+    with open(os.path.join(dst, model_name), "wb") as f:
+        f.write(model_bytes.getbuffer())  # type: ignore
+
+    os.remove(tmp_file)
 
 
 def load_state_dict_from_s3_url(
@@ -78,6 +112,54 @@ def load_state_dict_from_s3_url(
         print(f"Downloading model from {s3_url}...")
         download_s3_url_to_file(
             s3_url, cached_file, boto_client_config=boto_client_config
+        )
+        print(f"Model downloaded and cached in {cached_file}.")
+
+    return torch.load(cached_file, map_location=map_location)
+
+
+def load_state_dict_from_tar_gz_url(
+    url: str,
+    extract_member: str,
+    model_dir: Optional[str] = None,
+    map_location: MAP_LOCATION = None,
+) -> Dict[str, Any]:
+    r"""Loads the Torch serialized object at the given S3 URL.
+
+    If downloaded file is a zip file, it will be automatically
+    decompressed.
+
+    If the object is already present in `model_dir`, it's deserialized and
+    returned.
+    The default value of ``model_dir`` is ``<hub_dir>/checkpoints`` where
+    ``hub_dir`` is the directory returned by :func:`~torch.hub.get_dir`.
+
+    Args:
+        s3_url (str): S3 URL of the object to download
+        model_dir (str, optional): directory in which to save the object
+        map_location (optional): a function or a dict specifying how to remap storage locations (see torch.load)
+        boto_client_config (botocore.client.Config):
+            boto3 client configuration. By default uses --no-sign-request config.
+
+    Returns:
+        state_dict (dict): a dict containing the state of the pytorch model
+
+    """
+    url = url.rstrip("/")
+    if not url.endswith(".tar.gz"):
+        raise ValueError("tar.gz URL must end with 'tar.gz'.")
+
+    if model_dir is None:
+        hub_dir = torch.hub.get_dir()
+        model_dir = os.path.join(hub_dir, "checkpoints")
+
+    os.makedirs(model_dir, exist_ok=True)
+
+    cached_file = os.path.join(model_dir, os.path.basename(extract_member))
+    if not os.path.exists(cached_file):
+        print(f"Downloading model from {url}...")
+        download_extract_tar_gz(
+            url, cached_file, extract_member=extract_member
         )
         print(f"Model downloaded and cached in {cached_file}.")
 

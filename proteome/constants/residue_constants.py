@@ -22,7 +22,7 @@ from typing import List, Mapping, Tuple
 import numpy as np
 import tree
 
-from proteome.models.folding.openfold.resources.stereo_chemical_props import STEREO_CHEMICAL_PROPS
+from proteome.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
 
 # Internal import (35fd).
 
@@ -549,8 +549,8 @@ atom_types = [
     "N",
     "CA",
     "C",
-    "CB",
     "O",
+    "CB",
     "CG",
     "CG1",
     "CG2",
@@ -1076,7 +1076,7 @@ chi_angles_atom_indices = tree.map_structure(
 chi_angles_atom_indices = np.array(
     [
         chi_atoms + ([[0, 0, 0, 0]] * (4 - len(chi_atoms)))
-        for chi_atoms in chi_angles_atom_indices
+        for chi_atoms in chi_angles_atom_indices  # type: ignore
     ]
 )
 

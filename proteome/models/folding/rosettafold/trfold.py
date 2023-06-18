@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from proteome.models.folding.rosettafold.config import TRFoldConfig
+
 
 def perturb_init(xyz, batch, noise=0.5):
     L = xyz.shape[0]
@@ -97,22 +99,21 @@ def get_dih(a, b, c, d):
 
 
 class TRFold:
-    def __init__(self, pred, params):
-        self.pred = pred
-        self.params = params
-        self.device = self.pred[0].device
+    def __init__(self, config: TRFoldConfig, device: torch.device):
+        self.config = config
+        self.device = device
 
         # dfire background correction for distograms
         self.bkgd = (
-            torch.linspace(4.25, 19.75, 32, device=self.device) / self.params["DCUT"]
-        ) ** self.params["ALPHA"]
+            torch.linspace(4.25, 19.75, 32, device=self.device) / self.config.dcut
+        ) ** self.config.alpha
 
         # background correction for phi
         ang = torch.linspace(0, np.pi, 19, device=self.device)[:-1]
         self.bkgp = 0.5 * (torch.cos(ang) - torch.cos(ang + np.deg2rad(10.0)))
 
         # Sav-Gol filter
-        self.sg = torch.from_numpy(self.params["SG"]).float().to(self.device)
+        self.sg = torch.from_numpy(self.config.sg).float().to(self.device)
 
         # paddings for distograms:
         # left - linear clash; right - zeroes
@@ -121,13 +122,13 @@ class TRFold:
         padR = torch.zeros(padRsize, device=self.device)
         padL = (
             torch.arange(1, padLsize + 1, device=self.device).flip(0)
-            * self.params["CLASH"]
+            * self.config.clash
         )
         self.padR = padR[:, None]
         self.padL = padL[:, None]
 
         # backbone motif
-        self.ncac = torch.from_numpy(self.params["NCAC"]).to(self.device)
+        self.ncac = torch.from_numpy(self.config.ncac).to(self.device)
 
     def akima(self, y, h):
         """Akima spline coefficients (boundaries trimmed to [2:-2])
@@ -150,14 +151,14 @@ class TRFold:
         )
         return coef
 
-    def fold(self, xyz, batch=32, lr=0.8, nsteps=100):
+    def fold(self, xyz, pred, batch=32, lr=0.8, nsteps=100):
         assert nsteps > 0
-        pd, po, pt, pp = self.pred
+        pd, po, pt, pp = pred
         L = pd.shape[-1]
 
         p20 = (6.0 - pd[-1] - po[-1] - pt[-1] - pp[-1] - (pt[-1] + pp[-1]).T) / 6
         i, j = torch.triu_indices(L, L, 1, device=self.device)
-        sel = torch.where(p20[i, j] > self.params["PCUT"])[0]
+        sel = torch.where(p20[i, j] > self.config.pcut)[0]
 
         # indices for dist and omega (symmetric)
         i_s, j_s = i[sel], j[sel]
@@ -188,12 +189,12 @@ class TRFold:
         cstd = cstd - cstd[:, -1][:, None]
 
         # akima spline coefficients
-        coefd = self.akima(cstd, self.params["DSTEP"]).detach()
-        coefo = self.akima(csto, self.params["ASTEP"]).detach()
-        coeft = self.akima(cstt, self.params["ASTEP"]).detach()
-        coefp = self.akima(cstp, self.params["ASTEP"]).detach()
+        coefd = self.akima(cstd, self.config.dstep).detach()
+        coefo = self.akima(csto, self.config.astep).detach()
+        coeft = self.akima(cstt, self.config.astep).detach()
+        coefp = self.akima(cstp, self.config.astep).detach()
 
-        astep = self.params["ASTEP"]
+        astep = self.config.astep
 
         ko = torch.arange(i_s.shape[0], device=self.device).repeat(batch)
         kt = torch.arange(i_a.shape[0], device=self.device).repeat(batch)
@@ -275,8 +276,8 @@ class TRFold:
 
             loss = (
                 lossd.mean()
-                + self.params["WANG"] * loss_ang.mean()
-                + coef * self.params["WCST"] * loss_geom.mean()
+                + self.config.wang * loss_ang.mean()
+                + coef * self.config.wcst * loss_geom.mean()
             )
 
             opt.zero_grad()
@@ -284,7 +285,7 @@ class TRFold:
             opt.step()
 
         lossd = torch.stack([lossd[b == i].mean() for i in range(batch)])
-        loss = lossd + self.params["WANG"] * loss_ang + self.params["WCST"] * loss_geom
+        loss = lossd + self.config.wang * loss_ang + self.config.wcst * loss_geom
         minidx = torch.argmin(loss)
 
         return bb[minidx].permute(1, 0, 2)

@@ -2,9 +2,9 @@ import re
 import string
 
 import numpy as np
-import scipy.spatial
 import torch
-import util
+
+import proteome.models.folding.rosettafold.util as util
 from proteome.models.folding.rosettafold.ffindex import *
 
 to1letter = {

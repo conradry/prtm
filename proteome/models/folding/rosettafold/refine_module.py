@@ -1,12 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
-from proteome.models.folding.rosettafold.attention_module import get_bonded_neigh
-from proteome.models.folding.rosettafold.attention_module import make_graph as make_graph_topk
+from proteome.models.folding.rosettafold.attention_module import (
+    LayerNorm, get_bonded_neigh)
+from proteome.models.folding.rosettafold.attention_module import \
+    make_graph as make_graph_topk
 from proteome.models.folding.rosettafold.attention_module import rbf
-from proteome.models.folding.rosettafold.init_str_generator import UniMPBlock, get_seqsep, make_graph
+from proteome.models.folding.rosettafold.init_str_generator import (UniMPBlock,
+                                                                    get_seqsep,
+                                                                    make_graph)
+from proteome.models.folding.rosettafold.rosetta_transformer import (
+    _get_clones, create_custom_forward)
 from proteome.models.folding.rosettafold.se3_network import SE3Transformer
-from proteome.models.folding.rosettafold.rosetta_transformer import _get_clones, create_custom_forward
 
 # Re-generate initial coordinates based on 1) final pair features 2) predicted distogram
 # Then, refine it through multiple SE3 transformer block
@@ -27,14 +32,14 @@ class Regen_Network(nn.Module):
         super(Regen_Network, self).__init__()
 
         # embedding layers for node and edge features
-        self.norm_node = nn.LayerNorm(node_dim_in)
-        self.norm_edge = nn.LayerNorm(edge_dim_in)
+        self.norm_node = LayerNorm(node_dim_in)
+        self.norm_edge = LayerNorm(edge_dim_in)
 
         self.embed_x = nn.Sequential(
-            nn.Linear(node_dim_in + 21, node_dim_hidden), nn.LayerNorm(node_dim_hidden)
+            nn.Linear(node_dim_in + 21, node_dim_hidden), LayerNorm(node_dim_hidden)
         )
         self.embed_e = nn.Sequential(
-            nn.Linear(edge_dim_in + 2, edge_dim_hidden), nn.LayerNorm(edge_dim_hidden)
+            nn.Linear(edge_dim_in + 2, edge_dim_hidden), LayerNorm(edge_dim_hidden)
         )
 
         # graph transformer
@@ -46,7 +51,7 @@ class Regen_Network(nn.Module):
 
         # outputs
         self.get_xyz = nn.Linear(node_dim_hidden, 9)
-        self.norm_state = nn.LayerNorm(node_dim_hidden)
+        self.norm_state = LayerNorm(node_dim_hidden)
         self.get_state = nn.Linear(node_dim_hidden, state_dim)
 
     def forward(self, seq1hot, idx, node, edge):
@@ -84,9 +89,9 @@ class Refine_Network(nn.Module):
         p_drop=0.0,
     ):
         super(Refine_Network, self).__init__()
-        self.norm_msa = nn.LayerNorm(d_node)
-        self.norm_pair = nn.LayerNorm(d_pair)
-        self.norm_state = nn.LayerNorm(d_state)
+        self.norm_msa = LayerNorm(d_node)
+        self.norm_pair = LayerNorm(d_pair)
+        self.norm_state = LayerNorm(d_state)
 
         self.embed_x = nn.Linear(d_node + 21 + d_state, SE3_param["l0_in_features"])
         self.embed_e1 = nn.Linear(d_pair, SE3_param["num_edge_features"])
@@ -94,13 +99,12 @@ class Refine_Network(nn.Module):
             SE3_param["num_edge_features"] + 36 + 1, SE3_param["num_edge_features"]
         )
 
-        self.norm_node = nn.LayerNorm(SE3_param["l0_in_features"])
-        self.norm_edge1 = nn.LayerNorm(SE3_param["num_edge_features"])
-        self.norm_edge2 = nn.LayerNorm(SE3_param["num_edge_features"])
+        self.norm_node = LayerNorm(SE3_param["l0_in_features"])
+        self.norm_edge1 = LayerNorm(SE3_param["num_edge_features"])
+        self.norm_edge2 = LayerNorm(SE3_param["num_edge_features"])
 
         self.se3 = SE3Transformer(**SE3_param)
 
-    @torch.cuda.amp.autocast(enabled=False)
     def forward(self, msa, pair, xyz, state, seq1hot, idx, top_k=64):
         # process node & pair features
         B, L = msa.shape[:2]
@@ -177,7 +181,7 @@ class Refine_module(nn.Module):
             ),
             self.n_module,
         )
-        self.norm_state = nn.LayerNorm(SE3_param["l0_out_features"])
+        self.norm_state = LayerNorm(SE3_param["l0_out_features"])
         self.pred_lddt = nn.Linear(SE3_param["l0_out_features"], 1)
 
     def forward(self, node, edge, seq1hot, idx, use_transf_checkpoint=False, eps=1e-4):
@@ -211,7 +215,7 @@ class Refine_module(nn.Module):
                         state.float(),
                         seq1hot,
                         idx,
-                    )
+                    )  # type: ignore
                 else:
                     xyz, state = self.refine_net[i_m](
                         node.float(),

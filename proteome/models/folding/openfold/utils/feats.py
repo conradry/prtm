@@ -17,17 +17,14 @@ import math
 from typing import Dict
 
 import numpy as np
-import proteome.models.folding.openfold.np.residue_constants as rc
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.np import protein
+
+from proteome import protein
+from proteome.constants import residue_constants as rc
 from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
 from proteome.models.folding.openfold.utils.tensor_utils import (
-    batched_gather,
-    one_hot,
-    tensor_tree_map,
-    tree_map,
-)
+    batched_gather, one_hot, tensor_tree_map, tree_map)
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):

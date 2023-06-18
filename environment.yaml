@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - bioconda
   - pytorch
-  - dglteam
+  - dglteam/label/cu118
   - pyg
   - nvidia
 dependencies:
@@ -20,7 +20,7 @@ dependencies:
   - bioconda::kalign2==2.04
   - pytorch::pytorch==2.0.1
   - pytorch-cuda=11.8
-  - dglteam::dgl==1.1.0
+  - dglteam/label/cu118::dgl==1.1.0
   - pytorch-lightning==2.0.2
   - astropy==5.3
   - wandb==0.15.3
@@ -71,7 +71,7 @@ dependencies:
       - huggingface_hub
       - immutabledict
       - icecream
-      #- lie_learn
+      - lie_learn
       - lifelines
       - mpl-scatter-density
       - packaging

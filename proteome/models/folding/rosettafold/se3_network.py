@@ -1,13 +1,9 @@
 import torch
 import torch.nn as nn
-from proteome.models.folding.rosettafold.equivariant_attention.fibers import Fiber
+from proteome.models.folding.rosettafold.equivariant_attention.fibers import \
+    Fiber
 from proteome.models.folding.rosettafold.equivariant_attention.modules import (
-    GConvSE3,
-    GNormBias,
-    GNormSE3,
-    GSE3Res,
-    get_basis_and_r,
-)
+    GConvSE3, GNormBias, GNormSE3, GSE3Res, get_basis_and_r)
 
 
 class TFN(nn.Module):
@@ -74,7 +70,6 @@ class TFN(nn.Module):
         )
         return nn.ModuleList(block0)
 
-    @torch.cuda.amp.autocast(enabled=False)
     def forward(self, G, type_0_features, type_1_features):
         # Compute equivariant weight basis from relative positions
         basis, r = get_basis_and_r(G, self.num_degrees - 1)
@@ -165,7 +160,6 @@ class SE3Transformer(nn.Module):
         )
         return nn.ModuleList(Gblock)
 
-    @torch.cuda.amp.autocast(enabled=False)
     def forward(self, G, type_0_features, type_1_features):
         # Compute equivariant weight basis from relative positions
         basis, r = get_basis_and_r(G, self.num_degrees - 1)

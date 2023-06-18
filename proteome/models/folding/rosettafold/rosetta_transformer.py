@@ -58,43 +58,44 @@ class MultiheadAttention(nn.Module):
         self.heads = heads
         self.d_model = d_model
         self.d_k = d_model // heads
+        self.scaling = 1 / math.sqrt(self.d_k)
 
         self.to_query = nn.Linear(d_model, d_model)
         self.to_key = nn.Linear(k_dim, d_model)
         self.to_value = nn.Linear(v_dim, d_model)
         self.to_out = nn.Linear(d_model, d_model)
 
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout, inplace=True)
 
     def forward(self, query, key, value, return_att=False):
-        batch, L = query.shape[:2]
+        batch, L1 = query.shape[:2]
+        batch, L2 = key.shape[:2]
         q = (
             self.to_query(query)
-            .view(batch, L, self.heads, self.d_k)
+            .view(batch, L1, self.heads, self.d_k)
             .permute(0, 2, 1, 3)
         )  # (B, h, L, d_k)
         k = (
-            self.to_key(key).view(batch, L, self.heads, self.d_k).permute(0, 2, 1, 3)
+            self.to_key(key).view(batch, L2, self.heads, self.d_k).permute(0, 2, 1, 3)
         )  # (B, h, L, d_k)
         v = (
             self.to_value(value)
-            .view(batch, L, self.heads, self.d_k)
+            .view(batch, L2, self.heads, self.d_k)
             .permute(0, 2, 1, 3)
         )
         #
-        attention = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        attention = F.softmax(attention, dim=-1)  # (B, h, L, L)
+        attention = torch.matmul(q, k.transpose(-2, -1)) * self.scaling
+        attention = F.softmax(attention, dim=-1)  # (B, h, L1, L2)
         attention = self.dropout(attention)
         #
         out = torch.matmul(attention, v)  # (B, h, L, d_k)
-        out = out.permute(0, 2, 1, 3).contiguous().view(batch, L, -1)
+        out = out.permute(0, 2, 1, 3).contiguous().view(batch, L1, -1)
         #
         out = self.to_out(out)
         if return_att:
             attention = 0.5 * (attention + attention.permute(0, 1, 3, 2))
             return out, attention.permute(0, 2, 3, 1)
-        else:
-            return out
+        return out
 
 
 # Own implementation for tied multihead attention
@@ -345,26 +346,18 @@ class MaskedDirectMultiheadAttention(nn.Module):
 # Use PreLayerNorm for more stable training
 class EncoderLayer(nn.Module):
     def __init__(
-        self, 
-        d_model, 
-        d_ff, 
-        heads,
-        is_2track=False,
-        p_drop=0.1, 
-        performer_opts=None, 
-        use_tied=False,
-        nb_features=None,
+        self, d_model, d_ff, heads, p_drop=0.1, performer_opts=None, use_tied=False
     ):
         super(EncoderLayer, self).__init__()
-        assert not is_2track and use_tied
+        self.use_performer = performer_opts is not None
         self.use_tied = use_tied
         # multihead attention
-        if performer_opts is not None:
+        if self.use_performer:
+            assert isinstance(performer_opts, dict)
             self.attn = SelfAttention(
                 dim=d_model,
                 heads=heads,
                 dropout=p_drop,
-                nb_features=nb_features,
                 generalized_attention=True,
                 **performer_opts
             )
@@ -372,23 +365,14 @@ class EncoderLayer(nn.Module):
             self.attn = SoftTiedMultiheadAttention(d_model, heads, dropout=p_drop)
         else:
             self.attn = MultiheadAttention(d_model, heads, dropout=p_drop)
+        # feedforward
+        self.ff = FeedForwardLayer(d_model, d_ff, p_drop=p_drop)
 
-        self.is_2track = is_2track
-        if is_2track:
-            self.linear1 = nn.Linear(d_model, d_ff)
-            self.dropout = nn.Dropout(p_drop)
-            self.linear2 = nn.Linear(d_ff, d_model)
-            # normalization module
-            self.norm1 = nn.LayerNorm(d_model)
-            self.norm2 = nn.LayerNorm(d_model)
-        else:
-            self.ff = FeedForwardLayer(d_model, d_ff, p_drop=p_drop)
-            # normalization module
-            self.norm1 = LayerNorm(d_model)
-            self.norm2 = LayerNorm(d_model)
-
-        self.dropout1 = nn.Dropout(p_drop)
-        self.dropout2 = nn.Dropout(p_drop)
+        # normalization module
+        self.norm1 = LayerNorm(d_model)
+        self.norm2 = LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(p_drop, inplace=True)
+        self.dropout2 = nn.Dropout(p_drop, inplace=True)
 
     def forward(self, src, return_att=False):
         # Input shape for multihead attention: (BATCH, SRCLEN, EMB)
@@ -397,28 +381,21 @@ class EncoderLayer(nn.Module):
         src2 = self.norm1(src)
         if not self.use_tied:
             src2 = src2.reshape(B * N, L, -1)
-
         if return_att:
             src2, att = self.attn(src2, src2, src2, return_att=return_att)
+            src2 = src2.reshape(B, N, L, -1)
         else:
-            src2 = self.attn(src2, src2, src2)
+            src2 = self.attn(src2, src2, src2).reshape(B, N, L, -1)
             att = None
-
-        src2 = src2.reshape(B, N, L, -1)
         src = src + self.dropout1(src2)
 
         # feed-forward
         src2 = self.norm2(src)  # pre-normalization
-        if self.is_2track:
-            src2 = self.linear2(self.dropout(F.relu_(self.linear1(src2))))
-        else:
-            src2 = self.ff(src2)
-
+        src2 = self.ff(src2)
         src = src + self.dropout2(src2)
         if return_att:
             return src, att
-        else:
-            return src
+        return src
 
 
 # AxialTransformer with tied attention for L dimension
@@ -435,6 +412,7 @@ class AxialEncoderLayer(nn.Module):
         use_soft_row=False,
     ):
         super(AxialEncoderLayer, self).__init__()
+        self.use_performer = performer_opts is not None
         self.use_tied_row = use_tied_row
         self.use_tied_col = use_tied_col
         self.use_soft_row = use_soft_row
@@ -444,7 +422,8 @@ class AxialEncoderLayer(nn.Module):
         elif use_soft_row:
             self.attn_L = SoftTiedMultiheadAttention(d_model, heads, dropout=p_drop)
         else:
-            if performer_opts is not None:
+            if self.use_performer:
+                assert isinstance(performer_opts, dict)
                 self.attn_L = SelfAttention(
                     dim=d_model,
                     heads=heads,
@@ -457,7 +436,8 @@ class AxialEncoderLayer(nn.Module):
         if use_tied_col:
             self.attn_N = TiedMultiheadAttention(d_model, heads, dropout=p_drop)
         else:
-            if performer_opts is not None:
+            if self.use_performer:
+                assert isinstance(performer_opts, dict)
                 self.attn_N = SelfAttention(
                     dim=d_model,
                     heads=heads,
@@ -527,9 +507,11 @@ class Encoder(nn.Module):
 class CrossEncoderLayer(nn.Module):
     def __init__(self, d_model, d_ff, heads, d_k, d_v, performer_opts=None, p_drop=0.1):
         super(CrossEncoderLayer, self).__init__()
+        self.use_performer = performer_opts is not None
 
         # multihead attention
-        if performer_opts is not None:
+        if self.use_performer:
+            assert isinstance(performer_opts, dict)
             self.attn = SelfAttention(
                 dim=d_model,
                 k_dim=d_k,
@@ -615,82 +597,6 @@ class CrossEncoder(nn.Module):
         super(CrossEncoder, self).__init__()
         self.layers = _get_clones(enc_layer, n_layer)
         self.n_layer = n_layer
-
-    def forward(self, src, tgt):
-        output = tgt
-        for layer in self.layers:
-            output = layer(src, output)
-        return output
-
-
-class SpecialEncoderLayer(nn.Module):
-    def __init__(self, heads, d_in, d_out, d_ff, p_drop=0.1):
-        super(SpecialEncoderLayer, self).__init__()
-        self.heads = heads
-
-        # linear projection to get attention map
-        self.norm = nn.LayerNorm(d_in)
-        self.proj_pair_1 = nn.Linear(d_in, heads // 2)
-        self.proj_pair_2 = nn.Linear(d_in, heads // 2)
-        # linear projection to get values from given msa
-        self.proj_msa = nn.Linear(d_out, d_out)
-        # projection after applying attention
-        self.proj_out = nn.Linear(d_out, d_out)
-        # dropouts
-        self.drop_1 = nn.Dropout(p_drop)
-        self.drop_2 = nn.Dropout(p_drop)
-        self.drop_3 = nn.Dropout(p_drop)
-        # feed-forward
-        self.linear1 = nn.Linear(d_out, d_ff)
-        self.dropout = nn.Dropout(p_drop)
-        self.linear2 = nn.Linear(d_ff, d_out)
-        # LayerNorm
-        self.norm1 = nn.LayerNorm(d_out)
-        self.norm2 = nn.LayerNorm(d_out)
-
-    def forward(self, src, tgt):
-        # Input:
-        #  For pair to msa: src=pair (B, L, L, C), tgt=msa (B, N, L, K)
-        B, N, L = tgt.shape[:3]
-        # get attention map
-        src = self.norm(src)
-        attn_map_1 = F.softmax(self.proj_pair_1(src), dim=1).permute(
-            0, 3, 1, 2
-        )  # (B, h//2, L, L)
-        attn_map_2 = F.softmax(self.proj_pair_2(src), dim=2).permute(
-            0, 3, 2, 1
-        )  # (B, h//2, L, L)
-        attn_map = torch.cat((attn_map_1, attn_map_2), dim=1)  # (B, h, L, L)
-        attn_map = self.drop_1(attn_map).unsqueeze(1)
-
-        # apply attention
-        tgt2 = self.norm1(tgt.view(B * N, L, -1)).view(B, N, L, -1)
-        value = (
-            self.proj_msa(tgt2)
-            .permute(0, 3, 1, 2)
-            .contiguous()
-            .view(B, -1, self.heads, N, L)
-        )  # (B,-1, h, N, L)
-        tgt2 = (
-            torch.matmul(value, attn_map).view(B, -1, N, L).permute(0, 2, 3, 1)
-        )  # (B,N,L,K)
-        tgt2 = self.proj_out(tgt2)
-        tgt = tgt + self.drop_2(tgt2)
-
-        # feed-forward
-        tgt2 = self.norm2(tgt.view(B * N, L, -1)).view(B, N, L, -1)
-        tgt2 = self.linear2(self.dropout(F.relu_(self.linear1(tgt2))))
-        tgt = tgt + self.drop_3(tgt2)
-
-        return tgt
-
-
-class SpecialEncoder(nn.Module):
-    def __init__(self, enc_layer, n_layer, d_model):
-        super(SpecialEncoder, self).__init__()
-        self.layers = _get_clones(enc_layer, n_layer)
-        self.n_layer = n_layer
-        # self.norm = nn.LayerNorm(d_model)
 
     def forward(self, src, tgt):
         output = tgt

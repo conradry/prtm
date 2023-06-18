@@ -172,7 +172,7 @@ class SphericalHarmonics(object):
         assert abs(m) <= l, "absolute value of order m must be <= degree l"
 
         N = np.sqrt((2*l+1) / (4*np.pi))
-        leg = self.lpmv(l, abs(m), math.cos(theta))
+        leg = self.lpmv(l, abs(m), torch.cos(theta))
         if m == 0:
             return N*leg
         elif m > 0:
