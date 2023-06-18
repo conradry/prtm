@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -16,25 +17,15 @@
 # =============================================================================
 """
 
-"""
-# =============================================================================
-# Imports
-# =============================================================================
 import argparse
 import typing
 
 import torch
+from proteome.constants import residue_constants as rc
 from proteome.models.folding.omegafold import modules, utils
-from proteome.models.folding.omegafold.utils import residue_constants as rc
 from torch import nn
 
 
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
 def _get_pos(
     shape: torch.Size,
     device: torch.device,
@@ -107,9 +98,6 @@ def _apply_embed(
     return torch.cat([x1 * cos - x2 * sin, x2 * cos + x1 * sin], dim=-1)
 
 
-# =============================================================================
-# Classes
-# =============================================================================
 class EdgeEmbedder(modules.OFModule):
     """
     Embed the input into node and edge representations
@@ -166,11 +154,9 @@ class RoPE(nn.Module):
 
         """
         if isinstance(seq_dim, int):
-            seq_dim = [
-                seq_dim,
-            ]
-        sin, cos = self._compute_sin_cos(tensor, seq_dim)
+            seq_dim = (seq_dim,)
 
+        sin, cos = self._compute_sin_cos(tensor, seq_dim)
         return _apply_embed(tensor, sin, cos, seq_dim)
 
     def _compute_sin_cos(
@@ -375,7 +361,7 @@ class RecycleEmbedder(modules.OFModule):
         Returns:
 
         """
-        atom_mask = rc.restype2atom_mask.to(self.device)[fasta]
+        atom_mask = torch.from_numpy(rc.restype2atom_mask).to(self.device)[fasta]
         prev_beta = utils.create_pseudo_beta(prev_x, atom_mask)
         d = utils.get_norm(prev_beta.unsqueeze(-2) - prev_beta.unsqueeze(-3))
         d = self.dgram(d)
@@ -388,10 +374,3 @@ class RecycleEmbedder(modules.OFModule):
             edge_repr += self.embed_struct(fasta, prev_x, atom14_mask, prev_frames)
 
         return node_repr, edge_repr
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass

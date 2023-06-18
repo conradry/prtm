@@ -947,6 +947,7 @@ restype_1to3 = {
 # many more, and less common, three letter names as keys and maps many of these
 # to the same one letter name (including 'X' and 'U' which we don't use here).
 restype_3to1 = {v: k for k, v in restype_1to3.items()}
+restype2atom_mask = np.zeros([len(restypes_with_x), 14])
 
 # Define a restype name for all unknown residues.
 unk_restype = "UNK"
@@ -1114,8 +1115,11 @@ restype_atom37_to_rigid_group = np.zeros([21, 37], dtype=int)
 restype_atom37_mask = np.zeros([21, 37], dtype=np.float32)
 restype_atom37_rigid_group_positions = np.zeros([21, 37, 3], dtype=np.float32)
 restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=int)
+restype_atom14_to_aa = np.zeros([21, 14], dtype=np.int64)
 restype_atom14_mask = np.zeros([21, 14], dtype=np.float32)
+restype_atom14_aa_positions = np.zeros([21, 14, 3], dtype=np.float32)
 restype_atom14_rigid_group_positions = np.zeros([21, 14, 3], dtype=np.float32)
+restype_aa_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
 restype_rigid_group_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
 
 

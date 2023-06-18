@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -16,29 +17,21 @@
 # =============================================================================
 """
 
-"""
-# =============================================================================
-# Imports
-# =============================================================================
 import argparse
 import typing
 
 import torch
-from proteome.models.folding.omegafold import (confidence, decode, embedders,
-                                               geoformer, modules, omegaplm,
-                                               utils)
-from proteome.models.folding.omegafold.utils import residue_constants as rc
+from proteome.constants import residue_constants as rc
+from proteome.models.folding.omegafold import (
+    confidence,
+    decode,
+    embedders,
+    geoformer,
+    modules,
+    omegaplm,
+    utils,
+)
 from torch import nn
-
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
-# =============================================================================
-# Classes
-# =============================================================================
 
 
 class OmegaFoldCycle(modules.OFModule):
@@ -147,9 +140,9 @@ class OmegaFold(modules.OFModule):
         final_result = None
 
         # Start cycling
-        residx_atom14_mask = rc.restype_atom14_mask.to(device=primary_sequence.device)[
-            primary_sequence
-        ]
+        residx_atom14_mask = torch.from_numpy(rc.restype_atom14_mask).to(
+            device=primary_sequence.device
+        )[primary_sequence]
         for cycle_data in inputs:
             p_msa, p_msa_mask = cycle_data["p_msa"], cycle_data["p_msa_mask"]
             fasta, mask = p_msa[..., 0, :], p_msa_mask[..., 0, :]
@@ -237,10 +230,3 @@ class OmegaFold(modules.OFModule):
                 num_res, 8, unit="Angstrom", device=self.device
             ),
         }
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass

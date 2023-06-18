@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -15,32 +16,15 @@
 # limitations under the License.
 # =============================================================================
 """
-This script contains the Frame object, that acts as an essential part to
-convert to full atom coordinates for amino acids.
-This is inspired by Jumper et al. (2021), where the authors refer to this
-object as rigid group/affine update, and we unify the two notions here.
-
-Some codes adopted from
-https://github.com/deepmind/alphafold/blob/main/alphafold/model/all_atom.py
-"""
-# =============================================================================
-# Imports
-# =============================================================================
+import numbers
+import typing
 from typing import List, Tuple, Union
 
 import torch
-from proteome.models.folding.omegafold.utils.protein_utils import \
-    functions as f
-from proteome.models.folding.omegafold.utils.protein_utils import \
-    residue_constants as rc
+from proteome.constants import residue_constants as rc
 from torch.nn import functional as F
 
-# =============================================================================
-# Functions
-# =============================================================================
-# =============================================================================
-# Constant
-# =============================================================================
+T = typing.TypeVar("T")
 _BACKBONE_ROTATE = torch.tensor(
     [
         [-1, 0.0, 0.0],
@@ -50,9 +34,226 @@ _BACKBONE_ROTATE = torch.tensor(
 )
 
 
-# =============================================================================
-# Classes
-# =============================================================================
+def mask2bias(mask: torch.Tensor, *, inf: float = 1e9) -> torch.Tensor:
+    """Convert mask to attention bias
+
+    Args:
+        mask: the mask to convert to bias representation
+        inf: the floating point number to represent infinity
+
+    Returns:
+        bias representation for masking in attention
+
+    """
+    return mask.float().sub(1).mul(inf)
+
+
+def normalize(
+    inputs: torch.Tensor,
+    normalized_shape: typing.Optional[
+        typing.Union[int, typing.List[int], torch.Size]
+    ] = None,
+    in_place: bool = False,
+) -> torch.Tensor:
+    """Layer normalization without a module (and weight)
+
+    Args:
+        inputs: the input tensor to be normalized
+        normalized_shape: the normalized_shape for normalization
+        in_place: if to perform the operations in-place
+
+    Returns:
+        normalized tensor
+
+    """
+    if normalized_shape is None:
+        normalized_shape = inputs.shape[-1]
+    if isinstance(normalized_shape, numbers.Integral):
+        normalized_shape = (normalized_shape,)
+
+    if in_place:
+        # This seems to create small discrepancy in result
+        dim = list(range(len(inputs.shape))[-len(normalized_shape) :])
+        inputs -= inputs.mean(dim=dim, keepdim=True)
+        inputs *= torch.rsqrt(inputs.var(dim=dim, keepdim=True) + 1e-5)
+        return inputs
+    else:
+        # F.layer_norm seems a bit faster
+        return F.layer_norm(inputs, normalized_shape, None, None, 1e-5)
+
+
+def masked_mean(
+    values: torch.Tensor,
+    mask: torch.Tensor,
+    dim: typing.Union[int, typing.Sequence[int], None],
+    keepdim: typing.Optional[bool] = False,
+    eps: typing.Optional[float] = 4e-5,
+) -> torch.Tensor:
+    """Mean operation with mask
+
+    Args:
+        values: the values to take the mean for
+        mask: the mask to take the mean with
+        dim: the dimension along which to take the mean
+        keepdim: to keep the dimension
+        eps: the epsilon to compute mean for
+
+    Returns:
+        mean result
+
+    """
+    values = values.masked_fill(~mask.bool(), 0).sum(dim, keepdim=keepdim)
+    norm = mask.sum(dim, keepdim=keepdim, dtype=values.dtype) + eps
+    return values / norm
+
+
+def recursive_to(obj: typing.Any, **kwargs) -> typing.Any:
+    r"""
+    Just to move things to space
+    *args is removed because it brings problems in using .cpu()
+
+    Args:
+        obj (): the object to move
+        kwargs (): different keyword arguments
+
+    Returns:
+        cuda tensors in its original construct
+
+    """
+    if isinstance(obj, torch.Tensor):
+        try:
+            return obj.to(**kwargs)
+        except RuntimeError:
+            kwargs.pop("non_blocking")
+            return obj.to(**kwargs)
+    elif isinstance(obj, list):
+        return [recursive_to(o, **kwargs) for o in obj]
+    elif isinstance(obj, tuple):
+        return tuple(recursive_to(o, **kwargs) for o in obj)
+    elif isinstance(obj, set):
+        return set(recursive_to(o, **kwargs) for o in obj)
+    elif isinstance(obj, dict):
+        return {k: recursive_to(v, **kwargs) for k, v in obj.items()}
+    elif hasattr(obj, "to"):
+        # this takes care of classes that implements the ~to method
+        return obj.to(**kwargs)
+    else:
+        return obj
+
+
+def get_norm(x: torch.Tensor) -> torch.Tensor:
+    """
+    Replacement for LA.norm since MPS does not support it yet.
+
+    Args:
+        x:
+
+    Returns:
+
+    """
+    return x.norm(p=2, dim=-1)
+
+
+def robust_normalize(
+    x: torch.Tensor, dim: int = -1, p: typing.Union[int, str] = 2
+) -> torch.Tensor:
+    """
+    Normalization with a constant small term on the denominator
+
+    Args:
+        x (): tensor ot normalize
+        dim (): the dimension along which to perform the normalization
+        p (): the p in l-p
+
+    Returns:
+        the normalized result
+
+    """
+    return x / (x.norm(p=p, dim=dim, keepdim=True).clamp(4e-5))
+
+
+def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as quaternions to rotation matrices.
+
+    # The following from PyTorch3d
+    Args:
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4) or (..., 3).
+
+    Returns:
+        Rotation matrices as tensor of shape (..., 3, 3).
+    """
+    if quaternions.shape[-1] == 3:
+        quaternions = torch.cat(
+            (torch.ones_like(quaternions[..., 0:1]), quaternions), dim=-1
+        )
+    r, i, j, k = torch.unbind(quaternions, -1)
+    two_s = 2.0 / (quaternions * quaternions).sum(-1)
+
+    o = torch.stack(
+        (
+            1 - two_s * (j * j + k * k),
+            two_s * (i * j - k * r),
+            two_s * (i * k + j * r),
+            two_s * (i * j + k * r),
+            1 - two_s * (i * i + k * k),
+            two_s * (j * k - i * r),
+            two_s * (i * k - j * r),
+            two_s * (j * k + i * r),
+            1 - two_s * (i * i + j * j),
+        ),
+        -1,
+    )
+    return o.reshape(quaternions.shape[:-1] + (3, 3))
+
+
+def batch_matrix_vector(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
+    """
+    Perform batched matrix vector product on the last dimension
+
+    Args:
+        matrix (): of shape (*, d, d)
+        vector (): of shape (*, d)
+
+    Returns:
+        the product of the two
+
+    """
+    assert len(matrix.shape[:-2]) == len(vector.shape[:-1])
+
+    return torch.einsum("...cd, ...d -> ...c", matrix, vector)
+
+
+def create_pseudo_beta(atom_pos: torch.Tensor, atom_mask: torch.Tensor) -> torch.Tensor:
+    """
+
+    Args:
+        atom_pos: the atom position in atom14 format,
+            of shape [*, num_res, 14, 3]
+        atom_mask: the atom mask in atom14 format,
+            of shape [*, num_res, 14]
+
+    Returns:
+        CB coordinate (when available) and CA coordinate (when not available)
+
+    """
+    if not (atom_mask.shape[-1] == atom_pos.shape[-2] == 14):
+        raise ValueError(f"Only supports atom 14")
+    pseudo_beta = torch.where(
+        atom_mask[..., 4:5].expand(list(atom_mask.shape[:-1]) + [3]).bool(),
+        atom_pos[..., 4, :],
+        atom_pos[..., 1, :],
+    )
+    return pseudo_beta
+
+
+def bit_wise_not(boolean_tensor: torch.Tensor) -> torch.Tensor:
+    """For MPS devices that have no support for yet bit-wise not"""
+    boolean_tensor = 1 - boolean_tensor.float()
+    return boolean_tensor.bool()
+
+
 class AAFrame(object):
     """
     The transformation object that holds translation and rotation
@@ -215,7 +416,7 @@ class AAFrame(object):
             value: the translation value
 
         """
-        m = f.bit_wise_not(self.mask.unsqueeze(-1).expand_as(value))
+        m = bit_wise_not(self.mask.unsqueeze(-1).expand_as(value))
         self._translation = value.masked_fill(m, 0)
 
     @property
@@ -238,7 +439,7 @@ class AAFrame(object):
             value: the rotational matrices
 
         """
-        mask = f.bit_wise_not(self.mask[..., None, None].expand_as(value))
+        mask = bit_wise_not(self.mask[..., None, None].expand_as(value))
         value = value.masked_fill(mask, 0.0)
         value = value.masked_fill(
             mask * torch.eye(3, dtype=torch.bool).to(mask.device), 1
@@ -478,7 +679,7 @@ class AAFrame(object):
         shape2 = pos.shape[batched_dims:-1]  # the ones to cross
         self_shape2 = self.shape[batched_dims:]
         out = self.view(*shape1, *[1 for _ in range(len(shape2))], *self_shape2)
-        return f.batch_matrix_vector(out.rotation, pos) + out.translation
+        return batch_matrix_vector(out.rotation, pos) + out.translation
 
     @classmethod
     def from_torsion(
@@ -675,7 +876,7 @@ class AAFrame(object):
 
         r_out = torch.bmm(r_1, r_2)
         # the transition
-        t_out = t_1 + f.batch_matrix_vector(r_1, t_2)
+        t_out = t_1 + batch_matrix_vector(r_1, t_2)
         # the torsion_angles_mask
         m_out = m_1 * m_2
 
@@ -772,14 +973,14 @@ class AAFrame(object):
         torsion_angles_mask = torch.cat((angle_mask, torsion_angles_mask), -1)
 
         # prepare the angles
-        torsion_angles = f.robust_normalize(torsion_angles)
+        torsion_angles = robust_normalize(torsion_angles)
         rot_x = AAFrame.from_torsion(
             torsion_angles=torsion_angles, mask=torsion_angles_mask, unit="Angstrom"
         )
 
         # make extra backbone frames
         # This follows the order of ~restypes
-        m = rc.restype_aa_default_frame.to(self.device)[fasta]
+        m = torch.from_numpy(rc.restype_aa_default_frame).to(self.device)[fasta]
         default_frames = AAFrame.from_4x4(m, torsion_angles_mask, unit="Angstrom")
         all_frames = default_frames * rot_x
         # make side chain frames (chain them up along the side chain)
@@ -855,7 +1056,7 @@ class AAFrame(object):
         assert self._unit == "Angstrom"
 
         fasta = fasta.cpu()
-        residx2group = rc.restype_atom14_to_aa
+        residx2group = torch.from_numpy(rc.restype_atom14_to_aa)
         residx2group = residx2group[..., :pos_counts]
         residx2group = residx2group[fasta].to(self.device)
         group_mask = F.one_hot(residx2group, num_classes=8)
@@ -863,7 +1064,7 @@ class AAFrame(object):
         group_mask = group_mask * frame.mask[..., None, :]
         to_mask = frame.unsqueeze(-2) * group_mask
         map_atoms_to_global = to_mask.sum(-1)
-        lit_pos = rc.restype_atom14_aa_positions
+        lit_pos = torch.from_numpy(rc.restype_atom14_aa_positions)
         lit_pos = lit_pos[..., :pos_counts, :]
         lit_pos = lit_pos[fasta].to(self.device)
         pred_pos = map_atoms_to_global.transform(lit_pos)
@@ -887,7 +1088,7 @@ class AAFrame(object):
 
         """
         r = self.rotation.transpose(-1, -2)
-        t = f.batch_matrix_vector(r, self.translation)
+        t = batch_matrix_vector(r, self.translation)
         return self._construct_frame(
             -t, r, self.mask, f"inversed from {self}", safe=False, unit=self.unit
         )
@@ -914,7 +1115,7 @@ class AAFrame(object):
         """
         q_dim = 4 if tensor.shape[-1] == 7 else 3
         quaternion, tx, ty, tz = torch.split(tensor, [q_dim, 1, 1, 1], dim=-1)
-        rotation = f.quaternion_to_matrix(quaternion)
+        rotation = quaternion_to_matrix(quaternion)
         translation = torch.stack([tx[..., 0], ty[..., 0], tz[..., 0]], dim=-1)
 
         return cls._construct_frame(
@@ -946,14 +1147,3 @@ def torsion_mask_to_atom14_mask(
     atom14_exist_mask[..., 4] = fasta != 7
     atom14_exist_mask[..., 0:3] = torsion_mask[..., 0:1]
     return atom14_exist_mask.bool()
-
-
-# =============================================================================
-# Functions
-# =============================================================================
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass
