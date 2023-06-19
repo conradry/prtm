@@ -333,7 +333,7 @@ def to_pdb(prot: Protein) -> str:
         for atom_name, pos, mask, b_factor in zip(
             atom_types[res_name_3], atom_positions[i], atom_mask[i], b_factors[i]
         ):
-            if mask < 0.5:
+            if mask < 0.5 or not atom_name:
                 continue
 
             record_type = "ATOM"

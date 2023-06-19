@@ -873,7 +873,7 @@ restype_order = {restype: i for i, restype in enumerate(restypes)}
 restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
-restypes_with_x = restypes + ["X"]
+restypes_with_x = restypes + ["X", "-"]
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
 
 
@@ -1161,7 +1161,6 @@ restype_atom37_rigid_group_positions = np.zeros([21, 37, 3], dtype=np.float32)
 restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=int)
 restype_atom14_mask = np.zeros([21, 14], dtype=np.float32)
 restype_atom14_rigid_group_positions = np.zeros([21, 14, 3], dtype=np.float32)
-restype_aa_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
 restype_rigid_group_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
 
 
@@ -1260,7 +1259,7 @@ for rt in restypes:
 restype_atom14_to_atom37.append([0] * 14)
 restype_atom37_to_atom14.append([0] * 37)
 
-estype_atom14_to_atom37 = np.array(restype_atom14_to_atom37, dtype=np.int64)
+restype_atom14_to_atom37 = np.array(restype_atom14_to_atom37, dtype=np.int64)
 restype_atom37_to_atom14 = np.array(restype_atom37_to_atom14, dtype=np.int64)
 chi_pi_periodic = np.array(
     [

@@ -980,7 +980,7 @@ class AAFrame(object):
 
         # make extra backbone frames
         # This follows the order of ~restypes
-        m = torch.from_numpy(rc.restype_aa_default_frame).to(self.device)[fasta]
+        m = torch.from_numpy(rc.restype_rigid_group_default_frame).to(self.device)[fasta]
         default_frames = AAFrame.from_4x4(m, torsion_angles_mask, unit="Angstrom")
         all_frames = default_frames * rot_x
         # make side chain frames (chain them up along the side chain)
@@ -1056,7 +1056,7 @@ class AAFrame(object):
         assert self._unit == "Angstrom"
 
         fasta = fasta.cpu()
-        residx2group = torch.from_numpy(rc.restype_atom14_to_aa)
+        residx2group = torch.from_numpy(rc.restype_atom14_to_rigid_group)
         residx2group = residx2group[..., :pos_counts]
         residx2group = residx2group[fasta].to(self.device)
         group_mask = F.one_hot(residx2group, num_classes=8)
@@ -1064,7 +1064,7 @@ class AAFrame(object):
         group_mask = group_mask * frame.mask[..., None, :]
         to_mask = frame.unsqueeze(-2) * group_mask
         map_atoms_to_global = to_mask.sum(-1)
-        lit_pos = torch.from_numpy(rc.restype_atom14_aa_positions)
+        lit_pos = torch.from_numpy(rc.restype_atom14_rigid_group_positions)
         lit_pos = lit_pos[..., :pos_counts, :]
         lit_pos = lit_pos[fasta].to(self.device)
         pred_pos = map_atoms_to_global.transform(lit_pos)
