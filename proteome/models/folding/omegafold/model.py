@@ -17,13 +17,13 @@
 # =============================================================================
 """
 
-import argparse
 import typing
 
 import torch
 from proteome.constants import residue_constants as rc
 from proteome.models.folding.omegafold import (
     confidence,
+    config,
     decode,
     embedders,
     geoformer,
@@ -35,7 +35,7 @@ from torch import nn
 
 
 class OmegaFoldCycle(modules.OFModule):
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.OmegaFoldModelConfig) -> None:
         super(OmegaFoldCycle, self).__init__(cfg)
 
         self.geoformer = geoformer.GeoFormer(cfg)
@@ -48,7 +48,7 @@ class OmegaFoldCycle(modules.OFModule):
         mask: torch.Tensor,
         node_repr: torch.Tensor,
         edge_repr: torch.Tensor,
-        fwd_cfg: typing.Optional[argparse.Namespace],
+        fwd_cfg: typing.Optional[config.ForwardConfig],
     ) -> typing.Tuple[
         typing.Dict[str, torch.Tensor],
         typing.Dict[str, typing.Union[torch.Tensor, utils.AAFrame]],
@@ -106,7 +106,7 @@ class OmegaFold(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.OmegaFoldModelConfig) -> None:
         super(OmegaFold, self).__init__(cfg)
         self.omega_plm = omegaplm.OmegaPLM(cfg.plm)
         self.plm_node_embedder = nn.Linear(cfg.plm.node, cfg.node_dim)
@@ -120,7 +120,7 @@ class OmegaFold(modules.OFModule):
         inputs: _INPUTS,
         predict_with_confidence: typing.Optional[bool] = True,
         *,
-        fwd_cfg: typing.Optional[argparse.Namespace] = None
+        fwd_cfg: typing.Optional[config.ForwardConfig] = None
     ) -> typing.Dict[str, typing.Union[torch.Tensor, float]]:
         """
         The forward implementation of OmegaFold
@@ -183,7 +183,7 @@ class OmegaFold(modules.OFModule):
         self,
         fasta: torch.Tensor,
         mask: torch.Tensor,
-        fwd_cfg: typing.Optional[argparse.Namespace],
+        fwd_cfg: typing.Optional[config.ForwardConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
         Run the forward method of the pretrained-language model
@@ -204,7 +204,7 @@ class OmegaFold(modules.OFModule):
 
         return node_repr, edge_repr
 
-    def create_initial_prev_dict(self, num_res: int) -> typing.Dict[str, torch.Tensor]:
+    def create_initial_prev_dict(self, num_res: int) -> typing.Dict[str, typing.Union[torch.Tensor, utils.AAFrame]]:
         """
         Generate 'previous' (filling with 0's) features for the model
 

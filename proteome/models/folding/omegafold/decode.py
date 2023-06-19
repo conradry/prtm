@@ -16,12 +16,11 @@
 # limitations under the License.
 # =============================================================================
 """
-import argparse
 import math
 import typing
 
 import torch
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
 
 
@@ -32,7 +31,7 @@ class InvariantPointAttention(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.StructureConfig) -> None:
         super(InvariantPointAttention, self).__init__(cfg)
         node_dim = cfg.node_dim
         edge_dim = cfg.edge_dim
@@ -185,7 +184,7 @@ class TorsionAngleHead(modules.OFModule):
     node representation following Jumper et al. (2021)
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super(TorsionAngleHead, self).__init__(cfg)
 
         self.input_projection = nn.ModuleList(
@@ -243,7 +242,7 @@ class StructureCycle(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.StructureConfig) -> None:
         super(StructureCycle, self).__init__(cfg)
         self.ipa = InvariantPointAttention(cfg)
         self.input_norm = nn.LayerNorm(cfg.node_dim)
@@ -295,7 +294,7 @@ class StructureCycle(modules.OFModule):
 class StructureModule(modules.OFModule):
     """Jumper et al. (2021) Suppl. Alg. 20 'StructureModule'"""
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super(StructureModule, self).__init__(cfg)
         self.node_norm = nn.LayerNorm(cfg.node_dim)
         self.edge_norm = nn.LayerNorm(cfg.edge_dim)

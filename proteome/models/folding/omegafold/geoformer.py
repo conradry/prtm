@@ -16,11 +16,10 @@
 # limitations under the License.
 # =============================================================================
 """
-import argparse
 import typing
 
 import torch
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
 
 
@@ -30,7 +29,7 @@ class GeoFormerBlock(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.OmegaFoldModelConfig) -> None:
         super(GeoFormerBlock, self).__init__(cfg)
         self.attention_w_edge_bias = modules.AttentionWEdgeBias(
             d_node=cfg.node_dim,
@@ -72,7 +71,7 @@ class GeoFormerBlock(modules.OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[argparse.Namespace] = None
+        fwd_cfg: typing.Optional[config.ForwardConfig] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
 
@@ -85,19 +84,20 @@ class GeoFormerBlock(modules.OFModule):
         Returns:
 
         """
+        subbatch_size = fwd_cfg.subbatch_size if fwd_cfg is not None else None
         node_repr += self.attention_w_edge_bias(
             node_repr, edge_repr, mask, fwd_cfg=fwd_cfg
         )
         node_repr = self._column_attention(node_repr, mask, fwd_cfg=fwd_cfg)
         node_repr += self.node_transition(
-            node_repr, subbatch_size=fwd_cfg.subbatch_size
+            node_repr, subbatch_size=subbatch_size
         )
 
         edge_repr += self.out_product(node_repr, mask)
         for layer in self.geometric_attention:
             edge_repr += layer(edge_repr, mask[..., 0, :], fwd_cfg=fwd_cfg)
 
-        edge_repr += self.edge_transition(edge_repr, fwd_cfg.subbatch_size)
+        edge_repr += self.edge_transition(edge_repr, subbatch_size)
 
         return node_repr, edge_repr
 
@@ -114,7 +114,7 @@ class GeoFormerBlock(modules.OFModule):
 
 
 class GeoFormer(modules.OFModule):
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.OmegaFoldModelConfig):
         super(GeoFormer, self).__init__(cfg)
         self.blocks = nn.ModuleList(
             [GeoFormerBlock(cfg) for _ in range(cfg.geo_num_blocks)]
@@ -127,7 +127,7 @@ class GeoFormer(modules.OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[argparse.Namespace] = None
+        fwd_cfg: typing.Optional[config.ForwardConfig] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
 

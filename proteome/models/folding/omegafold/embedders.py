@@ -17,12 +17,11 @@
 # =============================================================================
 """
 
-import argparse
 import typing
 
 import torch
 from proteome.constants import residue_constants as rc
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
 
 
@@ -104,7 +103,7 @@ class EdgeEmbedder(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.OmegaFoldModelConfig) -> None:
         super(EdgeEmbedder, self).__init__(cfg)
 
         self.proj_i = nn.Embedding(cfg.alphabet_size, cfg.edge_dim)
@@ -207,7 +206,7 @@ class StructEmbedder(modules.OFModule):
     but a sublinear-function with ord encoder.
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.OmegaFoldModelConfig):
         super(StructEmbedder, self).__init__(cfg)
         self.rough_dist_bin = modules.Val2ContBins(cfg.rough_dist_bin)
         self.dist_bin = modules.Val2ContBins(cfg.dist_bin)
@@ -319,7 +318,7 @@ class RecycleEmbedder(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.OmegaFoldModelConfig):
         super(RecycleEmbedder, self).__init__(cfg)
 
         self.layernorm_node = nn.LayerNorm(cfg.node_dim)

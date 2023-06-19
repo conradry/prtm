@@ -16,10 +16,9 @@
 # limitations under the License.
 # =============================================================================
 """
-import argparse
 
 import torch
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
 
 
@@ -112,7 +111,7 @@ class ConfidenceHead(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super().__init__(cfg)
         self.network = nn.Sequential(
             nn.Linear(cfg.node_dim, cfg.hidden_dim),
