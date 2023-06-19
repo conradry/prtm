@@ -110,7 +110,11 @@ class OmegaFoldForFolding:
 
     def _featurize_input(self, sequence: str) -> List[Dict[str, torch.Tensor]]:
         """Prepare the input features for a given sequence and its MSAs and deletion matrices."""
-        return self.featurizer(sequence=sequence)
+        list_of_feature_dict = self.featurizer(sequence=sequence)
+        list_of_feature_dict = utils.recursive_to(
+            list_of_feature_dict, device=self.device
+        )
+        return list_of_feature_dict
 
     @torch.no_grad()
     def fold(self, sequence: str) -> Tuple[protein.Protein, float]:
@@ -119,9 +123,6 @@ class OmegaFoldForFolding:
 
         # Prepare the input features for a given sequence and its MSAs and deletion matrices.
         list_of_feature_dict = self._featurize_input(sequence)
-        list_of_feature_dict = utils.recursive_to(
-            list_of_feature_dict, device=self.device
-        )
 
         res = self.model(
             list_of_feature_dict,

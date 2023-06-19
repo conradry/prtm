@@ -1,10 +1,12 @@
 # DMPfold2 Neural Network definition - D.T.Jones 2020
 
-from math import asin, cos, log, pi, sin, sqrt
+import math
+from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from proteome.models.folding.dmpfold2 import config
 from torch.utils.checkpoint import checkpoint_sequential
 
 NUM_CHANNELS = 442
@@ -29,7 +31,7 @@ class Maxout2d(nn.Module):
         )
         self.norm = nn.InstanceNorm2d(out_channels, affine=True)
         if block > 0:
-            nn.init.xavier_uniform_(self.lin.weight, gain=1.0 / sqrt(block))
+            nn.init.xavier_uniform_(self.lin.weight, gain=1.0 / math.sqrt(block))
         else:
             nn.init.xavier_uniform_(self.lin.weight, gain=1.0)
 
@@ -189,9 +191,9 @@ def calpha_to_main_chain(coords_ca):
     vec_c_ca = coords_ca - coords_c
     cross_vn_vc = torch.cross(vec_n_ca, vec_c_ca, dim=2)
     vec_ca_cb = vec_n_ca + vec_c_ca
-    ang = pi / 2 - asin(1 / sqrt(3))
-    sx = (1.5 * cos(ang) / vec_ca_cb.norm(dim=2)).unsqueeze(2)
-    sy = (1.5 * sin(ang) / cross_vn_vc.norm(dim=2)).unsqueeze(2)
+    ang = math.pi / 2 - math.asin(1 / math.sqrt(3))
+    sx = (1.5 * math.cos(ang) / vec_ca_cb.norm(dim=2)).unsqueeze(2)
+    sy = (1.5 * math.sin(ang) / cross_vn_vc.norm(dim=2)).unsqueeze(2)
     coords_cb = coords_ca + sx * vec_ca_cb + sy * cross_vn_vc
 
     out = torch.cat(
@@ -209,19 +211,19 @@ def calpha_to_main_chain(coords_ca):
 
 # RNNResNet Module
 class GRUResNet(nn.Module):
-    def __init__(self, width, cwidth):
+    def __init__(self, cfg: config.DMPFold2Config):
         super(GRUResNet, self).__init__()
 
-        self.width = width
-        self.cwidth = cwidth
+        self.width = cfg.width
+        self.cwidth = cfg.cwidth
 
         self.embed = nn.Embedding.from_pretrained(torch.eye(22), freeze=True)
         self.vgru = nn.GRU(
-            22, width, batch_first=False, num_layers=2, bidirectional=False
+            22, self.width, batch_first=False, num_layers=2, bidirectional=False
         )
         self.hgru = nn.GRU(
-            width,
-            width // 2,
+            self.width,
+            self.width // 2,
             batch_first=False,
             num_layers=2,
             dropout=0.1,
@@ -231,7 +233,9 @@ class GRUResNet(nn.Module):
         layers = []
 
         layer = Maxout2d(
-            in_channels=NUM_CHANNELS + width + 1, out_channels=cwidth, pool_size=3
+            in_channels=NUM_CHANNELS + self.width + 1,
+            out_channels=self.cwidth,
+            pool_size=3,
         )
 
         layers.append(layer)
@@ -241,29 +245,35 @@ class GRUResNet(nn.Module):
         for rep in range(16):
             for fsize, dilv in [(5, 1)]:
                 if fsize > 0:
-                    layer = ResNet_Block(cwidth, fsize, dilv, nblock)
+                    layer = ResNet_Block(self.cwidth, fsize, dilv, nblock)
                     layers.append(layer)
                     nblock += 1
 
-        layer = nn.Conv2d(in_channels=cwidth, out_channels=2, kernel_size=1)
+        layer = nn.Conv2d(in_channels=self.cwidth, out_channels=2, kernel_size=1)
 
         layers.append(layer)
 
         self.resnet = nn.Sequential(*layers)
 
         self.coord_gru = nn.GRU(
-            width + 8,
-            width // 2,
+            self.width + 8,
+            self.width // 2,
             batch_first=True,
             num_layers=3,
             dropout=0.1,
             bidirectional=True,
         )
 
-        self.coord_fc = nn.Linear(width, 3, bias=False)
+        self.coord_fc = nn.Linear(self.width, 3, bias=False)
 
-    def forward(self, x, x2, nloops=5, refine_steps=0):
-        nseqs = x.size()[0]
+    def forward(
+        self,
+        feature_dict: Dict[str, torch.Tensor],
+        nloops: int = 5,
+        refine_steps: int = 0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = feature_dict["msa"]
+        x2 = feature_dict["cov"]
         nres = x.size()[1]
 
         x = self.embed(x)
@@ -294,7 +304,7 @@ class GRUResNet(nn.Module):
             + dm[:, :, 0:1].expand(-1, -1, nres) ** 2
             - dm**2
         )
-        w, v = torch.symeig(M.float(), eigenvectors=True)
+        w, v = torch.linalg.eigh(M.float())
         w = torch.clamp(F.relu(w, inplace=False), min=1e-8)
         w = torch.diag_embed(w.sqrt())
         mds_coords = torch.matmul(v, w)[:, :, -8:]
@@ -344,7 +354,7 @@ class GRUResNet(nn.Module):
                 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2
                 - dm**2
             )
-            w, v = torch.symeig(M.float(), eigenvectors=True)
+            w, v = torch.linalg.eigh(M.float())
             w = torch.clamp(F.relu(w, inplace=False), min=1e-8)
             w = torch.diag_embed(w.sqrt())
             mds_coords = torch.matmul(v, w)[:, :, -8:]
