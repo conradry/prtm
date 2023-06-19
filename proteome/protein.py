@@ -305,7 +305,7 @@ def to_pdb(prot: Protein) -> str:
     """
     restypes = residue_constants.restypes + ["X"]
     res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], "UNK")
-    atom_types = residue_constants.atom_types
+    atom_types = residue_constants.restype_name_to_atom14_names
 
     pdb_lines = []
 
@@ -331,9 +331,9 @@ def to_pdb(prot: Protein) -> str:
     for i in range(n):
         res_name_3 = res_1to3(aatype[i])
         for atom_name, pos, mask, b_factor in zip(
-            atom_types, atom_positions[i], atom_mask[i], b_factors[i]
+            atom_types[res_name_3], atom_positions[i], atom_mask[i], b_factors[i]
         ):
-            if mask < 0.5:
+            if mask < 0.5 or not atom_name:
                 continue
 
             record_type = "ATOM"

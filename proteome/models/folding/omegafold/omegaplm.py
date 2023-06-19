@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -16,25 +17,14 @@
 # =============================================================================
 """
 
-"""
-# =============================================================================
-# Imports
-# =============================================================================
-import argparse
 import math
 import typing
 
 import torch
-from proteome.models.folding.omegafold import embedders, modules, utils
+from proteome.models.folding.omegafold import config, embedders, modules, utils
 from torch import nn
 
 
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
 def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:
     """
     https://kexue.fm/archives/8823
@@ -49,15 +39,10 @@ def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:
     return num_res.clamp(min=4e-5).log() / (math.log(512) * attn_dim**0.5)
 
 
-# =============================================================================
-# Classes
-# =============================================================================
 class GatedAttentionUnit(modules.OFModule):
     """ """
-
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.PLMConfig):
         super(GatedAttentionUnit, self).__init__(cfg)
-        self.cfg = cfg
         self.gva_proj = nn.Sequential(
             nn.Linear(cfg.node, cfg.proj_dim * 2 + cfg.attn_dim), nn.SiLU()
         )
@@ -73,8 +58,8 @@ class GatedAttentionUnit(modules.OFModule):
         node: torch.Tensor,
         scaling: torch.Tensor,
         bias: torch.Tensor,
-        fwd_cfg: typing.Optional[argparse.Namespace],
-    ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
+        fwd_cfg: typing.Optional[config.ForwardConfig],
+    ) -> typing.Tuple[torch.Tensor, typing.Tuple[torch.Tensor]]:
         """
         The forward method of this class
 
@@ -94,13 +79,14 @@ class GatedAttentionUnit(modules.OFModule):
         )
         queries, keys = self.multi_headed_scaling(base)
 
+        subbatch_size = fwd_cfg.subbatch_size if fwd_cfg is not None else None
         node, edge = modules.attention(
             query=queries,
             key=keys,
             scale=scaling,
             value=values,
             bias=bias + self.relpos(base.shape[-2])[..., 0],
-            subbatch_size=fwd_cfg.subbatch_size,
+            subbatch_size=subbatch_size,
             return_edge=True,
             edge_reduction="sum",
             edge_reduction_dim=-3,
@@ -122,7 +108,7 @@ class OmegaPLMLayer(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.PLMConfig) -> None:
         super(OmegaPLMLayer, self).__init__(cfg)
         self.gau = GatedAttentionUnit(cfg)
 
@@ -131,7 +117,7 @@ class OmegaPLMLayer(modules.OFModule):
         node: torch.Tensor,
         qk_scaling: torch.Tensor,
         bias: torch.Tensor,
-        fwd_cfg: typing.Optional[argparse.Namespace],
+        fwd_cfg: typing.Optional[config.ForwardConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method for pre-layernorm
 
@@ -165,7 +151,7 @@ class OmegaPLM(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.PLMConfig) -> None:
         super(OmegaPLM, self).__init__(cfg)
         self.input_embedding = nn.Embedding(
             cfg.alphabet_size, cfg.node, padding_idx=cfg.padding_idx
@@ -177,7 +163,7 @@ class OmegaPLM(modules.OFModule):
         self,
         tokens: torch.Tensor,
         mask: torch.Tensor,
-        fwd_cfg: typing.Optional[argparse.Namespace],
+        fwd_cfg: typing.Optional[config.ForwardConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 
@@ -235,10 +221,3 @@ class OmegaPLM(modules.OFModule):
             mask_ratio_observed,
         )
         return un_masked_ratio_train / (1 - mask_ratio_observed)[:, None, None]
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass

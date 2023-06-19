@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -15,28 +16,12 @@
 # limitations under the License.
 # =============================================================================
 """
-For generating the final coordinates of the amino acids of the predicted
-"""
-# =============================================================================
-# Imports
-# =============================================================================
-import argparse
 import math
 import typing
 
 import torch
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
-
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
-# =============================================================================
-# Classes
-# =============================================================================
 
 
 class InvariantPointAttention(modules.OFModule):
@@ -46,7 +31,7 @@ class InvariantPointAttention(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.StructureConfig) -> None:
         super(InvariantPointAttention, self).__init__(cfg)
         node_dim = cfg.node_dim
         edge_dim = cfg.edge_dim
@@ -199,7 +184,7 @@ class TorsionAngleHead(modules.OFModule):
     node representation following Jumper et al. (2021)
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super(TorsionAngleHead, self).__init__(cfg)
 
         self.input_projection = nn.ModuleList(
@@ -257,7 +242,7 @@ class StructureCycle(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.StructureConfig) -> None:
         super(StructureCycle, self).__init__(cfg)
         self.ipa = InvariantPointAttention(cfg)
         self.input_norm = nn.LayerNorm(cfg.node_dim)
@@ -309,7 +294,7 @@ class StructureCycle(modules.OFModule):
 class StructureModule(modules.OFModule):
     """Jumper et al. (2021) Suppl. Alg. 20 'StructureModule'"""
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super(StructureModule, self).__init__(cfg)
         self.node_norm = nn.LayerNorm(cfg.node_dim)
         self.edge_norm = nn.LayerNorm(cfg.edge_dim)
@@ -379,10 +364,3 @@ class StructureModule(modules.OFModule):
             "final_atom_positions": pos14,
             "final_atom_mask": mask14,
         }
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass

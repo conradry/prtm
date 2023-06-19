@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -16,25 +17,15 @@
 # =============================================================================
 """
 
-"""
-# =============================================================================
-# Imports
-# =============================================================================
-import argparse
 import numbers
 import typing
+from dataclasses import dataclass
 
 import torch
-from proteome.models.folding.omegafold import utils
+from proteome.models.folding.omegafold import config, utils
 from torch import nn
 
 
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
 def softmax(
     x: torch.Tensor,
     dim: int,
@@ -161,18 +152,13 @@ def attention(
     return output, attns
 
 
-# =============================================================================
-# Classes
-# =============================================================================
-
-
 class OFModule(nn.Module):
     """
     The OmegaFold modules
         args: The arguments used for each of the modules
     """
 
-    def __init__(self, cfg: typing.Optional[argparse.Namespace]) -> None:
+    def __init__(self, cfg: typing.Optional[typing.Any]) -> None:
         super(OFModule, self).__init__()
         self.cfg = cfg
 
@@ -274,7 +260,7 @@ class MultiHeadedScaling(OFModule):
 class Val2ContBins(OFModule):
     def __init__(
         self,
-        cfg: argparse.Namespace,
+        cfg: config.ContBinConfig,
     ):
         super(Val2ContBins, self).__init__(cfg)
 
@@ -308,7 +294,7 @@ class Val2Bins(OFModule):
         breaks: the line space break
     """
 
-    def __init__(self, cfg: argparse.Namespace) -> None:
+    def __init__(self, cfg: config.BinConfig) -> None:
         super(Val2Bins, self).__init__(cfg)
         self.register_buffer(
             "breaks",
@@ -408,7 +394,7 @@ class Attention(OFModule):
         kv_inputs: torch.Tensor,
         bias: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[argparse.Namespace] = None,
+        fwd_cfg: typing.Optional[config.ForwardConfig] = None,
     ) -> typing.Union[typing.Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         """
         Perform the standard multi-headed attention with added gating with some
@@ -499,7 +485,7 @@ class AttentionWEdgeBias(OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[argparse.Namespace] = None,
+        fwd_cfg: typing.Optional[config.ForwardConfig] = None,
     ) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor, torch.Tensor]]:
         """
 
@@ -654,10 +640,3 @@ class GeometricAttention(OFModule):
         out += self._get_gated(edge_repr, mask, fwd_cfg)
 
         return out
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass

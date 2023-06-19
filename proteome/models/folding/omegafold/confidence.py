@@ -1,3 +1,4 @@
+"""
 # -*- coding: utf-8 -*-
 # =============================================================================
 # Copyright 2022 HeliXon Limited
@@ -15,24 +16,10 @@
 # limitations under the License.
 # =============================================================================
 """
-Code for confidence-relevant things
-"""
-
-# =============================================================================
-# Imports
-# =============================================================================
-import argparse
 
 import torch
-from proteome.models.folding.omegafold import modules, utils
+from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
-
-# =============================================================================
-# Constants
-# =============================================================================
-# =============================================================================
-# Functions
-# =============================================================================
 
 
 def get_all_confidence(
@@ -117,11 +104,6 @@ def _compute_confidence(logits: torch.Tensor) -> torch.Tensor:
     return confidence
 
 
-# =============================================================================
-# Classes
-# =============================================================================
-
-
 class ConfidenceHead(modules.OFModule):
     """
     This is the same pLDDT head from AF2, which provides a confidence measure
@@ -129,7 +111,7 @@ class ConfidenceHead(modules.OFModule):
 
     """
 
-    def __init__(self, cfg: argparse.Namespace):
+    def __init__(self, cfg: config.StructureConfig):
         super().__init__(cfg)
         self.network = nn.Sequential(
             nn.Linear(cfg.node_dim, cfg.hidden_dim),
@@ -145,10 +127,3 @@ class ConfidenceHead(modules.OFModule):
         logits = _compute_confidence(logits)
 
         return logits
-
-
-# =============================================================================
-# Tests
-# =============================================================================
-if __name__ == "__main__":
-    pass
