@@ -6,7 +6,7 @@ import typing as T
 from dataclasses import dataclass
 from functools import partial
 
-import esm
+from proteome.models.folding import esm
 import torch
 import torch.nn as nn
 from proteome.models.folding.esm.data import Alphabet
@@ -17,9 +17,9 @@ from proteome.models.folding.esm.esmfold.v1.misc import (
     output_to_pdb,
 )
 from proteome.models.folding.esm.esmfold.v1.trunk import FoldingTrunk, FoldingTrunkConfig
-from openfold.data.data_transforms import make_atom14_masks
-from openfold.np import residue_constants
-from openfold.utils.loss import compute_predicted_aligned_error, compute_tm
+from proteome.models.folding.openfold.data.data_transforms import make_atom14_masks
+from proteome.constants import residue_constants
+from proteome.models.folding.openfold.utils.loss import compute_predicted_aligned_error, compute_tm
 from torch import nn
 from torch.nn import LayerNorm
 

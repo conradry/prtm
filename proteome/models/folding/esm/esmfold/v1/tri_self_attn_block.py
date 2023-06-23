@@ -10,11 +10,11 @@ from proteome.models.folding.esm.esmfold.v1.misc import (
     ResidueMLP,
     SequenceToPair,
 )
-from openfold.model.triangular_attention import (
+from proteome.models.folding.openfold.model.triangular_attention import (
     TriangleAttentionEndingNode,
     TriangleAttentionStartingNode,
 )
-from openfold.model.triangular_multiplicative_update import (
+from proteome.models.folding.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming,
     TriangleMultiplicationOutgoing,
 )
