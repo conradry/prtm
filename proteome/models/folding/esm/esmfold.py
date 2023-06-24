@@ -8,9 +8,9 @@ import torch
 import torch.nn as nn
 from proteome.constants import residue_constants
 from proteome.models.folding.esm import config
-from proteome.models.folding.esm.esm2 import ESM2
 from proteome.models.folding.esm.categorical_mixture import categorical_lddt
 from proteome.models.folding.esm.data import Alphabet
+from proteome.models.folding.esm.esm2 import ESM2
 from proteome.models.folding.esm.misc import (
     batch_encode_sequences,
     collate_dense_tensors,
