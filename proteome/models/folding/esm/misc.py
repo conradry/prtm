@@ -9,8 +9,8 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
 from proteome.constants import residue_constants
-from proteome.protein import Protein, to_pdb
 from proteome.models.folding.openfold.utils.feats import atom14_to_atom37
+from proteome.protein import Protein, to_pdb
 from torch import nn
 
 

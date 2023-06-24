@@ -8,7 +8,6 @@ import os
 import pickle
 import re
 import shutil
-from pathlib import Path
 from typing import List, Sequence, Tuple, Union
 
 import torch

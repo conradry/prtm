@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.esm.esmfold.v1.tri_self_attn_block import TriangularSelfAttentionBlock
+from proteome.models.folding.esm.tri_self_attn_block import TriangularSelfAttentionBlock
 from proteome.models.folding.openfold.model.structure_module import StructureModule
 
 

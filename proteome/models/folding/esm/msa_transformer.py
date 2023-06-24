@@ -5,9 +5,11 @@
 
 import torch
 import torch.nn as nn
-
-from ..axial_attention import ColumnSelfAttention, RowSelfAttention
-from ..modules import (
+from proteome.models.folding.esm.axial_attention import (
+    ColumnSelfAttention,
+    RowSelfAttention,
+)
+from proteome.models.folding.esm.modules import (
     AxialTransformerLayer,
     ContactPredictionHead,
     ESM1bLayerNorm,

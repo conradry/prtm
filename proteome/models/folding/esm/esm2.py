@@ -5,9 +5,9 @@
 
 from typing import Union
 
-from proteome.models.folding.esm import data as esm_data
 import torch
 import torch.nn as nn
+from proteome.models.folding.esm import data as esm_data
 from proteome.models.folding.esm.modules import (
     ContactPredictionHead,
     ESM1bLayerNorm,
