@@ -74,7 +74,7 @@ class ESMFold(nn.Module):
             nn.ReLU(),
             nn.Linear(c_s, c_s),
         )
-        if cfg.use_esm_attn_map:
+        if getattr(cfg, "use_esm_attn_map", False):
             self.esm_z_mlp = nn.Sequential(
                 LayerNorm(self.esm_attns),
                 nn.Linear(self.esm_attns, c_z),

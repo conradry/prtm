@@ -15,6 +15,9 @@ def _load_model(model_name):
         )
 
     cfg = model_data["cfg"]["model"]
+    if not hasattr(cfg, "use_esm_attn_map"):
+        cfg.use_esm_attn_map = False
+
     model_state = model_data["model"]
     model = ESMFold(esmfold_config=cfg)
 

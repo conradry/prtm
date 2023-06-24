@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Sequence, Tuple, Union
 
 import torch
-from proteome.models.folding.esm.constants import proteinseq_toks
+from proteome.constants.residue_constants import esm_proteinseq_toks
 
 RawMSA = Sequence[Tuple[str, str]]
 
@@ -143,28 +143,28 @@ class Alphabet(object):
     @classmethod
     def from_architecture(cls, name: str) -> "Alphabet":
         if name in ("ESM-1", "protein_bert_base"):
-            standard_toks = proteinseq_toks["toks"]
+            standard_toks = esm_proteinseq_toks["toks"]
             prepend_toks: Tuple[str, ...] = ("<null_0>", "<pad>", "<eos>", "<unk>")
             append_toks: Tuple[str, ...] = ("<cls>", "<mask>", "<sep>")
             prepend_bos = True
             append_eos = False
             use_msa = False
         elif name in ("ESM-1b", "roberta_large"):
-            standard_toks = proteinseq_toks["toks"]
+            standard_toks = esm_proteinseq_toks["toks"]
             prepend_toks = ("<cls>", "<pad>", "<eos>", "<unk>")
             append_toks = ("<mask>",)
             prepend_bos = True
             append_eos = True
             use_msa = False
         elif name in ("MSA Transformer", "msa_transformer"):
-            standard_toks = proteinseq_toks["toks"]
+            standard_toks = esm_proteinseq_toks["toks"]
             prepend_toks = ("<cls>", "<pad>", "<eos>", "<unk>")
             append_toks = ("<mask>",)
             prepend_bos = True
             append_eos = False
             use_msa = True
         elif "invariant_gvp" in name.lower():
-            standard_toks = proteinseq_toks["toks"]
+            standard_toks = esm_proteinseq_toks["toks"]
             prepend_toks = ("<null_0>", "<pad>", "<eos>", "<unk>")
             append_toks = ("<mask>", "<cath>", "<af2>")
             prepend_bos = True
