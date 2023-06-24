@@ -3,10 +3,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from dataclasses import fields
 from typing import Union
 
 import torch
 import torch.nn as nn
+from proteome.models.folding.esm import config
 from proteome.models.folding.esm import data as esm_data
 from proteome.models.folding.esm.modules import (
     ContactPredictionHead,
@@ -19,19 +21,14 @@ from proteome.models.folding.esm.modules import (
 class ESM2(nn.Module):
     def __init__(
         self,
-        num_layers: int = 33,
-        embed_dim: int = 1280,
-        attention_heads: int = 20,
-        alphabet: Union[esm_data.Alphabet, str] = "ESM-1b",
-        token_dropout: bool = True,
+        cfg: config.ESM2Config,
     ):
         super().__init__()
-        self.num_layers = num_layers
-        self.embed_dim = embed_dim
-        self.attention_heads = attention_heads
-        if not isinstance(alphabet, esm_data.Alphabet):
-            alphabet = esm_data.Alphabet.from_architecture(alphabet)
-        self.alphabet = alphabet
+
+        for field in fields(cfg):
+            setattr(self, field.name, getattr(cfg, field.name))
+
+        alphabet = self.alphabet
         self.alphabet_size = len(alphabet)
         self.padding_idx = alphabet.padding_idx
         self.mask_idx = alphabet.mask_idx
@@ -39,7 +36,6 @@ class ESM2(nn.Module):
         self.eos_idx = alphabet.eos_idx
         self.prepend_bos = alphabet.prepend_bos
         self.append_eos = alphabet.append_eos
-        self.token_dropout = token_dropout
 
         self._init_submodules()
 

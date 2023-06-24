@@ -3,13 +3,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import typing as T
-from dataclasses import dataclass
-from functools import partial
 
 import torch
 import torch.nn as nn
 from proteome.constants import residue_constants
-from proteome.models.folding import esm
+from proteome.models.folding.esm import config
+from proteome.models.folding.esm.esm2 import ESM2
 from proteome.models.folding.esm.categorical_mixture import categorical_lddt
 from proteome.models.folding.esm.data import Alphabet
 from proteome.models.folding.esm.misc import (
@@ -17,7 +16,7 @@ from proteome.models.folding.esm.misc import (
     collate_dense_tensors,
     output_to_pdb,
 )
-from proteome.models.folding.esm.trunk import FoldingTrunk, FoldingTrunkConfig
+from proteome.models.folding.esm.trunk import FoldingTrunk
 from proteome.models.folding.openfold.data.data_transforms import make_atom14_masks
 from proteome.models.folding.openfold.utils.loss import (
     compute_predicted_aligned_error,
@@ -27,38 +26,16 @@ from torch import nn
 from torch.nn import LayerNorm
 
 
-@dataclass
-class ESMFoldConfig:
-    trunk: T.Any = FoldingTrunkConfig()
-    lddt_head_hid_dim: int = 128
-
-
-load_fn = esm.pretrained.load_model_and_alphabet
-esm_registry = {
-    "esm2_8M": partial(load_fn, "esm2_t6_8M_UR50D_500K"),
-    "esm2_8M_270K": esm.pretrained.esm2_t6_8M_UR50D,
-    "esm2_35M": partial(load_fn, "esm2_t12_35M_UR50D_500K"),
-    "esm2_35M_270K": esm.pretrained.esm2_t12_35M_UR50D,
-    "esm2_150M": partial(load_fn, "esm2_t30_150M_UR50D_500K"),
-    "esm2_150M_270K": partial(load_fn, "esm2_t30_150M_UR50D_270K"),
-    "esm2_650M": esm.pretrained.esm2_t33_650M_UR50D,
-    "esm2_650M_270K": partial(load_fn, "esm2_t33_650M_270K_UR50D"),
-    "esm2_3B": esm.pretrained.esm2_t36_3B_UR50D,
-    "esm2_3B_270K": partial(load_fn, "esm2_t36_3B_UR50D_500K"),
-    "esm2_15B": esm.pretrained.esm2_t48_15B_UR50D,
-}
-
-
 class ESMFold(nn.Module):
-    def __init__(self, esmfold_config=None, **kwargs):
+    def __init__(self, cfg: config.ESMFoldConfig, **kwargs):
         super().__init__()
 
-        self.cfg = esmfold_config if esmfold_config else ESMFoldConfig(**kwargs)
-        cfg = self.cfg
+        self.cfg = cfg
 
         self.distogram_bins = 64
 
-        self.esm, self.esm_dict = esm_registry.get(cfg.esm_type)()
+        self.esm = ESM2(cfg.esm_config)
+        self.esm_dict = self.esm.alphabet
 
         self.esm.requires_grad_(False)
         self.esm.half()
@@ -92,7 +69,7 @@ class ESMFold(nn.Module):
         self.mask_idx = self.n_tokens_embed - 1
         self.embedding = nn.Embedding(self.n_tokens_embed, c_s, padding_idx=0)
 
-        self.trunk = FoldingTrunk(**cfg.trunk)
+        self.trunk = FoldingTrunk(cfg.trunk)
 
         self.distogram_head = nn.Linear(c_z, self.distogram_bins)
         self.ptm_head = nn.Linear(c_z, self.distogram_bins)
