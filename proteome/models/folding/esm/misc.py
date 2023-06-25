@@ -8,11 +8,11 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from openfold.np import residue_constants
-from openfold.np.protein import Protein as OFProtein
-from openfold.np.protein import to_pdb
-from openfold.utils.feats import atom14_to_atom37
 from torch import nn
+
+from proteome.constants import residue_constants
+from proteome.models.folding.openfold.utils.feats import atom14_to_atom37
+from proteome.protein import Protein, to_pdb
 
 
 def encode_sequence(
@@ -103,7 +103,7 @@ def output_to_pdb(output: T.Dict) -> T.List[str]:
         pred_pos = final_atom_positions[i]
         mask = final_atom_mask[i]
         resid = output["residue_index"][i] + 1
-        pred = OFProtein(
+        pred = Protein(
             aatype=aa,
             atom_positions=pred_pos,
             atom_mask=mask,

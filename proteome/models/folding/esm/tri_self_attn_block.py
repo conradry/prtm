@@ -3,22 +3,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import torch
-from proteome.models.folding.esm.esmfold.v1.misc import (
-    Attention,
-    Dropout,
-    PairToSequence,
-    ResidueMLP,
-    SequenceToPair,
-)
-from openfold.model.triangular_attention import (
-    TriangleAttentionEndingNode,
-    TriangleAttentionStartingNode,
-)
-from openfold.model.triangular_multiplicative_update import (
-    TriangleMultiplicationIncoming,
-    TriangleMultiplicationOutgoing,
-)
 from torch import nn
+
+from proteome.models.folding.esm.misc import (Attention, Dropout,
+                                              PairToSequence, ResidueMLP,
+                                              SequenceToPair)
+from proteome.models.folding.openfold.model.triangular_attention import (
+    TriangleAttentionEndingNode, TriangleAttentionStartingNode)
+from proteome.models.folding.openfold.model.triangular_multiplicative_update import (
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 
 
 class TriangularSelfAttentionBlock(nn.Module):

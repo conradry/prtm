@@ -6,14 +6,13 @@
 import torch
 import torch.nn as nn
 
-from ..axial_attention import ColumnSelfAttention, RowSelfAttention
-from ..modules import (
-    AxialTransformerLayer,
-    ContactPredictionHead,
-    ESM1bLayerNorm,
-    LearnedPositionalEmbedding,
-    RobertaLMHead,
-)
+from proteome.models.folding.esm.axial_attention import (ColumnSelfAttention,
+                                                         RowSelfAttention)
+from proteome.models.folding.esm.modules import (AxialTransformerLayer,
+                                                 ContactPredictionHead,
+                                                 ESM1bLayerNorm,
+                                                 LearnedPositionalEmbedding,
+                                                 RobertaLMHead)
 
 
 class MSATransformer(nn.Module):

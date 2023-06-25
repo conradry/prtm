@@ -4,50 +4,16 @@
 # LICENSE file in the root directory of this source tree.
 import typing as T
 from contextlib import ExitStack
-from dataclasses import dataclass
+from dataclasses import asdict
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.esm.esmfold.v1.tri_self_attn_block import TriangularSelfAttentionBlock
-from openfold.model.structure_module import StructureModule
 
-
-@dataclass
-class StructureModuleConfig:
-    c_s: int = 384
-    c_z: int = 128
-    c_ipa: int = 16
-    c_resnet: int = 128
-    no_heads_ipa: int = 12
-    no_qk_points: int = 4
-    no_v_points: int = 8
-    dropout_rate: float = 0.1
-    no_blocks: int = 8
-    no_transition_layers: int = 1
-    no_resnet_blocks: int = 2
-    no_angles: int = 7
-    trans_scale_factor: int = 10
-    epsilon: float = 1e-8
-    inf: float = 1e5
-
-
-@dataclass
-class FoldingTrunkConfig:
-    _name: str = "FoldingTrunkConfig"
-    num_blocks: int = 48
-    sequence_state_dim: int = 1024
-    pairwise_state_dim: int = 128
-    sequence_head_width: int = 32
-    pairwise_head_width: int = 32
-    position_bins: int = 32
-    dropout: float = 0
-    layer_drop: float = 0
-    cpu_grad_checkpoint: bool = False
-
-    max_recycles: int = 4
-    chunk_size: T.Optional[int] = None
-
-    structure_module: StructureModuleConfig = StructureModuleConfig()
+from proteome.models.folding.esm import config
+from proteome.models.folding.esm.tri_self_attn_block import \
+    TriangularSelfAttentionBlock
+from proteome.models.folding.openfold.model.structure_module import \
+    StructureModule
 
 
 def get_axial_mask(mask):
@@ -107,9 +73,9 @@ class RelativePosition(nn.Module):
 
 
 class FoldingTrunk(nn.Module):
-    def __init__(self, **kwargs):
+    def __init__(self, cfg: config.FoldingTrunkConfig):
         super().__init__()
-        self.cfg = FoldingTrunkConfig(**kwargs)
+        self.cfg = cfg
         assert self.cfg.max_recycles > 0
 
         c_s = self.cfg.sequence_state_dim
@@ -142,7 +108,7 @@ class FoldingTrunk(nn.Module):
         self.recycle_disto = nn.Embedding(self.recycle_bins, c_z)
         self.recycle_disto.weight[0].detach().zero_()
 
-        self.structure_module = StructureModule(**self.cfg.structure_module)  # type: ignore
+        self.structure_module = StructureModule(**asdict(self.cfg.structure_module))  # type: ignore
         self.trunk2sm_s = nn.Linear(c_s, self.structure_module.c_s)
         self.trunk2sm_z = nn.Linear(c_z, self.structure_module.c_z)
 

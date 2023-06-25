@@ -36,7 +36,7 @@ def _generate_pseudo_msas(
         dictionaries containing the pseudo msas and their masks.
 
     """
-    mapping = residue_constants.restype_order_with_x
+    mapping = residue_constants.restype_order_with_x_dash
     L = len(sequence)
     aatype = torch.tensor([mapping.get(aa, mapping["X"]) for aa in sequence]).long()
     mask = torch.ones_like(aatype).float()

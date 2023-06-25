@@ -873,8 +873,10 @@ restype_order = {restype: i for i, restype in enumerate(restypes)}
 restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
-restypes_with_x = restypes + ["X", "-"]
+restypes_with_x = restypes + ["X"]
+restypes_with_x_dash = restypes_with_x + ["-"] 
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
+restype_order_with_x_dash = {restype: i for i, restype in enumerate(restypes_with_x_dash)}
 
 
 def sequence_to_onehot(
@@ -1404,3 +1406,7 @@ def substitute(res: str):
             else:
                 # did not get anything that works
                 return None
+
+esm_proteinseq_toks = {
+    'toks': ['L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U', 'Z', 'O', '.', '-']
+}
