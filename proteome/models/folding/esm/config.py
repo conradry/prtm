@@ -45,7 +45,7 @@ class FoldingTrunkConfig:
 class ESM2Config:
     num_layers: int = 36
     embed_dim: int = 2560
-    attention_heads: int = 20
+    attention_heads: int = 40
     alphabet: Alphabet = Alphabet.from_architecture("ESM-1b")
     token_dropout: bool = True
 

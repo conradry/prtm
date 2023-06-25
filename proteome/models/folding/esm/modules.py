@@ -9,11 +9,11 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.folding.esm.axial_attention import (
-    ColumnSelfAttention,
-    RowSelfAttention,
-)
-from proteome.models.folding.esm.multihead_attention import MultiheadAttention  # noqa
+
+from proteome.models.folding.esm.axial_attention import (ColumnSelfAttention,
+                                                         RowSelfAttention)
+from proteome.models.folding.esm.multihead_attention import \
+    MultiheadAttention  # noqa
 
 
 def gelu(x):

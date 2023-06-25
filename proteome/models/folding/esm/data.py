@@ -11,6 +11,7 @@ import shutil
 from typing import List, Sequence, Tuple, Union
 
 import torch
+
 from proteome.constants.residue_constants import esm_proteinseq_toks
 
 RawMSA = Sequence[Tuple[str, str]]
