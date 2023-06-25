@@ -74,20 +74,46 @@ class Protein:
     parents_chain_index: Optional[Sequence[int]] = None
 
 
-def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class DesignableProtein(Protein):
+    """Protein structure definition with a mask that denotes designable positions."""
+    
+    # Binary float mask to indicate designable positions. 1.0 if a position is
+    # designable and 0.0 if not.
+    design_mask: np.ndarray  # [num_res]
+
+    # Binary mask to indicate amino acids that are designable
+    design_aatype_mask: np.ndarray  # [num_res, num_aatype]
+
+    pssm_coef: np.ndarray  # [num_res]
+    pssm_bias: np.ndarray  # [num_res, num_aatype]
+    pssm_log_odds: np.ndarray  # [num_res, num_aatype]
+
+    bias_per_residue: np.ndarray  # [num_res, num_aatype]
+
+
+def from_pdb_string(
+    pdb_str: str, 
+    chain_id: Optional[str] = None, 
+    backbone_only: bool = False,
+    ca_only: bool = False,
+) -> Protein:
     """Takes a PDB string and constructs a Protein object.
 
     WARNING: All non-standard residue types will be converted into UNK. All
       non-standard atoms will be ignored.
 
     Args:
-      pdb_str: The contents of the pdb file
-      chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+        pdb_str: The contents of the pdb file
+        chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
         is parsed.
+        backbone_only: If True, then only the 3 backbone atoms are parsed for each residue.
+        ca_only: If True, then only the CA atom is parsed for each residue.
 
     Returns:
-      A new `Protein` parsed from the pdb contents.
+        A new `Protein` parsed from the pdb contents.
     """
+    assert not (backbone_only and ca_only), "Cannot specify both backbone_only and ca_only"
     pdb_fh = io.StringIO(pdb_str)
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("none", pdb_fh)
@@ -155,13 +181,22 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
     chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
     chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
 
+    if ca_only:
+        # Strip out all atoms except CA
+        atom_indices = [residue_constants.atom_order["CA"]]
+    elif backbone_only:
+        # Strip out all atoms except N, CA, C, O
+        atom_indices = [residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]]
+    else:
+        atom_indices = list(residue_constants.atom_order.values())
+
     return Protein(
-        atom_positions=np.array(atom_positions),
-        atom_mask=np.array(atom_mask),
+        atom_positions=np.array(atom_positions)[:, atom_indices],
+        atom_mask=np.array(atom_mask)[:, atom_indices],
         aatype=np.array(aatype),
         residue_index=np.array(residue_index),
         chain_index=chain_index,
-        b_factors=np.array(b_factors),
+        b_factors=np.array(b_factors)[:, atom_indices],
         parents=parents,
         parents_chain_index=parents_chain_index,
     )
