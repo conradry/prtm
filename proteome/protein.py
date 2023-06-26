@@ -18,7 +18,7 @@ import dataclasses
 import io
 import re
 import string
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 import modelcif
 import modelcif.alignment
@@ -90,6 +90,7 @@ class DesignableProtein(Protein):
     pssm_log_odds: np.ndarray  # [num_res, num_aatype]
 
     bias_per_residue: np.ndarray  # [num_res, num_aatype]
+    tied_positions: Optional[List[Dict[int, List[int]]]] = None
 
 
 def from_pdb_string(
