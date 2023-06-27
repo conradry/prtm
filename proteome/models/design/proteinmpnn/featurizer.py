@@ -81,7 +81,7 @@ def featurize_protein(
     l0 = 0
 
     residue_idx = -100 * np.ones([padded_sequence_length], dtype=np.int32)
-    for chain_pos, chain_id in enumerate(all_chains, 1):
+    for chain_pos, chain_id in enumerate(all_chains, 0):
         chain_seq = structure.aatype[structure.chain_index == chain_id]
         chain_length = len(chain_seq)
         x_chain = structure.atom_positions[structure.chain_index == chain_id]
@@ -252,7 +252,8 @@ def tied_featurize(
         features_dict_batch[k] = torch.from_numpy(v).to(dtype=dtype, device=device)
 
     if ca_only:
-        features_dict_batch["atom_positions"] = features_dict_batch["atom_positions"][:, :, :1]
+        features_dict_batch["atom_positions"] = features_dict_batch["atom_positions"][:, :, 0]
+        features_dict_batch["tied_beta"] = features_dict_batch["tied_beta"].squeeze()
     
     return TiedFeaturizeOutput(
         **features_dict_batch,
