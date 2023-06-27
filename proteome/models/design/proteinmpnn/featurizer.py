@@ -1,20 +1,11 @@
-from __future__ import print_function
-
-import itertools
-import json
-import time
 from dataclasses import dataclass
 from typing import Dict, List
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from proteome import protein
-from proteome.constants.residue_constants import restypes_with_x, restypes_with_x_dash
-
-# A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design
+from proteome.constants.residue_constants import proteinmppn_restypes
 
 
 def get_sequence_scores(S, log_probs, mask):
@@ -28,7 +19,7 @@ def get_sequence_scores(S, log_probs, mask):
 
 
 def decode_sequence(S, mask):
-    return "".join([restypes_with_x[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0])
+    return "".join([proteinmppn_restypes[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0])
 
 
 @dataclass
