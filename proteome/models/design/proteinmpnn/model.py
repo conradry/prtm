@@ -5,7 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from proteome.models.design.proteinmpnn import config
+
 # A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design
+
 
 # The following gather functions
 def gather_edges(edges, neighbor_idx):
@@ -460,57 +463,44 @@ class ProteinFeatures(nn.Module):
 
 
 class ProteinMPNN(nn.Module):
-    def __init__(
-        self,
-        num_letters,
-        node_features,
-        edge_features,
-        hidden_dim,
-        num_encoder_layers=3,
-        num_decoder_layers=3,
-        vocab=21,
-        k_neighbors=64,
-        augment_eps=0.05,
-        dropout=0.1,
-        ca_only=False,
-    ):
+    def __init__(self, cfg: config.ProteinMPNNConfig):
         super(ProteinMPNN, self).__init__()
 
         # Hyperparameters
-        self.node_features = node_features
-        self.edge_features = edge_features
-        self.hidden_dim = hidden_dim
+        self.node_features = cfg.node_features
+        self.edge_features = cfg.edge_features
+        self.hidden_dim = cfg.hidden_dim
 
         # Featurization layers
-        if ca_only:
+        if cfg.ca_only:
             self.features = CA_ProteinFeatures(
-                node_features, edge_features, top_k=k_neighbors, augment_eps=augment_eps
+                cfg.node_features, cfg.edge_features, top_k=cfg.k_neighbors, augment_eps=cfg.augment_eps
             )
-            self.W_v = nn.Linear(node_features, hidden_dim, bias=True)
+            self.W_v = nn.Linear(cfg.node_features, cfg.hidden_dim, bias=True)
         else:
             self.features = ProteinFeatures(
-                node_features, edge_features, top_k=k_neighbors, augment_eps=augment_eps
+                cfg.node_features, cfg.edge_features, top_k=cfg.k_neighbors, augment_eps=cfg.augment_eps
             )
 
-        self.W_e = nn.Linear(edge_features, hidden_dim, bias=True)
-        self.W_s = nn.Embedding(vocab, hidden_dim)
+        self.W_e = nn.Linear(cfg.edge_features, cfg.hidden_dim, bias=True)
+        self.W_s = nn.Embedding(cfg.vocab, cfg.hidden_dim)
 
         # Encoder layers
         self.encoder_layers = nn.ModuleList(
             [
-                EncLayer(hidden_dim, hidden_dim * 2, dropout=dropout)
-                for _ in range(num_encoder_layers)
+                EncLayer(cfg.hidden_dim, cfg.hidden_dim * 2, dropout=cfg.dropout)
+                for _ in range(cfg.num_encoder_layers)
             ]
         )
 
         # Decoder layers
         self.decoder_layers = nn.ModuleList(
             [
-                DecLayer(hidden_dim, hidden_dim * 3, dropout=dropout)
-                for _ in range(num_decoder_layers)
+                DecLayer(cfg.hidden_dim, cfg.hidden_dim * 3, dropout=cfg.dropout)
+                for _ in range(cfg.num_decoder_layers)
             ]
         )
-        self.W_out = nn.Linear(hidden_dim, num_letters, bias=True)
+        self.W_out = nn.Linear(cfg.hidden_dim, cfg.num_letters, bias=True)
 
         for p in self.parameters():
             if p.dim() > 1:

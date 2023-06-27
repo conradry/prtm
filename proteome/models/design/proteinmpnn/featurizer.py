@@ -3,9 +3,9 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-
 from proteome import protein
 from proteome.constants.residue_constants import proteinmppn_restypes
+from proteome.models.design.proteinmpnn.config import TiedFeaturizeOutput
 
 
 def get_sequence_scores(S, log_probs, mask):
@@ -19,31 +19,9 @@ def get_sequence_scores(S, log_probs, mask):
 
 
 def decode_sequence(S, mask):
-    return "".join([proteinmppn_restypes[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0])
-
-
-@dataclass
-class TiedFeaturizeOutput:
-    atom_positions: torch.Tensor
-    sequence: torch.Tensor
-    mask: torch.Tensor
-    lengths: np.ndarray
-    chain_M: torch.Tensor
-    chain_encoding_all: torch.Tensor
-    letter_list_list: List[List[str]]
-    visible_list_list: List[List[int]]
-    masked_list_list: List[List[int]]
-    masked_chain_length_list_list: List[List[int]]
-    chain_M_pos: torch.Tensor
-    omit_AA_mask: torch.Tensor
-    residue_idx: torch.Tensor
-    dihedral_mask: torch.Tensor
-    tied_pos_list_of_lists_list: List[List[List[int]]]
-    pssm_coef_all: torch.Tensor
-    pssm_bias_all: torch.Tensor
-    pssm_log_odds_all: torch.Tensor
-    bias_by_res_all: torch.Tensor
-    tied_beta: torch.Tensor
+    return "".join(
+        [proteinmppn_restypes[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0]
+    )
 
 
 def featurize_protein(
@@ -85,7 +63,9 @@ def featurize_protein(
             masked_chain_length_list.append(chain_length)
         chain_encoding = (chain_pos + 1) * np.ones(np.array(chain_mask).shape[0])
 
-        residue_idx[l0:l0+chain_length] = (100 * chain_pos) + np.arange(l0, l0 + chain_length)
+        residue_idx[l0 : l0 + chain_length] = (100 * chain_pos) + np.arange(
+            l0, l0 + chain_length
+        )
         l0 += chain_length
 
         letter_list.append(chain_id)
@@ -97,7 +77,9 @@ def featurize_protein(
 
         fixed_position_mask = structure.design_mask[structure.chain_index == chain_id]
         fixed_position_mask_list.append(fixed_position_mask)
-        omit_AA_mask_temp = structure.design_aatype_mask[structure.chain_index == chain_id]
+        omit_AA_mask_temp = structure.design_aatype_mask[
+            structure.chain_index == chain_id
+        ]
         omit_AA_mask_list.append(omit_AA_mask_temp)
         pssm_coef = structure.pssm_coef[structure.chain_index == chain_id]
         pssm_coef_list.append(pssm_coef)
@@ -127,9 +109,7 @@ def featurize_protein(
                         tied_beta[start_idx + v[0][v_count] - 1] = v[1][v_count]
                 else:
                     for v_ in v:
-                        one_list.append(
-                            start_idx + v_ - 1
-                        )  # make 0 to be the first
+                        one_list.append(start_idx + v_ - 1)  # make 0 to be the first
             tied_pos_list_of_lists.append(one_list)
 
     x = np.concatenate(x_chain_list, 0)  # [L, 4, 3]
@@ -172,20 +152,24 @@ def featurize_protein(
     features_dict["sequence"] = all_sequence
 
     padding = padded_sequence_length - len(all_sequence)
-    for k,v in features_dict.items():
+    for k, v in features_dict.items():
         constant = np.nan if k == "atom_positions" else 0.0
         padding_tuples = [(0, padding)] + [(0, 0)] * (v.ndim - 1)
-        features_dict[k] = np.pad(v, padding_tuples, "constant", constant_values=(constant,))
+        features_dict[k] = np.pad(
+            v, padding_tuples, "constant", constant_values=(constant,)
+        )
 
     return features_dict, letter_list, masked_chain_length_list, tied_pos_list_of_lists
+
 
 def tied_featurize(
     batch: List[protein.DesignableProtein],
     device,
-    chain_dict,
+    chain_dict=None,
     ca_only=False,
 ):
     """Pack and pad batch into torch tensors"""
+    assert chain_dict is None, "chain_dict is not supported yet"
     B = len(batch)
     lengths = np.array([len(b.aatype) for b in batch], dtype=np.int32)
     L_max = max(lengths)
@@ -207,9 +191,12 @@ def tied_featurize(
         masked_chains.sort()  # sort masked_chains
         visible_chains.sort()  # sort visible_chains
 
-        features_dict, letter_list, masked_chain_length_list, tied_pos_list_of_lists = featurize_protein(
-            structure, L_max, visible_chains, masked_chains
-        )
+        (
+            features_dict,
+            letter_list,
+            masked_chain_length_list,
+            tied_pos_list_of_lists,
+        ) = featurize_protein(structure, L_max, visible_chains, masked_chains)
         feature_dicts.append(features_dict)
         letter_list_list.append(letter_list)
         visible_list_list.append(visible_chains)
@@ -223,10 +210,18 @@ def tied_featurize(
         features_dict_batch[k] = np.stack([d[k] for d in feature_dicts], axis=0)
 
     isnan = np.isnan(features_dict_batch["atom_positions"])
-    features_dict_batch["mask"] = np.isfinite(np.sum(features_dict_batch["atom_positions"], (2, 3))).astype(np.float32)
+    features_dict_batch["mask"] = np.isfinite(
+        np.sum(features_dict_batch["atom_positions"], (2, 3))
+    ).astype(np.float32)
     features_dict_batch["atom_positions"][isnan] = 0.0
 
-    jumps = ((features_dict_batch["residue_idx"][:, 1:] - features_dict_batch["residue_idx"][:, :-1]) == 1).astype(np.float32)
+    jumps = (
+        (
+            features_dict_batch["residue_idx"][:, 1:]
+            - features_dict_batch["residue_idx"][:, :-1]
+        )
+        == 1
+    ).astype(np.float32)
     phi_mask = np.pad(jumps, [[0, 0], [1, 0]])
     psi_mask = np.pad(jumps, [[0, 0], [0, 1]])
     omega_mask = np.pad(jumps, [[0, 0], [0, 1]])
@@ -243,9 +238,10 @@ def tied_featurize(
         features_dict_batch[k] = torch.from_numpy(v).to(dtype=dtype, device=device)
 
     if ca_only:
-        features_dict_batch["atom_positions"] = features_dict_batch["atom_positions"][:, :, 0]
-        features_dict_batch["tied_beta"] = features_dict_batch["tied_beta"].squeeze()
-    
+        features_dict_batch["atom_positions"] = features_dict_batch["atom_positions"][
+            :, :, 0
+        ]
+
     return TiedFeaturizeOutput(
         **features_dict_batch,
         lengths=lengths,
