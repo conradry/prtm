@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
+
+from proteome.constants.residue_constants import proteinmppn_restypes
 
 
 @dataclass
@@ -36,9 +38,20 @@ class InferenceConfig:
     num_seq_per_target: int = 1
     batch_size: int = 1
     sampling_temp: float = 0.1
-    omit_aas = "X"
-    pssm_multi = 0.0
-    pssm_threshold = 0.0
+    omit_aas: str = "X"
+    pssm_multi: float = 0.0
+    pssm_threshold: float = 0.0
+    pssm_log_odds_flag: bool = False
+    pssm_bias_flag: bool = False
+
+    # Unbiased
+    bias_aas: np.ndarray = np.zeros(len(proteinmppn_restypes), dtype=np.float32)
+    omit_aas_mask: np.ndarray = field(init=False)
+
+    def __post_init__(self):
+        self.omit_aas_mask: np.ndarray = np.array(
+            [aa in self.omit_aas for aa in proteinmppn_restypes]
+        ).astype(np.float32)
 
 
 @dataclass

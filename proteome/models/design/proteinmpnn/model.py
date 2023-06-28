@@ -1,4 +1,5 @@
 import itertools
+from typing import Dict, Optional
 
 import numpy as np
 import torch
@@ -6,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from proteome.models.design.proteinmpnn import config
+from proteome.constants.residue_constants import proteinmppn_restypes
 
 # A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design
 
@@ -508,16 +510,18 @@ class ProteinMPNN(nn.Module):
 
     def forward(
         self,
-        X,
-        S,
-        mask,
-        chain_M,
-        residue_idx,
-        chain_encoding_all,
-        randn,
-        use_input_decoding_order=False,
-        decoding_order=None,
+        features: Dict[str, torch.Tensor],
+        use_input_decoding_order: bool = False,
+        decoding_order: Optional[torch.Tensor] = None,
     ):
+        X = features["atom_positions"]
+        S = features["sequence"]
+        mask = features["mask"]
+        chain_M = features["chain_M"]
+        residue_idx = features["residue_idx"]
+        chain_encoding_all = features["chain_encoding_all"]
+        randn = features["noise"]
+
         """Graph-conditioned sequence model"""
         device = X.device
         # Prepare node and edge embeddings
@@ -570,28 +574,29 @@ class ProteinMPNN(nn.Module):
         log_probs = F.log_softmax(logits, dim=-1)
         return log_probs
 
-    def sample(
-        self,
-        X,
-        randn,
-        S_true,
-        chain_mask,
-        chain_encoding_all,
-        residue_idx,
-        mask=None,
-        temperature=1.0,
-        omit_AAs_np=None,
-        bias_AAs_np=None,
-        chain_M_pos=None,
-        omit_AA_mask=None,
-        pssm_coef=None,
-        pssm_bias=None,
-        pssm_multi=None,
-        pssm_log_odds_flag=None,
-        pssm_log_odds_mask=None,
-        pssm_bias_flag=None,
-        bias_by_res=None,
-    ):
+    def sample(self, features: Dict[str, torch.Tensor]):
+        # Unpack the features
+        X = features["atom_positions"]
+        S_true = features["sequence"]
+        mask = features["mask"]
+        chain_mask = features["chain_M"]
+        chain_encoding_all = features["chain_encoding_all"]
+        residue_idx = features["residue_idx"]
+        chain_M_pos = features["chain_M_pos"]
+        omit_AA_mask = features["omit_AA_mask"]
+        pssm_coef = features["pssm_coef_all"]
+        pssm_bias = features["pssm_bias_all"]
+        pssm_multi = features["pssm_multi"]
+        bias_by_res = features["bias_by_res_all"]
+        randn = features["noise"]
+        pssm_log_odds_mask = features["pssm_log_odds_mask"]
+        temperature = features["sampling_temp"]
+        pssm_multi = features["pssm_multi"]
+        pssm_log_odds_flag = features["pssm_log_odds_flag"]
+        pssm_bias_flag = features["pssm_bias_flag"]
+        omit_AAs_np = features["omit_aas_mask"]
+        bias_AAs_np = features["bias_aas"]
+
         device = X.device
         # Prepare node and edge embeddings
         E, E_idx = self.features(X, mask, residue_idx, chain_encoding_all)

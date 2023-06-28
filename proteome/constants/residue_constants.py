@@ -874,6 +874,7 @@ restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
 proteinmppn_restypes = sorted(restypes) + ["X"]
+proteinmpnn_restype_order = {restype: i for i, restype in enumerate(proteinmppn_restypes)}
 restypes_with_x = restypes + ["X"]
 restypes_with_x_dash = restypes_with_x + ["-"] 
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
