@@ -74,25 +74,6 @@ class Protein:
     parents_chain_index: Optional[Sequence[int]] = None
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
-class DesignableProtein(Protein):
-    """Protein structure definition with a mask that denotes designable positions."""
-    
-    # Binary float mask to indicate designable positions. 1.0 if a position is
-    # designable and 0.0 if not.
-    design_mask: np.ndarray  # [num_res]
-
-    # Binary mask to indicate amino acids that are designable
-    design_aatype_mask: np.ndarray  # [num_res, num_aatype]
-
-    pssm_coef: np.ndarray  # [num_res]
-    pssm_bias: np.ndarray  # [num_res, num_aatype]
-    pssm_log_odds: np.ndarray  # [num_res, num_aatype]
-
-    bias_per_residue: np.ndarray  # [num_res, num_aatype]
-    tied_positions: Optional[List[Dict[int, List[int]]]] = None
-
-
 def from_pdb_string(
     pdb_str: str, 
     chain_id: Optional[str] = None, 

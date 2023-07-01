@@ -1,11 +1,12 @@
 import random
 from dataclasses import asdict
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
 
 from proteome import protein
+from proteome.constants.residue_constants import proteinmppn_restypes
 from proteome.models.design.proteinmpnn import config
 from proteome.models.design.proteinmpnn.featurizer import tied_featurize, get_sequence_scores, decode_sequence
 from proteome.models.design.proteinmpnn.model import ProteinMPNN
@@ -28,6 +29,20 @@ PROTEINMPNN_MODEL_CONFIGS = {
 def _get_model_config(model_name: str) -> config.ProteinMPNNConfig:
     """Get the model config for a given model name."""
     return PROTEINMPNN_MODEL_CONFIGS[model_name.split("-")[0]]
+
+
+def _get_default_design_params(sequence_length: int) -> config.DesignParams:
+    """Make default design params for a given sequence length."""
+    num_aa = len(proteinmppn_restypes)
+    design_params = config.DesignParams(
+        design_mask=np.ones(sequence_length),
+        design_aatype_mask=np.zeros([sequence_length, num_aa], np.int32),
+        pssm_coef=np.zeros(sequence_length),
+        pssm_bias=np.zeros([sequence_length, num_aa]),
+        pssm_log_odds=10000.0 * np.ones([sequence_length, num_aa]),
+        bias_per_residue=np.zeros([sequence_length, num_aa]),
+    )
+    return design_params
 
 
 class ProteinMPNNForSequenceDesign:
@@ -66,7 +81,7 @@ class ProteinMPNNForSequenceDesign:
         )["model_state_dict"]
         msg = self.model.load_state_dict(state_dict)
 
-    def _featurize_input(self, structure: protein.DesignableProtein) -> config.TiedFeaturizeOutput:
+    def _featurize_input(self, structure: config.DesignableProtein) -> config.TiedFeaturizeOutput:
         return tied_featurize(
             [structure],
             self.device,
@@ -76,11 +91,29 @@ class ProteinMPNNForSequenceDesign:
 
     @torch.no_grad()
     def design_sequence(
-        self, 
-        structure: protein.DesignableProtein, 
-        inference_config: config.InferenceConfig
+        self,
+        structure: protein.Protein,
+        design_params: Optional[config.DesignParams] = None,
+        inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[str, float]:
         """Design a protein sequence for a given structure."""
+        # Quick check to make sure the structure has the right number
+        # of atoms for the chosen model
+        if self.ca_only:
+            assert structure.atom_positions.shape[1] == 1, "CA only models require 1 atom per residue"
+        else:
+            assert structure.atom_positions.shape[1] == 4, "Vanilla models require 4 atoms per residue"
+
+        # Add design params to structure if provided
+        # otherwise use the default design params
+        if design_params is None:
+            design_params = _get_default_design_params(len(structure.aatype))
+
+        structure = config.DesignableProtein(
+            **asdict(structure),
+            **asdict(design_params),
+        )
+
         tied_featurize_output = self._featurize_input(structure)
 
         # Create a random noise for generator

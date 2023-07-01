@@ -3,9 +3,8 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-from proteome import protein
 from proteome.constants.residue_constants import proteinmppn_restypes
-from proteome.models.design.proteinmpnn.config import TiedFeaturizeOutput
+from proteome.models.design.proteinmpnn.config import TiedFeaturizeOutput, DesignableProtein
 
 
 def get_sequence_scores(S, log_probs, mask):
@@ -25,7 +24,7 @@ def decode_sequence(S, mask):
 
 
 def featurize_protein(
-    structure: protein.DesignableProtein,
+    structure: DesignableProtein,
     padded_sequence_length: int,
     visible_chains: List[int],
     masked_chains: List[int],
@@ -163,7 +162,7 @@ def featurize_protein(
 
 
 def tied_featurize(
-    batch: List[protein.DesignableProtein],
+    batch: List[DesignableProtein],
     device,
     chain_dict=None,
     ca_only=False,

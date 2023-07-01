@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
+from proteome import protein
 from proteome.constants.residue_constants import proteinmppn_restypes
 
 
@@ -52,6 +53,31 @@ class InferenceConfig:
         self.omit_aas_mask: np.ndarray = np.array(
             [aa in self.omit_aas for aa in proteinmppn_restypes]
         ).astype(np.float32)
+
+
+@dataclass(frozen=True, kw_only=True)
+class DesignParams:
+    """Design parameters for ProteinMPNN."""
+    
+    # Binary float mask to indicate designable positions. 1.0 if a position is
+    # designable and 0.0 if not.
+    design_mask: np.ndarray  # [num_res]
+
+    # Binary mask to indicate amino acids that are designable
+    design_aatype_mask: np.ndarray  # [num_res, num_aatype]
+
+    pssm_coef: np.ndarray  # [num_res]
+    pssm_bias: np.ndarray  # [num_res, num_aatype]
+    pssm_log_odds: np.ndarray  # [num_res, num_aatype]
+
+    bias_per_residue: np.ndarray  # [num_res, num_aatype]
+    tied_positions: Optional[List[Dict[int, List[int]]]] = None
+
+
+
+@dataclass(frozen=True, kw_only=True)
+class DesignableProtein(protein.Protein, DesignParams):
+    """Protein structure definition with design parameters for ProteinMPNN."""
 
 
 @dataclass
