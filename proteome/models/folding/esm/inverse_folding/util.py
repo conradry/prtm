@@ -248,7 +248,7 @@ class CoordBatchConverter(BatchConverter):
 
         # pad beginning and end of each protein due to legacy reasons
         coords = [
-            F.pad(torch.tensor(cd), (0, 0, 0, 0, 1, 1), value=np.inf)
+            F.pad(cd.clone().detach(), (0, 0, 0, 0, 1, 1), value=np.inf)
             for cd, _ in coords_and_confidence
         ]
         confidence = [

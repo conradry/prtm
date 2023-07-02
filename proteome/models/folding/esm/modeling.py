@@ -6,6 +6,8 @@ import torch
 from proteome import protein
 from proteome.models.folding.esm import config
 from proteome.models.folding.esm.esmfold import ESMFold
+from proteome.models.folding.esm.inverse_folding.gvp_transformer import GVPTransformerModel
+from proteome.models.folding.esm.inverse_folding.util import score_sequence
 from proteome.models.folding.openfold.utils.feats import atom14_to_atom37
 
 ESM_MODEL_URLS = {
@@ -15,16 +17,26 @@ ESMFOLD_MODEL_URLS = {
     "esmfold_3B_v0": "https://dl.fbaipublicfiles.com/fair-esm/models/esmfold_3B_v0.pt",
     "esmfold_3B_v1": "https://dl.fbaipublicfiles.com/fair-esm/models/esmfold_3B_v1.pt",
 }
+ESMIF_MODEL_URLS = {
+    "esm_if1_gvp4_t16_142M_UR50": "https://dl.fbaipublicfiles.com/fair-esm/models/esm_if1_gvp4_t16_142M_UR50.pt",
+}
 ESMFOLD_MODEL_CONFIGS = {
     "esmfold_3B_v0": config.ESMFoldV0(),
     "esmfold_3B_v1": config.ESMFoldV1(),
 }
+ESMIF_MODEL_CONFIGS = {
+    "esm_if1_gvp4_t16_142M_UR50": config.ESMIFConfig(),
+}
 
 
-def _get_model_config(model_name: str) -> config.ESMFoldConfig:
+def _get_esmfold_model_config(model_name: str) -> config.ESMFoldConfig:
     """Get the model config for a given model name."""
-    # All `finetuning` models use the same config.
     return ESMFOLD_MODEL_CONFIGS[model_name]
+
+
+def _get_esmif_model_config(model_name: str) -> config.ESMIFConfig:
+    """Get the model config for a given model name."""
+    return ESMIF_MODEL_CONFIGS[model_name]
 
 
 class ESMForFolding:
@@ -36,7 +48,7 @@ class ESMForFolding:
         half_precision: bool = True,
     ):
         self.model_name = model_name
-        self.cfg = _get_model_config(model_name)
+        self.cfg = _get_esmfold_model_config(model_name)
         self.model = ESMFold(cfg=self.cfg)
         self.model.set_chunk_size(512)
 
@@ -134,3 +146,68 @@ class ESMForFolding:
         )
 
         return predicted_protein, float(output["mean_plddt"])
+
+
+class ESMForSequenceDesign:
+    def __init__(self, model_name: str = "esm_if1_gvp4_t16_142M_UR50"):
+        self.model_name = model_name
+        self.cfg = _get_esmif_model_config(model_name)
+        self.model = GVPTransformerModel(cfg=self.cfg)
+        self.load_weights(ESMIF_MODEL_URLS[model_name])
+        self.model.eval()
+        if torch.cuda.is_available():
+            self.device = torch.cuda.current_device()
+        else:
+            self.device = torch.device("cpu")
+
+        self.model = self.model.to(self.device)
+
+    def load_weights(self, weights_url: str):
+        """Load weights from a weights url."""
+        model_state = torch.hub.load_state_dict_from_url(
+            weights_url, progress=False, map_location="cpu"
+        )["model"]
+
+        def update_name(s: str):
+            # Map the module names in checkpoints trained with internal code to
+            # the updated module names in open source code
+            s = s.replace("W_v", "embed_graph.embed_node")
+            s = s.replace("W_e", "embed_graph.embed_edge")
+            s = s.replace("embed_scores.0", "embed_confidence")
+            s = s.replace("embed_score.", "embed_graph.embed_confidence.")
+            s = s.replace("seq_logits_projection.", "")
+            s = s.replace("embed_ingraham_features", "embed_dihedrals")
+            s = s.replace("embed_gvp_in_local_frame.0", "embed_gvp_output")
+            s = s.replace("embed_features_in_local_frame.0", "embed_gvp_input_features")
+            return s
+
+        model_state = {
+            update_name(sname): svalue
+            for sname, svalue in model_state.items()
+            if "version" not in sname
+        }
+        msg = self.model.load_state_dict(model_state, strict=False)
+
+
+    @torch.no_grad()
+    def design_sequence(
+        self, 
+        structure: protein.Protein, 
+        design_params: config.DesignParams = config.DesignParams(),
+        temperature: float = 1.0,
+    ) -> Tuple[str, float]:
+        """Design a protein sequence for a given structure."""
+
+        coords = torch.tensor(structure.atom_positions[:, :3]).float().to(self.device)
+        if design_params.confidence is not None:
+            confidence = torch.tensor(design_params.confidence).float().to(self.device)
+        else:
+            confidence = None
+
+        sequence, avg_prob = self.model.sample(
+            coords,
+            temperature=temperature,
+            confidence=confidence,
+            partial_seq=design_params.partial_seq_list,
+        )
+        return sequence, avg_prob

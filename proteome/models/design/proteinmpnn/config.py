@@ -74,7 +74,6 @@ class DesignParams:
     tied_positions: Optional[List[Dict[int, List[int]]]] = None
 
 
-
 @dataclass(frozen=True, kw_only=True)
 class DesignableProtein(protein.Protein, DesignParams):
     """Protein structure definition with design parameters for ProteinMPNN."""

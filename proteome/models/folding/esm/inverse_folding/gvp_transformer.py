@@ -72,7 +72,13 @@ class GVPTransformerModel(nn.Module):
         )
         return logits, extra
     
-    def sample(self, coords, partial_seq=None, temperature=1.0, confidence=None, device=None):
+    def sample(
+        self, 
+        coords: torch.Tensor, 
+        temperature: float = 1.0, 
+        partial_seq: Optional[List[str]] = None, 
+        confidence: Optional[torch.Tensor] = None, 
+    ):
         """
         Samples sequences based on multinomial sampling (no beam search).
 
@@ -84,6 +90,7 @@ class GVPTransformerModel(nn.Module):
                 sequence recovery and high temperature for higher diversity
             confidence: optional length L list of confidence scores for coordinates
         """
+        device = coords.device
         L = len(coords)
         # Convert to batch format
         batch_converter = CoordBatchConverter(self.decoder.alphabet)
@@ -93,7 +100,7 @@ class GVPTransformerModel(nn.Module):
         
         # Start with prepend token
         mask_idx = self.decoder.alphabet.get_idx('<mask>')
-        sampled_tokens = torch.full((1, 1+L), mask_idx, dtype=int)
+        sampled_tokens = torch.full((1, 1+L), mask_idx, dtype=torch.int64)
         sampled_tokens[0, 0] = self.decoder.alphabet.get_idx('<cath>')
         if partial_seq is not None:
             for i, c in enumerate(partial_seq):
@@ -110,6 +117,7 @@ class GVPTransformerModel(nn.Module):
             sampled_tokens = sampled_tokens.to(device)
         
         # Decode one token at a time
+        sequence_probs = []
         for i in range(1, L+1):
             logits, _ = self.decoder(
                 sampled_tokens[:, :i], 
@@ -117,11 +125,15 @@ class GVPTransformerModel(nn.Module):
                 incremental_state=incremental_state,
             )
             logits = logits[0].transpose(0, 1)
+            predicted_probs = F.softmax(logits, dim=-1)
             logits /= temperature
             probs = F.softmax(logits, dim=-1)
             if sampled_tokens[0, i] == mask_idx:
                 sampled_tokens[:, i] = torch.multinomial(probs, 1).squeeze(-1)
+                sequence_probs.append(predicted_probs[0, sampled_tokens[0, i]].item())
+
         sampled_seq = sampled_tokens[0, 1:]
         
         # Convert back to string via lookup
-        return ''.join([self.decoder.alphabet.get_tok(a) for a in sampled_seq])
+        mean_prob = sum(sequence_probs) / len(sequence_probs)
+        return ''.join([self.decoder.alphabet.get_tok(a) for a in sampled_seq]), mean_prob
