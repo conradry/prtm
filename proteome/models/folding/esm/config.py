@@ -1,6 +1,9 @@
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, List, Optional
 
+import numpy as np
+
+from proteome import protein
 from proteome.models.folding.esm.data import Alphabet
 
 
@@ -75,3 +78,64 @@ class ESMFoldV0(ESMFoldConfig):
 @dataclass
 class ESMFoldV1(ESMFoldConfig):
     name: str = "esm_fold_v1"
+    
+
+@dataclass
+class GVPConfig:
+    top_k_neighbors: int = 30
+    node_hidden_dim_scalar: int = 1024
+    node_hidden_dim_vector: int = 256
+    edge_hidden_dim_scalar: int = 32
+    edge_hidden_dim_vector: int = 1
+    dropout: float = 0.1
+    num_encoder_layers: int = 4
+
+
+@dataclass
+class ESMIFConfig:
+    encoder_embed_dim: int = 512
+    decoder_embed_dim: int = 512
+    dropout: float = 0.1
+    alphabet: Alphabet = Alphabet.from_architecture("invariant_gvp")
+    encoder_layers: int = 8
+    encoder_attention_heads: int = 8
+    attention_dropout: float = 0.1
+    encoder_ffn_embed_dim: int = 2048
+    decoder_embed_dim: int = 512
+    decoder_layers: int = 8
+    decoder_attention_heads: int = 8
+    decoder_ffn_embed_dim: int = 2048
+    scale_fc: bool = False
+    scale_resids: bool = False
+    # Everything in args that startswith "gvp_" will be passed to GVPEncoder
+    gvp_config: GVPConfig = GVPConfig()
+
+
+@dataclass(frozen=True, kw_only=True)
+class DesignParams:
+    """Design parameters for ProteinMPNN."""
+    
+    # Binary float mask to indicate designable positions. 1.0 if a position is
+    # designable and 0.0 if not.
+    confidence: Optional[np.ndarray] = None  # [num_res]
+
+    # A string where each character is a residue type. Masked characters
+    # that are not designable are represented by the character "-".
+    partial_seq: Optional[str] = None  # [num_res]
+    partial_seq_list: Optional[List[str]] = None
+
+    def __post_init__(self):
+        if self.confidence is not None and self.partial_seq is not None:
+            assert len(self.confidence) == len(self.partial_seq)
+
+        # Fill the "-" characters in the sequence with "<mask>"
+        # and assign to partial_seq_list.
+        if self.partial_seq is not None:
+            self.partial_seq_list = [  #  type: ignore
+                "<mask>" if c == "-" else c for c in self.partial_seq
+            ]
+
+
+@dataclass(frozen=True, kw_only=True)
+class DesignableProtein(protein.Protein, DesignParams):
+    """Protein structure definition with design parameters for ProteinMPNN."""
