@@ -55,6 +55,8 @@ dependencies:
   - conda-forge::rdkit==2023.03.1
   - conda-forge::scanpy==1.9.3
   - pyg::pyg==2.3.0
+  - pyg::pytorch-sparse==0.6.17
+  - pyg::pytorch-scatter==2.1.1
   - ray-core==2.4.0
   - transformers==4.29.2
   - tensorboard==2.11.2
