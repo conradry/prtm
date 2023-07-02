@@ -75,3 +75,35 @@ class ESMFoldV0(ESMFoldConfig):
 @dataclass
 class ESMFoldV1(ESMFoldConfig):
     name: str = "esm_fold_v1"
+    
+
+@dataclass
+class GVPConfig:
+    top_k_neighbors: int = 30
+    node_hidden_dim_scalar: int = 1024
+    node_hidden_dim_vector: int = 256
+    edge_hidden_dim_scalar: int = 32
+    edge_hidden_dim_vector: int = 1
+    dropout: float = 0.1
+    num_encoder_layers: int = 4
+
+
+@dataclass
+class ESMIFConfig:
+    encoder_embed_dim: int = 512
+    decoder_embed_dim: int = 512
+    dropout: float = 0.1
+    alphabet: Alphabet = Alphabet.from_architecture("invariant_gvp")
+    encoder_layers: int = 8
+    encoder_attention_heads: int = 8
+    attention_dropout: float = 0.1
+    encoder_ffn_embed_dim: int = 2048
+    decoder_embed_dim: int = 512
+    decoder_layers: int = 8
+    decoder_attention_heads: int = 8
+    decoder_ffn_embed_dim: int = 2048
+    scale_fc: bool = False
+    scale_resids: bool = False
+    # Everything in args that startswith "gvp_" will be passed to GVPEncoder
+    gvp_config: GVPConfig = GVPConfig()
+
