@@ -1,5 +1,6 @@
 from pyrosetta import *
 from rosetta import *
+from proteome.models.design.protein_seq_des import atoms
 
 init("-mute basic -mute core -mute protocols  -ex1 -ex2 -constant_seed")
 
@@ -52,17 +53,17 @@ def randomize_sequence(
         if "_" in ref_res_name:
             ref_res_name = ref_res_name[: ref_res_name.find("_")]
 
-        if ref_res_name not in common.atoms.res_label_dict.keys():
+        if ref_res_name not in atoms.res_label_dict.keys():
             continue
 
         if ala:
-            r = common.atoms.res_label_dict["ALA"]
+            r = atoms.res_label_dict["ALA"]
         elif val:
-            r = common.atoms.res_label_dict["VAL"]
+            r = atoms.res_label_dict["VAL"]
         else:
             r = new_seq[idx]
 
-        res_aa = common.atoms.aa_map[r]
+        res_aa = atoms.aa_map[r]
 
         # resfile hangling: ex. 5 TPIKAA C means set the initial sequence at residue 5 to 'C'
         if idx in resfile_init_seq.keys():
@@ -231,7 +232,7 @@ def mutate_residue(
         pack_scorefxn = pyrosetta.get_score_function()
 
     # forces mutation
-    mut = MutateResidue(mutant_position, common.atoms.aa_inv[mutant_aa])
+    mut = MutateResidue(mutant_position, atoms.aa_inv[mutant_aa])
     mut.apply(wpose)
 
     # the numbers 1-20 correspond individually to the 20 proteogenic amino acids

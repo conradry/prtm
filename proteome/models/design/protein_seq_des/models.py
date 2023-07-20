@@ -1,6 +1,7 @@
-import proteome.models.design.protein_seq_des.util.data as data
+import proteome.models.design.protein_seq_des.data as data
 import torch
 import torch.nn as nn
+from proteome.models.design.protein_seq_des import atoms
 
 
 def init_ortho_weights(self):
@@ -68,7 +69,7 @@ class seqPred(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
             nn.Conv1d(
-                nf * 4, len(common.atoms.label_res_dict.keys()), 3, 1, 1, bias=False
+                nf * 4, len(atoms.label_res_dict.keys()), 3, 1, 1, bias=False
             ),
         )
 

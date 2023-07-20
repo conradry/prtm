@@ -1,7 +1,8 @@
 import numpy as np
-import proteome.models.design.protein_seq_des.util.canonicalize as canonicalize
-import proteome.models.design.protein_seq_des.util.data as data
-import proteome.models.design.protein_seq_des.util.voxelize as voxelize
+import proteome.models.design.protein_seq_des.canonicalize as canonicalize
+import proteome.models.design.protein_seq_des.data as data
+import proteome.models.design.protein_seq_des.voxelize as voxelize
+from proteome.models.design.protein_seq_des import atoms
 import torch
 import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
@@ -83,7 +84,7 @@ def get_conv_feat(
     x_data = atom_data_canonicalized
 
     voxels = voxelize.voxelize(
-        x, x_data, n=20, c=len(common.atoms.atoms), dist=10, bb_only=bb_only
+        x, x_data, n=20, c=len(atoms.atoms), dist=10, bb_only=bb_only
     )
     voxels = torch.FloatTensor(voxels)
     bs_i = voxels.size()[0]

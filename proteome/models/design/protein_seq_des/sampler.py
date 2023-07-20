@@ -1,10 +1,11 @@
 import math
 
 import numpy as np
-import proteome.models.design.protein_seq_des.util.data as data
-import proteome.models.design.protein_seq_des.util.pyrosetta_util as putil
-import proteome.models.design.protein_seq_des.util.resfile_util as resfile_util
-import proteome.models.design.protein_seq_des.util.sampler_util as sampler_util
+import proteome.models.design.protein_seq_des.data as data
+import proteome.models.design.protein_seq_des.pyrosetta_util as putil
+import proteome.models.design.protein_seq_des.resfile_util as resfile_util
+import proteome.models.design.protein_seq_des.sampler_util as sampler_util
+from proteome.models.design.protein_seq_des import atoms
 import torch
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
 from pyrosetta.rosetta.protocols.denovo_design.filters import \
@@ -12,6 +13,7 @@ from pyrosetta.rosetta.protocols.denovo_design.filters import \
 from pyrosetta.rosetta.protocols.simple_filters import (
     BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
 from torch.distributions.categorical import Categorical
+from proteome.models.design.protein_seq_des import atoms
 
 
 class Sampler(object):
@@ -307,7 +309,7 @@ class Sampler(object):
                         self.chi_feat_temp,
                         bb_only=1,
                     )
-                res = [common.atoms.label_res_single_dict[k] for k in res_idx]
+                res = [atoms.label_res_single_dict[k] for k in res_idx]
                 self.pose = self.set_rotamer(
                     self.pose,
                     res,
@@ -494,13 +496,13 @@ class Sampler(object):
                 # set of amino acids to restrict in the tensor
                 aa_to_restrict = constraints[i]
                 for aa in aa_to_restrict:
-                    logits[i, common.atoms.aa_map_inv[aa]] = -99999
+                    logits[i, atoms.aa_map_inv[aa]] = -99999
             elif (
                 header
             ):  # if not in the constraints, apply header (see util/resfile_util.py)
                 aa_to_restrict = header["DEFAULT"]
                 for aa in aa_to_restrict:
-                    logits[i, common.atoms.aa_map_inv[aa]] = -99999
+                    logits[i, atoms.aa_map_inv[aa]] = -99999
         return logits
 
     def enforce_constraints(self, logits, idx):
@@ -659,7 +661,7 @@ class Sampler(object):
             elif len(var_idx) > 0 and r_idx not in var_idx:
                 continue
             res_i = res[i]
-            chi_i = common.atoms.chi_dict[common.atoms.aa_inv[res_i]]
+            chi_i = atoms.chi_dict[atoms.aa_inv[res_i]]
             if "chi_1" in chi_i.keys():
                 pose.set_chi(1, r_idx + 1, chi_1[i] * (180 / np.pi))
                 assert (
@@ -693,7 +695,7 @@ class Sampler(object):
         assert len(res_idx) == len(idx), (len(idx), len(res_idx))
 
         for k in list(res_idx):
-            res.append(common.atoms.label_res_single_dict[k])
+            res.append(atoms.label_res_single_dict[k])
 
         if self.symmetry:
             idx_out = []
@@ -747,7 +749,7 @@ class Sampler(object):
         else:
             # residue idx is fixed (identity fixed) for rotamer repacking
             res = [self.gt_seq[i] for i in idx]
-            res_idx = [common.atoms.aa_map_inv[self.gt_seq[i]] for i in idx]
+            res_idx = [atoms.aa_map_inv[self.gt_seq[i]] for i in idx]
 
         # sample rotamer using precomputed chi_feat vector
         (
@@ -764,7 +766,7 @@ class Sampler(object):
             )
 
         # mutate residues, set rotamers
-        res = [common.atoms.label_res_single_dict[k] for k in res_idx]
+        res = [atoms.label_res_single_dict[k] for k in res_idx]
 
         if not self.use_rosetta_packer:
             # mutate center residue

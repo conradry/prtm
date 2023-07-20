@@ -2,7 +2,7 @@
 
 import re
 
-import common
+from proteome.models.design.protein_seq_des import atoms
 
 
 def read_resfile(filename):
@@ -68,7 +68,7 @@ def read_resfile(filename):
 
     # update the initial seq dictionary to only have one element per residue id (at random)
     initial_seq = {
-        res_id: (common.atoms.resfile_commands["ALLAAwc"] - restricted_aa).pop()
+        res_id: (atoms.resfile_commands["ALLAAwc"] - restricted_aa).pop()
         for res_id, restricted_aa in initial_seq.items()
     }
 
@@ -120,13 +120,13 @@ def check_for_commands(args, command_id, list_id):
     constraint = set()
     command = args[command_id].upper()
     init_seq = False  # reflect if it's TPIKAA or TNOTAA
-    if command in common.atoms.resfile_commands.keys():
+    if command in atoms.resfile_commands.keys():
         constraint = (
-            common.atoms.resfile_commands["ALLAAwc"]
-            - common.atoms.resfile_commands[command]
+            atoms.resfile_commands["ALLAAwc"]
+            - atoms.resfile_commands[command]
         )
     elif "PIKAA" in command:  # allow only the specified amino acids
-        constraint = common.atoms.resfile_commands["ALLAAwc"] - set(
+        constraint = atoms.resfile_commands["ALLAAwc"] - set(
             args[list_id].strip()
         )
     elif "NOTAA" in command:  # disallow only the specified amino acids

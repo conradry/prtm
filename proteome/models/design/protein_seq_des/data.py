@@ -5,8 +5,9 @@ import re
 import Bio.PDB
 import Bio.PDB.vectors
 import numpy as np
-import proteome.models.design.protein_seq_des.util.canonicalize as canonicalize
-import proteome.models.design.protein_seq_des.util.voxelize as voxelize
+import proteome.models.design.protein_seq_des.canonicalize as canonicalize
+import proteome.models.design.protein_seq_des.voxelize as voxelize
+from proteome.models.design.protein_seq_des import atoms
 import torch
 from torch.utils import data
 
@@ -119,7 +120,7 @@ def get_pdb_chains(pdb, data_dir, assembly=1, skip_download=0):
         for i in range(len(structure)):
             for c in structure[i].get_chains():
                 try:
-                    c.id = common.atoms.rename_chains[count]
+                    c.id = atoms.rename_chains[count]
                 except:
                     continue
                 count += 1
@@ -181,27 +182,27 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
             het, res_id, res_icode = res.id
 
             # skip waters, metal ions, pre-specified ligands, unknown ligands
-            if res_name in common.atoms.skip_res_list:
+            if res_name in atoms.skip_res_list:
                 continue
 
             res_atoms = [atom for atom in res.get_atoms()]
 
             # skip training on residues where all BB atoms are not present -- this will break canonicalization
-            if res_name in common.atoms.res_label_dict.keys() and len(res_atoms) < 4:
+            if res_name in atoms.res_label_dict.keys() and len(res_atoms) < 4:
                 skip_res = True
 
             # if residue is an amino acid, add to label and save residue ID
-            if (not skip_res) and (res_name in common.atoms.res_label_dict.keys()):
-                res_type = common.atoms.res_label_dict[res_name]
+            if (not skip_res) and (res_name in atoms.res_label_dict.keys()):
+                res_type = atoms.res_label_dict[res_name]
                 res_data[chain_id].append((res_id, res_icode, res_idx, res_type))
                 res_label.append(res_type)
             residue_bb_index[res_idx] = {}
 
             # iterate over atoms -- get coordinate data
             for atom in res.get_atoms():
-                if atom.element in common.atoms.skip_atoms:
+                if atom.element in atoms.skip_atoms:
                     continue
-                elif atom.element not in common.atoms.atoms:
+                elif atom.element not in atoms.atoms:
                     if res_name == "MSE" and atom.element == "SE":
                         elem_name = "S"  # swap MET for MSE
                     else:
@@ -213,17 +214,17 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                 c = np.array(list(atom.get_coord()))[None].astype(np.float32)
 
                 # get atom type index
-                assert elem_name in common.atoms.atoms
-                atom_type = common.atoms.atoms.index(elem_name)
+                assert elem_name in atoms.atoms
+                atom_type = atoms.atoms.index(elem_name)
 
                 # get whether atom is a BB atom
                 bb = int(
-                    res_name in common.atoms.res_label_dict.keys()
+                    res_name in atoms.res_label_dict.keys()
                     and atom.name in ["N", "CA", "C", "O", "OXT"]
                 )
 
-                if res_name in common.atoms.res_label_dict.keys():
-                    res_type_idx = common.atoms.res_label_dict[res_name]
+                if res_name in atoms.res_label_dict.keys():
+                    res_type_idx = atoms.res_label_dict[res_name]
                 else:
                     res_type_idx = 20  # 'other' type (ligand, ion)
 
@@ -233,13 +234,13 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                 atom_data.append(index[None])
                 # if atom is BB atom, add to residue_bb_index dictionary
                 if (not skip_res) and (
-                    (res_name in common.atoms.res_label_dict.keys())
+                    (res_name in atoms.res_label_dict.keys())
                 ):
                     # map from residue index to atom coordinate
                     residue_bb_index[res_idx][atom.name] = len(atom_coords) - 1
 
             # get rotamer chi angles
-            if (not skip_res) and (res_name in common.atoms.res_label_dict.keys()):
+            if (not skip_res) and (res_name in atoms.res_label_dict.keys()):
                 if res_name == "GLY" or res_name == "ALA":
                     chi = [0, 0, 0, 0]
                     mask = [0, 0, 0, 0]
@@ -259,11 +260,11 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                         )
                         if (
                             "chi_1"
-                            in common.atoms.chi_dict[
-                                common.atoms.label_res_dict[res_type]
+                            in atoms.chi_dict[
+                                atoms.label_res_dict[res_type]
                             ].keys()
-                            and common.atoms.chi_dict[
-                                common.atoms.label_res_dict[res_type]
+                            and atoms.chi_dict[
+                                atoms.label_res_dict[res_type]
                             ]["chi_1"]
                             in residue_bb_index[res_idx].keys()
                             and "CB" in residue_bb_index[res_idx].keys()
@@ -274,8 +275,8 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                             cg = Bio.PDB.vectors.Vector(
                                 atom_coords[
                                     residue_bb_index[res_idx][
-                                        common.atoms.chi_dict[
-                                            common.atoms.label_res_dict[res_type]
+                                        atoms.chi_dict[
+                                            atoms.label_res_dict[res_type]
                                         ]["chi_1"]
                                     ]
                                 ][0]
@@ -286,19 +287,19 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
 
                             if (
                                 "chi_2"
-                                in common.atoms.chi_dict[
-                                    common.atoms.label_res_dict[res_type]
+                                in atoms.chi_dict[
+                                    atoms.label_res_dict[res_type]
                                 ].keys()
-                                and common.atoms.chi_dict[
-                                    common.atoms.label_res_dict[res_type]
+                                and atoms.chi_dict[
+                                    atoms.label_res_dict[res_type]
                                 ]["chi_2"]
                                 in residue_bb_index[res_idx].keys()
                             ):
                                 cd = Bio.PDB.vectors.Vector(
                                     atom_coords[
                                         residue_bb_index[res_idx][
-                                            common.atoms.chi_dict[
-                                                common.atoms.label_res_dict[res_type]
+                                            atoms.chi_dict[
+                                                atoms.label_res_dict[res_type]
                                             ]["chi_2"]
                                         ]
                                     ][0]
@@ -309,19 +310,19 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
 
                                 if (
                                     "chi_3"
-                                    in common.atoms.chi_dict[
-                                        common.atoms.label_res_dict[res_type]
+                                    in atoms.chi_dict[
+                                        atoms.label_res_dict[res_type]
                                     ].keys()
-                                    and common.atoms.chi_dict[
-                                        common.atoms.label_res_dict[res_type]
+                                    and atoms.chi_dict[
+                                        atoms.label_res_dict[res_type]
                                     ]["chi_3"]
                                     in residue_bb_index[res_idx].keys()
                                 ):
                                     ce = Bio.PDB.vectors.Vector(
                                         atom_coords[
                                             residue_bb_index[res_idx][
-                                                common.atoms.chi_dict[
-                                                    common.atoms.label_res_dict[
+                                                atoms.chi_dict[
+                                                    atoms.label_res_dict[
                                                         res_type
                                                     ]
                                                 ]["chi_3"]
@@ -336,19 +337,19 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
 
                                     if (
                                         "chi_4"
-                                        in common.atoms.chi_dict[
-                                            common.atoms.label_res_dict[res_type]
+                                        in atoms.chi_dict[
+                                            atoms.label_res_dict[res_type]
                                         ].keys()
-                                        and common.atoms.chi_dict[
-                                            common.atoms.label_res_dict[res_type]
+                                        and atoms.chi_dict[
+                                            atoms.label_res_dict[res_type]
                                         ]["chi_4"]
                                         in residue_bb_index[res_idx].keys()
                                     ):
                                         cz = Bio.PDB.vectors.Vector(
                                             atom_coords[
                                                 residue_bb_index[res_idx][
-                                                    common.atoms.chi_dict[
-                                                        common.atoms.label_res_dict[
+                                                    atoms.chi_dict[
+                                                        atoms.label_res_dict[
                                                             res_type
                                                         ]
                                                     ]["chi_4"]
@@ -381,7 +382,7 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                 chis.append(np.concatenate([chi[None], mask[None]], axis=0))
 
             # add bb atom indices in residue_list to residue_bb_index dict
-            if (not skip_res) and res_name in common.atoms.res_label_dict.keys():
+            if (not skip_res) and res_name in atoms.res_label_dict.keys():
                 residue_bb_index[res_idx]["list"] = []
                 for atom in ["N", "CA", "C", "CB"]:
                     if atom in residue_bb_index[res_idx]:
@@ -393,7 +394,7 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                         residue_bb_index[res_idx]["list"].append(-1)
 
                 residue_bb_index_list.append(residue_bb_index[res_idx]["list"])
-            if not skip_res and (res_name in common.atoms.res_label_dict.keys()):
+            if not skip_res and (res_name in atoms.res_label_dict.keys()):
                 res_idx += 1
 
     assert len(atom_coords) == len(atom_data)
@@ -642,7 +643,7 @@ class PDB_data_spitter(data.Dataset):
         self.data_dir = data_dir
         self.n = n
         self.dist = dist
-        self.c = len(common.atoms.atoms)
+        self.c = len(atoms.atoms)
         self.len = 0
 
     def __len__(self):
