@@ -4,7 +4,10 @@ import tarfile
 from typing import Any, Dict, Optional
 
 import boto3
+import gdown
+import shutil
 import torch.hub
+import zipfile
 from botocore import UNSIGNED
 from botocore.client import Config
 from torch.hub import download_url_to_file
@@ -161,6 +164,60 @@ def load_state_dict_from_tar_gz_url(
         download_extract_tar_gz(
             url, cached_file, extract_member=extract_member
         )
+        print(f"Model downloaded and cached in {cached_file}.")
+
+    return torch.load(cached_file, map_location=map_location)
+
+
+def load_state_dict_from_gdrive_zip(
+    url: str,
+    extract_member: str,
+    model_dir: Optional[str] = None,
+    map_location: MAP_LOCATION = None,
+) -> Dict[str, Any]:
+    r"""Loads the Torch serialized object at the given S3 URL.
+
+    If downloaded file is a zip file, it will be automatically
+    decompressed.
+
+    If the object is already present in `model_dir`, it's deserialized and
+    returned.
+    The default value of ``model_dir`` is ``<hub_dir>/checkpoints`` where
+    ``hub_dir`` is the directory returned by :func:`~torch.hub.get_dir`.
+
+    Args:
+        s3_url (str): S3 URL of the object to download
+        model_dir (str, optional): directory in which to save the object
+        map_location (optional): a function or a dict specifying how to remap storage locations (see torch.load)
+        boto_client_config (botocore.client.Config):
+            boto3 client configuration. By default uses --no-sign-request config.
+
+    Returns:
+        state_dict (dict): a dict containing the state of the pytorch model
+
+    """
+    if "drive.google.com" not in url:
+        raise ValueError("URL must contain `drive.google.com`.")
+
+    if model_dir is None:
+        hub_dir = torch.hub.get_dir()
+        model_dir = os.path.join(hub_dir, "checkpoints")
+
+    os.makedirs(model_dir, exist_ok=True)
+
+    file_id = url.split("id=")[-1]
+    model_name = os.path.basename(extract_member)
+    cached_file = os.path.join(model_dir, f"{file_id}_{model_name}")
+    if not os.path.exists(cached_file):
+        print(f"Downloading model from {url}...")
+        outzip = gdown.cached_download(url, path=os.path.join(model_dir, f"{file_id}.zip"))
+        with zipfile.ZipFile(outzip) as zf:
+            zf.extract(extract_member, path=model_dir)
+            
+        
+        os.rename(os.path.join(model_dir, extract_member), cached_file)
+        if "/" in extract_member:
+            shutil.rmtree(os.path.join(model_dir, os.path.dirname(extract_member)))
         print(f"Model downloaded and cached in {cached_file}.")
 
     return torch.load(cached_file, map_location=map_location)
