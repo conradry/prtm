@@ -14,10 +14,17 @@ from pyrosetta.rosetta.protocols.simple_filters import (
     BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
 from torch.distributions.categorical import Categorical
 from proteome.models.design.protein_seq_des import atoms
+from proteome.models.design.protein_seq_des import config
 
 
 class Sampler(object):
-    def __init__(self, args, models, init_models=None, log=None, use_cuda=True):
+    def __init__(
+        self, 
+        cfg: config.SamplerConfig, 
+        models, 
+        init_models=None, 
+        use_cuda=True
+    ):
         super(Sampler, self).__init__()
         self.models = models
         for model in self.models:
@@ -29,45 +36,44 @@ class Sampler(object):
                 init_model.eval()
         else:
             self.init_models = None
-        self.no_init_model = args.no_init_model
+        self.no_init_model = cfg.no_init_model
 
-        self.pdb = args.pdb
-        self.log = log
+        self.pdb = cfg.pdb
         self.use_cuda = use_cuda
 
-        self.threshold = args.threshold
-        self.pack_radius = args.pack_radius
+        self.threshold = cfg.threshold
+        self.pack_radius = cfg.pack_radius
         self.iteration = 0
-        self.randomize = args.randomize
-        self.rotamer_repack = args.repack_only
-        self.use_rosetta_packer = args.use_rosetta_packer
-        self.no_cys = args.no_cys
-        self.no_met = args.no_met
-        self.symmetry = args.symmetry
-        self.k = args.k
-        self.restrict_gly = args.restrict_gly
-        self.ala = args.ala
-        self.val = args.val
+        self.randomize = cfg.randomize
+        self.rotamer_repack = cfg.repack_only
+        self.use_rosetta_packer = cfg.use_rosetta_packer
+        self.no_cys = cfg.no_cys
+        self.no_met = cfg.no_met
+        self.symmetry = cfg.symmetry
+        self.k = cfg.k
+        self.restrict_gly = cfg.restrict_gly
+        self.ala = cfg.ala
+        self.val = cfg.val
         assert not (
             self.ala and self.val
         ), "only ala or val settings can be on for a given run"
         self.chi_mask = None
 
-        self.anneal = args.anneal
-        self.anneal_start_temp = args.anneal_start_temp
-        self.anneal_final_temp = args.anneal_final_temp
-        self.step_rate = args.step_rate
+        self.anneal = cfg.anneal
+        self.anneal_start_temp = cfg.anneal_start_temp
+        self.anneal_final_temp = cfg.anneal_final_temp
+        self.step_rate = cfg.step_rate
         self.accept_prob = 1
 
         # load fixed idx if applicable
-        if args.fixed_idx != "":
+        if cfg.fixed_idx != "":
             # assert not self.symmetry, 'fixed idx not supported in symmetry mode'
-            self.fixed_idx = sampler_util.get_idx(args.fixed_idx)
+            self.fixed_idx = sampler_util.get_idx(cfg.fixed_idx)
         else:
             self.fixed_idx = []
 
         # resfile restrictions handling (see util/resfile_util.py)
-        self.resfile = args.resfile
+        self.resfile = cfg.resfile
         if self.resfile:
             # get resfile NATRO (used to skip designing/packing at all)
             self.fixed_idx = resfile_util.get_natro(self.resfile)
@@ -81,9 +87,9 @@ class Sampler(object):
                 self.randomize = 0
 
         # load var idx if applicable
-        if args.var_idx != "":
+        if cfg.var_idx != "":
             # assert not self.symmetry, 'var idx not supported in symmetry mode'
-            self.var_idx = sampler_util.get_idx(args.var_idx)
+            self.var_idx = sampler_util.get_idx(cfg.var_idx)
         else:
             self.var_idx = []
 
@@ -137,13 +143,12 @@ class Sampler(object):
             self.models,
             pose=self.gt_pose,
             return_chi=1,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
         self.chi_error = 0
         self.re = putil.score_pose(self.gt_pose)
-        self.gt_pose.dump_pdb(self.log.log_path + "/" + "gt_" + self.pdb)
+        #self.gt_pose.dump_pdb(self.log.log_path + "/" + "gt_" + self.pdb)
         self.gt_score_terms = self.gt_pose.energies().residue_total_energies_array()
         self.score_terms = list(self.gt_score_terms.dtype.fields)
 
@@ -235,7 +240,6 @@ class Sampler(object):
                     self.init_models,
                     self.pose,
                     bb_only=1,
-                    log_path=self.log.log_path,
                     include_rotamer_probs=1,
                     use_cuda=self.use_cuda,
                 )
@@ -360,7 +364,6 @@ class Sampler(object):
         ) = sampler_util.get_energy(
             self.models,
             self.pose,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
@@ -369,10 +372,10 @@ class Sampler(object):
                 self.chi_mask == self.gt_chi_mask
             ), "gt and current pose chi masks should be the same when doing rotamer repacking"
 
-        if self.anneal:
-            self.pose.dump_pdb(
-                self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-            )
+        #if self.anneal:
+        #    self.pose.dump_pdb(
+        #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
+        #    )
 
     def init_rosetta_filters(self):
         # initialize pyrosetta filters
@@ -760,10 +763,10 @@ class Sampler(object):
             idx,
             res_idx,
         ) = self.sample_rotamer(idx, res_idx, self.chi_feat)
-        if self.anneal:
-            self.pose = putil.get_pose(
-                self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-            )
+        #if self.anneal:
+        #    self.pose = putil.get_pose(
+        #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
+        #    )
 
         # mutate residues, set rotamers
         res = [atoms.label_res_single_dict[k] for k in res_idx]
@@ -820,7 +823,6 @@ class Sampler(object):
         ) = sampler_util.get_energy(
             self.models,
             self.pose_temp,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
@@ -836,10 +838,10 @@ class Sampler(object):
             r = 0
 
         if r < self.accept_prob:
-            if self.anneal:
-                self.pose_temp.dump_pdb(
-                    self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-                )
+            #if self.anneal:
+            #    self.pose_temp.dump_pdb(
+            #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
+            #    )
             # update pose
             self.pose = self.pose_temp
             (
