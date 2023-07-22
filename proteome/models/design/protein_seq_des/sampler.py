@@ -1,11 +1,14 @@
 import math
+from typing import List
 
 import numpy as np
-import proteome.models.design.protein_seq_des.util.data as data
-import proteome.models.design.protein_seq_des.util.pyrosetta_util as putil
-import proteome.models.design.protein_seq_des.util.resfile_util as resfile_util
-import proteome.models.design.protein_seq_des.util.sampler_util as sampler_util
+import proteome.models.design.protein_seq_des.data as data
+import proteome.models.design.protein_seq_des.pyrosetta_util as putil
+import proteome.models.design.protein_seq_des.resfile_util as resfile_util
+import proteome.models.design.protein_seq_des.sampler_util as sampler_util
 import torch
+from proteome import protein
+from proteome.models.design.protein_seq_des import atoms, config
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
 from pyrosetta.rosetta.protocols.denovo_design.filters import \
     ExposedHydrophobicsFilterCreator
@@ -15,73 +18,55 @@ from torch.distributions.categorical import Categorical
 
 
 class Sampler(object):
-    def __init__(self, args, models, init_models=None, log=None, use_cuda=True):
+    def __init__(
+        self,
+        cfg: config.SamplerConfig,
+        structure: protein.Protein,
+        models: List[torch.nn.Module],
+        init_model: torch.nn.Module,
+    ):
         super(Sampler, self).__init__()
+        self.structure = structure
+        self.cfg = cfg
         self.models = models
-        for model in self.models:
-            model.eval()
+        self.init_model = init_model
+        self.no_init_model = cfg.no_init_model
 
-        if init_models is not None:
-            self.init_models = init_models
-            for init_model in self.init_models:
-                init_model.eval()
-        else:
-            self.init_models = None
-        self.no_init_model = args.no_init_model
+        # Use CUDA if models do
+        self.use_cuda = list(self.models[0].named_parameters())[0][
+            1
+        ].is_cuda  # check if model is cuda
 
-        self.pdb = args.pdb
-        self.log = log
-        self.use_cuda = use_cuda
-
-        self.threshold = args.threshold
-        self.pack_radius = args.pack_radius
         self.iteration = 0
-        self.randomize = args.randomize
-        self.rotamer_repack = args.repack_only
-        self.use_rosetta_packer = args.use_rosetta_packer
-        self.no_cys = args.no_cys
-        self.no_met = args.no_met
-        self.symmetry = args.symmetry
-        self.k = args.k
-        self.restrict_gly = args.restrict_gly
-        self.ala = args.ala
-        self.val = args.val
         assert not (
-            self.ala and self.val
+            self.cfg.ala and self.cfg.val
         ), "only ala or val settings can be on for a given run"
         self.chi_mask = None
 
-        self.anneal = args.anneal
-        self.anneal_start_temp = args.anneal_start_temp
-        self.anneal_final_temp = args.anneal_final_temp
-        self.step_rate = args.step_rate
         self.accept_prob = 1
 
         # load fixed idx if applicable
-        if args.fixed_idx != "":
-            # assert not self.symmetry, 'fixed idx not supported in symmetry mode'
-            self.fixed_idx = sampler_util.get_idx(args.fixed_idx)
+        if cfg.fixed_idx != "":
+            self.fixed_idx = sampler_util.get_idx(cfg.fixed_idx)
         else:
             self.fixed_idx = []
 
         # resfile restrictions handling (see util/resfile_util.py)
-        self.resfile = args.resfile
-        if self.resfile:
+        if self.cfg.resfile:
             # get resfile NATRO (used to skip designing/packing at all)
-            self.fixed_idx = resfile_util.get_natro(self.resfile)
+            self.fixed_idx = resfile_util.get_natro(self.cfg.resfile)
             # get resfile commands (used to restrict amino acid probability distribution)
-            self.resfile = resfile_util.read_resfile(self.resfile)
+            self.resfile = resfile_util.read_resfile(self.cfg.resfile)
             # get initial resfile sequence (used to initialize the sequence)
-            self.init_seq_resfile = self.resfile[2]
+            self.init_seq_resfile = self.cfg.resfile[2]
 
             # the initial sequence must be randomized (avoid running the baseline model)
             if self.init_seq_resfile:
-                self.randomize = 0
+                self.cfg.randomize = False
 
         # load var idx if applicable
-        if args.var_idx != "":
-            # assert not self.symmetry, 'var idx not supported in symmetry mode'
-            self.var_idx = sampler_util.get_idx(args.var_idx)
+        if cfg.var_idx != "":
+            self.var_idx = sampler_util.get_idx(cfg.var_idx)
         else:
             self.var_idx = []
 
@@ -89,17 +74,12 @@ class Sampler(object):
             (len(self.fixed_idx) > 0) and (len(self.var_idx) > 0)
         ), "cannot specify both fixed and variable indices"
 
-        if self.rotamer_repack:
-            assert (
-                self.init_models is not None
-            ), "baseline model must be used to initialize rotamer repacking"
-
         if self.no_init_model:
             assert (
-                not self.rotamer_repack
+                not self.cfg.repack_only
             ), "baseline model must be used for initializing rotamer repacking"
 
-        if self.symmetry:
+        if self.cfg.symmetry:
             assert (
                 len(self.fixed_idx) == 0
             ), "specifying fixed idx not supported in symmetry model"
@@ -120,7 +100,7 @@ class Sampler(object):
         # initialize sampler
         self.init_rosetta_filters()
         # score starting (ground-truth) pdb, get gt energies
-        self.gt_pose = putil.get_pose(self.pdb)
+        self.gt_pose = protein.to_rosetta_pose(self.structure)
         self.gt_seq = self.gt_pose.sequence()
         (
             _,
@@ -135,40 +115,37 @@ class Sampler(object):
             self.models,
             pose=self.gt_pose,
             return_chi=1,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
         self.chi_error = 0
         self.re = putil.score_pose(self.gt_pose)
-        self.gt_pose.dump_pdb(self.log.log_path + "/" + "gt_" + self.pdb)
         self.gt_score_terms = self.gt_pose.energies().residue_total_energies_array()
         self.score_terms = list(self.gt_score_terms.dtype.fields)
 
         # set no gly indices
-        self.gt_pose.display_secstruct()
         ss = self.gt_pose.secstruct()
         self.no_gly_idx = [i for i in range(len(ss)) if ss[i] != "L"]
         self.n = self.gt_pose.residues.__len__()
 
         # handle symmetry
-        if self.symmetry:
-            if "tim" in self.pdb:
+        if self.cfg.symmetry:
+            if self.cfg.is_tim:
                 # handle tim case
                 self.n_k = (
-                    math.ceil((self.n + 1) / self.k)
+                    math.ceil((self.n + 1) / self.cfg.k)
                     if (self.n + 1) % 2 == 0
-                    else math.ceil((self.n) / self.k)
+                    else math.ceil((self.n) / self.cfg.k)
                 )
             else:
-                self.n_k = self.n // self.k
+                self.n_k = self.n // self.cfg.k
                 assert (
-                    self.n % self.k == 0
+                    self.n % self.cfg.k == 0
                 ), "length of protein must be divisible by k for k-fold symm design"
             idx = [
                 [
                     i + j * (self.n_k)
-                    for j in range(self.k)
+                    for j in range(self.cfg.k)
                     if i + j * (self.n_k) < self.n
                 ]
                 for i in range(self.n_k)
@@ -189,12 +166,8 @@ class Sampler(object):
                 ), "var idx must only be specified for first symmetric unit in symmetry mode (within first n_k residues)"
 
         # get gt data -- monitor distance to initial sequence
-        if "/" in self.pdb:
-            pdb_idx = self.pdb.rfind("/") + 1
-            pdb_dir = self.pdb[: self.pdb.rfind("/")]
-        else:
-            pdb_idx = 0
-            pdb_dir = "./"
+        # Write the structure to a PDB file
+        chain_structures = {"A": protein.to_biopdb_structure(self.structure)}
         (
             self.gt_atom_coords,
             self.gt_atom_data,
@@ -202,12 +175,7 @@ class Sampler(object):
             res_data,
             self.gt_res_label,
             chis,
-        ) = data.get_pdb_data(
-            self.pdb[pdb_idx:-4],
-            data_dir=pdb_dir,
-            assembly=0,
-            skip_download=1,
-        )
+        ) = data.get_pdb_data(chain_structures)
         self.eval_metrics(self.gt_pose, self.gt_res_label)
 
         # get conditionally independent blocks via greedy k-colring of backbone 'graph'
@@ -217,9 +185,9 @@ class Sampler(object):
         # initialize starting sequence
 
         # random/poly-alanine/poly-valine initialize sequence, pack rotamers
-        self.pose = putil.get_pose(self.pdb)
-        if self.randomize:
-            if (not self.no_init_model) and not (self.ala or self.val):
+        self.pose = protein.to_rosetta_pose(self.structure)
+        if self.cfg.randomize:
+            if (not self.no_init_model) and not (self.cfg.ala or self.cfg.val):
                 # get features --> BB only
                 (
                     res_label,
@@ -230,18 +198,17 @@ class Sampler(object):
                     self.chi_angles_temp,
                     self.chi_mask_temp,
                 ) = sampler_util.get_energy(
-                    self.init_models,
+                    [self.init_model],
                     self.pose,
                     bb_only=1,
-                    log_path=self.log.log_path,
                     include_rotamer_probs=1,
                     use_cuda=self.use_cuda,
                 )
 
                 # set sequence
-                if not self.rotamer_repack:
+                if not self.cfg.repack_only:
                     # sample res from logits
-                    if not self.symmetry:
+                    if not self.cfg.symmetry:
                         res, idx, res_label = self.sample(
                             self.logits_temp, np.arange(len(res_label))
                         )
@@ -260,12 +227,12 @@ class Sampler(object):
                     )
                 else:
                     res = [i for i in self.gt_seq]
-                    if self.symmetry:
+                    if self.cfg.symmetry:
                         res_label = res_label[: self.n_k]
 
                 # sample and set rotamers
-                if self.symmetry:
-                    if not self.rotamer_repack:
+                if self.cfg.symmetry:
+                    if not self.cfg.repack_only:
                         (
                             self.chi_1,
                             self.chi_2,
@@ -275,7 +242,10 @@ class Sampler(object):
                             res_idx,
                         ) = self.sample_rotamer(
                             np.arange(self.n_k),
-                            [res_label[i] for i in range(0, len(res_label), self.k)],
+                            [
+                                res_label[i]
+                                for i in range(0, len(res_label), self.cfg.k)
+                            ],
                             self.chi_feat_temp,
                             bb_only=1,
                         )
@@ -307,7 +277,7 @@ class Sampler(object):
                         self.chi_feat_temp,
                         bb_only=1,
                     )
-                res = [common.atoms.label_res_single_dict[k] for k in res_idx]
+                res = [atoms.label_res_single_dict[k] for k in res_idx]
                 self.pose = self.set_rotamer(
                     self.pose,
                     res,
@@ -322,20 +292,20 @@ class Sampler(object):
 
             # Randomize sequence/rotamers
             else:
-                if not self.rotamer_repack:
+                if not self.cfg.repack_only:
                     random_seq = np.random.choice(20, size=len(self.pose))
-                    if not self.ala and not self.val and self.symmetry:
+                    if not self.cfg.ala and not self.cfg.val and self.cfg.symmetry:
                         # random sequence must be symmetric
                         random_seq = np.concatenate(
-                            [random_seq[: self.n_k] for i in range(self.k)]
+                            [random_seq[: self.n_k] for i in range(self.cfg.k)]
                         )
                         random_seq = random_seq[: len(self.pose)]
                     self.pose, _ = putil.randomize_sequence(
                         random_seq,
                         self.pose,
-                        pack_radius=self.pack_radius,
-                        ala=self.ala,
-                        val=self.val,
+                        pack_radius=self.cfg.pack_radius,
+                        ala=self.cfg.ala,
+                        val=self.cfg.val,
                         resfile_init_seq=self.init_seq_resfile,
                         fixed_idx=self.fixed_idx,
                         var_idx=self.var_idx,
@@ -358,19 +328,13 @@ class Sampler(object):
         ) = sampler_util.get_energy(
             self.models,
             self.pose,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
-        if self.rotamer_repack:
+        if self.cfg.repack_only:
             assert np.all(
                 self.chi_mask == self.gt_chi_mask
             ), "gt and current pose chi masks should be the same when doing rotamer repacking"
-
-        if self.anneal:
-            self.pose.dump_pdb(
-                self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-            )
 
     def init_rosetta_filters(self):
         # initialize pyrosetta filters
@@ -399,15 +363,15 @@ class Sampler(object):
             self.blocks = [[i] for i in np.arange(D.shape[0])]
             self.n_blocks = len(self.blocks)
         else:
-            A = sampler_util.get_graph_from_D(D, self.threshold)
+            A = sampler_util.get_graph_from_D(D, self.cfg.threshold)
             # if symmetry holding --> collapse graph st. all neighbors of node i are neighbors of node i+n//4
-            if self.symmetry:
-                for i in range(self.n_k):  # //self.k): #self.graph.shape[0]):
+            if self.cfg.symmetry:
+                for i in range(self.n_k):  # //self.cfg.k): #self.graph.shape[0]):
                     A[i] = np.sum(
                         np.concatenate(
                             [
                                 A[i + j * self.n_k][None]
-                                for j in range(self.k)
+                                for j in range(self.cfg.k)
                                 if i + j * self.n_k < self.n
                             ]
                         ),
@@ -418,7 +382,7 @@ class Sampler(object):
                         np.concatenate(
                             [
                                 A[:, i + j * self.n_k][None]
-                                for j in range(self.k)
+                                for j in range(self.cfg.k)
                                 if i + j * self.n_k < self.n
                             ]
                         ),
@@ -432,7 +396,7 @@ class Sampler(object):
             nodes = np.arange(A.shape[0])
             np.random.shuffle(nodes)
             # eliminate fixed indices from list
-            if self.symmetry:
+            if self.cfg.symmetry:
                 nodes = [n for n in range(self.n_k)]
             if len(self.fixed_idx) > 0:
                 nodes = [n for n in nodes if n not in self.fixed_idx]
@@ -459,7 +423,7 @@ class Sampler(object):
         self.filter_scores = []
         for n, filter in self.filters:
             self.filter_scores.append((n, filter.score(pose)))
-        if self.rotamer_repack:
+        if self.cfg.repack_only:
             self.chi_rmsd = sum(
                 [
                     automorphic_rmsd(
@@ -471,7 +435,7 @@ class Sampler(object):
         else:
             self.chi_rmsd = 0
         self.seq = pose.sequence()
-        if self.chi_mask is not None and self.rotamer_repack:
+        if self.chi_mask is not None and self.cfg.repack_only:
             chi_error = self.chi_mask * np.sqrt(
                 (np.sin(self.chi_angles) - np.sin(self.gt_chi_angles)) ** 2
                 + (np.cos(self.chi_angles) - np.cos(self.gt_chi_angles)) ** 2
@@ -487,37 +451,37 @@ class Sampler(object):
         logits - tensor where the columns are residue ids, rows are amino acid probabilities
         idx - residue ids
         """
-        constraints, header = self.resfile[0], self.resfile[1]
+        constraints, header = self.cfg.resfile[0], self.cfg.resfile[1]
         # iterate over all residues and check if they're to be constrained
         for i in idx:
             if i in constraints.keys():
                 # set of amino acids to restrict in the tensor
                 aa_to_restrict = constraints[i]
                 for aa in aa_to_restrict:
-                    logits[i, common.atoms.aa_map_inv[aa]] = -99999
+                    logits[i, atoms.aa_map_inv[aa]] = -99999
             elif (
                 header
             ):  # if not in the constraints, apply header (see util/resfile_util.py)
                 aa_to_restrict = header["DEFAULT"]
                 for aa in aa_to_restrict:
-                    logits[i, common.atoms.aa_map_inv[aa]] = -99999
+                    logits[i, atoms.aa_map_inv[aa]] = -99999
         return logits
 
     def enforce_constraints(self, logits, idx):
-        if self.resfile:
+        if self.cfg.resfile:
             logits = self.enforce_resfile(logits, idx)
         # enforce idx-wise constraints
-        if self.no_cys:
+        if self.cfg.no_cys:
             logits = logits[..., :-1]
         no_gly_idx = [i for i in idx if i in self.no_gly_idx]
         # note -- definitely other more careful ways to enforce met/gly constraints
         for i in idx:
-            if self.restrict_gly:
+            if self.cfg.restrict_gly:
                 if i in self.no_gly_idx:
                     logits[i, 18] = torch.min(logits[i])
-            if self.no_met:
+            if self.cfg.no_met:
                 logits[i, 13] = torch.min(logits[i])
-        if self.symmetry:
+        if self.cfg.symmetry:
             # average logits across all symmetry postions
             for i in idx:
                 logits[i] = torch.cat(
@@ -531,11 +495,11 @@ class Sampler(object):
         # feat --> initial env features from conv net
         assert len(idx) == len(res_idx), (len(idx), len(res_idx))
         if bb_only:
-            curr_models = self.init_models
+            curr_models = [self.init_model]
         else:
             curr_models = self.models
 
-        if not self.symmetry:
+        if not self.cfg.symmetry:
             # get residue onehot vector
             res_idx_long = torch.LongTensor(res_idx)
             res_onehot = sampler_util.make_onehot(
@@ -659,7 +623,7 @@ class Sampler(object):
             elif len(var_idx) > 0 and r_idx not in var_idx:
                 continue
             res_i = res[i]
-            chi_i = common.atoms.chi_dict[common.atoms.aa_inv[res_i]]
+            chi_i = atoms.chi_dict[atoms.aa_inv[res_i]]
             if "chi_1" in chi_i.keys():
                 pose.set_chi(1, r_idx + 1, chi_1[i] * (180 / np.pi))
                 assert (
@@ -693,9 +657,9 @@ class Sampler(object):
         assert len(res_idx) == len(idx), (len(idx), len(res_idx))
 
         for k in list(res_idx):
-            res.append(common.atoms.label_res_single_dict[k])
+            res.append(atoms.label_res_single_dict[k])
 
-        if self.symmetry:
+        if self.cfg.symmetry:
             idx_out = []
             for i in idx:
                 idx_out.extend([j for j in self.symmetry_idx[i] if j < self.n])
@@ -720,16 +684,16 @@ class Sampler(object):
         if delta_e < 0:
             accept_prob = 1.0
         else:
-            if self.anneal_start_temp == 0:
+            if self.cfg.anneal_start_temp == 0:
                 accept_prob = 0
             else:
-                accept_prob = torch.exp(-(delta_e) / self.anneal_start_temp).item()
+                accept_prob = torch.exp(-(delta_e) / self.cfg.anneal_start_temp).item()
         return accept_prob
 
     def step_T(self):
         # anneal temperature
-        self.anneal_start_temp = max(
-            self.anneal_start_temp * self.step_rate, self.anneal_final_temp
+        self.cfg.anneal_start_temp = max(
+            self.cfg.anneal_start_temp * self.cfg.step_rate, self.cfg.anneal_final_temp
         )
 
     def step(self):
@@ -741,13 +705,13 @@ class Sampler(object):
         # random idx selection, draw sample
         idx = self.blocks[np.random.choice(self.n_blocks)]
 
-        if not self.rotamer_repack:
+        if not self.cfg.repack_only:
             # sample new residue indices/ residues
             res, idx, res_idx = self.sample(self.logits, idx)
         else:
             # residue idx is fixed (identity fixed) for rotamer repacking
             res = [self.gt_seq[i] for i in idx]
-            res_idx = [common.atoms.aa_map_inv[self.gt_seq[i]] for i in idx]
+            res_idx = [atoms.aa_map_inv[self.gt_seq[i]] for i in idx]
 
         # sample rotamer using precomputed chi_feat vector
         (
@@ -758,17 +722,13 @@ class Sampler(object):
             idx,
             res_idx,
         ) = self.sample_rotamer(idx, res_idx, self.chi_feat)
-        if self.anneal:
-            self.pose = putil.get_pose(
-                self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-            )
 
         # mutate residues, set rotamers
-        res = [common.atoms.label_res_single_dict[k] for k in res_idx]
+        res = [atoms.label_res_single_dict[k] for k in res_idx]
 
-        if not self.use_rosetta_packer:
+        if not self.cfg.use_rosetta_packer:
             # mutate center residue
-            if not self.rotamer_repack:
+            if not self.cfg.repack_only:
                 self.pose_temp = putil.mutate_list(
                     self.pose,
                     idx,
@@ -800,7 +760,7 @@ class Sampler(object):
                 self.pose,
                 idx,
                 res,
-                pack_radius=self.pack_radius,
+                pack_radius=self.cfg.pack_radius,
                 fixed_idx=self.fixed_idx,
                 var_idx=self.var_idx,
                 repack_rotamers=1,
@@ -818,11 +778,10 @@ class Sampler(object):
         ) = sampler_util.get_energy(
             self.models,
             self.pose_temp,
-            log_path=self.log.log_path,
             include_rotamer_probs=1,
             use_cuda=self.use_cuda,
         )
-        if self.anneal:
+        if self.cfg.anneal:
             # simulated annealing accept/reject step
             self.accept_prob = self.sim_anneal_step(
                 self.log_p_mean_temp, self.log_p_mean
@@ -834,10 +793,6 @@ class Sampler(object):
             r = 0
 
         if r < self.accept_prob:
-            if self.anneal:
-                self.pose_temp.dump_pdb(
-                    self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
-                )
             # update pose
             self.pose = self.pose_temp
             (
@@ -862,7 +817,7 @@ class Sampler(object):
 
     def step_anneal(self):
         # ending for step()
-        if self.anneal:
+        if self.cfg.anneal:
             self.step_T()
 
         self.iteration += 1

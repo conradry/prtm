@@ -69,6 +69,7 @@ dependencies:
       - opt-einsum>=3.3.0
       - charset-normalizer
       - colossalai
+      - gdown
       - gitpython
       - huggingface_hub
       - immutabledict

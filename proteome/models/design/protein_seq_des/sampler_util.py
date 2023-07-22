@@ -1,9 +1,11 @@
 import numpy as np
-import proteome.models.design.protein_seq_des.util.canonicalize as canonicalize
-import proteome.models.design.protein_seq_des.util.data as data
-import proteome.models.design.protein_seq_des.util.voxelize as voxelize
+import proteome.models.design.protein_seq_des.canonicalize as canonicalize
+import proteome.models.design.protein_seq_des.data as data
+import proteome.models.design.protein_seq_des.voxelize as voxelize
 import torch
 import torch.nn.functional as F
+from proteome import protein
+from proteome.models.design.protein_seq_des import atoms
 from torch.distributions.categorical import Categorical
 
 
@@ -83,7 +85,7 @@ def get_conv_feat(
     x_data = atom_data_canonicalized
 
     voxels = voxelize.voxelize(
-        x, x_data, n=20, c=len(common.atoms.atoms), dist=10, bb_only=bb_only
+        x, x_data, n=20, c=len(atoms.atoms), dist=10, bb_only=bb_only
     )
     voxels = torch.FloatTensor(voxels)
     bs_i = voxels.size()[0]
@@ -272,15 +274,15 @@ def get_energy_from_feat(
 def get_energy(
     models,
     pose=None,
-    pdb=None,
-    chain="A",
+    chain=None,
+    chain_id="A",
     bb_only=0,
     return_chi=0,
     use_cuda=1,
     log_path="./",
     include_rotamer_probs=0,
 ):
-    if pdb is not None:
+    if chain is not None:
         (
             atom_coords,
             atom_data,
@@ -288,15 +290,11 @@ def get_energy(
             res_data,
             res_label,
             chis,
-        ) = data.get_pdb_data(
-            pdb[pdb.rfind("/") + 1 : -4],
-            data_dir=pdb[: pdb.rfind("/")],
-            skip_download=1,
-            assembly=0,
-        )
+        ) = data.get_pdb_data({chain_id: chain})
     else:
         assert pose is not None, "need to specify pose to calc energy"
-        pose.dump_pdb(log_path + "/" + "curr.pdb")
+        protein_chain = protein.from_rosetta_pose(pose)
+        biopdb_chain = protein.to_biopdb_structure(protein_chain)
         (
             atom_coords,
             atom_data,
@@ -304,7 +302,7 @@ def get_energy(
             res_data,
             res_label,
             chis,
-        ) = data.get_pdb_data("curr", data_dir=log_path, skip_download=1, assembly=0)
+        ) = data.get_pdb_data({chain_id: biopdb_chain})
 
     # get residue and rotamer logits
     (
