@@ -12,9 +12,9 @@ def init_ortho_weights(self):
             torch.nn.init.orthogonal_(module.weight)
 
 
-class seqPred(nn.Module):
+class SeqPred(nn.Module):
     def __init__(self, nic, nf=64, momentum=0.01):
-        super(seqPred, self).__init__()
+        super(SeqPred, self).__init__()
         self.nic = nic
         self.model = nn.Sequential(
             # 20 -- 10
@@ -68,9 +68,7 @@ class seqPred(nn.Module):
             nn.BatchNorm1d(nf * 4, momentum=momentum),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.1),
-            nn.Conv1d(
-                nf * 4, len(atoms.label_res_dict.keys()), 3, 1, 1, bias=False
-            ),
+            nn.Conv1d(nf * 4, len(atoms.label_res_dict.keys()), 3, 1, 1, bias=False),
         )
 
         # chi feat vec -- condition on residue and env feature vector

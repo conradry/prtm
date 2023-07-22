@@ -1,11 +1,12 @@
-from pyrosetta import *
-from rosetta import *
 from proteome.models.design.protein_seq_des import atoms
+from pyrosetta import *
+from pyrosetta.rosetta import *
 
 init("-mute basic -mute core -mute protocols  -ex1 -ex2 -constant_seed")
 
 from pyrosetta.rosetta.core import conformation
 from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
+
 # from pyrosetta.toolbox import pose_from_rcsb, cleanATOM  # , mutate_residue
 from pyrosetta.rosetta.protocols.simple_moves import MutateResidue
 
@@ -34,7 +35,7 @@ def randomize_sequence(
     var_idx=[],
     ala=False,
     val=False,
-    resfile_init_seq=False,
+    resfile_init_seq=None,
     enforce=False,
     repack_rotamers=0,
 ):
@@ -66,7 +67,7 @@ def randomize_sequence(
         res_aa = atoms.aa_map[r]
 
         # resfile hangling: ex. 5 TPIKAA C means set the initial sequence at residue 5 to 'C'
-        if idx in resfile_init_seq.keys():
+        if resfile_init_seq is not None and idx in resfile_init_seq.keys():
             res_aa = resfile_init_seq[idx]
 
         pose = handle_disulfide(pose, idx)

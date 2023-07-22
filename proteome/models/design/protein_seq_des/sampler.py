@@ -5,25 +5,22 @@ import proteome.models.design.protein_seq_des.data as data
 import proteome.models.design.protein_seq_des.pyrosetta_util as putil
 import proteome.models.design.protein_seq_des.resfile_util as resfile_util
 import proteome.models.design.protein_seq_des.sampler_util as sampler_util
-from proteome.models.design.protein_seq_des import atoms
 import torch
+from proteome.models.design.protein_seq_des import atoms, config
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
-from pyrosetta.rosetta.protocols.denovo_design.filters import \
-    ExposedHydrophobicsFilterCreator
+from pyrosetta.rosetta.protocols.denovo_design.filters import (
+    ExposedHydrophobicsFilterCreator,
+)
 from pyrosetta.rosetta.protocols.simple_filters import (
-    BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
+    BuriedUnsatHbondFilterCreator,
+    PackStatFilterCreator,
+)
 from torch.distributions.categorical import Categorical
-from proteome.models.design.protein_seq_des import atoms
-from proteome.models.design.protein_seq_des import config
 
 
 class Sampler(object):
     def __init__(
-        self, 
-        cfg: config.SamplerConfig, 
-        models, 
-        init_models=None, 
-        use_cuda=True
+        self, cfg: config.SamplerConfig, models, init_models=None, use_cuda=True
     ):
         super(Sampler, self).__init__()
         self.models = models
@@ -148,7 +145,7 @@ class Sampler(object):
         )
         self.chi_error = 0
         self.re = putil.score_pose(self.gt_pose)
-        #self.gt_pose.dump_pdb(self.log.log_path + "/" + "gt_" + self.pdb)
+        # self.gt_pose.dump_pdb(self.log.log_path + "/" + "gt_" + self.pdb)
         self.gt_score_terms = self.gt_pose.energies().residue_total_energies_array()
         self.score_terms = list(self.gt_score_terms.dtype.fields)
 
@@ -372,7 +369,7 @@ class Sampler(object):
                 self.chi_mask == self.gt_chi_mask
             ), "gt and current pose chi masks should be the same when doing rotamer repacking"
 
-        #if self.anneal:
+        # if self.anneal:
         #    self.pose.dump_pdb(
         #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
         #    )
@@ -763,7 +760,7 @@ class Sampler(object):
             idx,
             res_idx,
         ) = self.sample_rotamer(idx, res_idx, self.chi_feat)
-        #if self.anneal:
+        # if self.anneal:
         #    self.pose = putil.get_pose(
         #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
         #    )
@@ -838,7 +835,7 @@ class Sampler(object):
             r = 0
 
         if r < self.accept_prob:
-            #if self.anneal:
+            # if self.anneal:
             #    self.pose_temp.dump_pdb(
             #        self.log.log_path + "/" + "curr_pose_%s.pdb" % self.log.ts
             #    )

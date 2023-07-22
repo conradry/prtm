@@ -2,9 +2,9 @@ import numpy as np
 import proteome.models.design.protein_seq_des.canonicalize as canonicalize
 import proteome.models.design.protein_seq_des.data as data
 import proteome.models.design.protein_seq_des.voxelize as voxelize
-from proteome.models.design.protein_seq_des import atoms
 import torch
 import torch.nn.functional as F
+from proteome.models.design.protein_seq_des import atoms
 from torch.distributions.categorical import Categorical
 
 

@@ -7,8 +7,8 @@ import Bio.PDB.vectors
 import numpy as np
 import proteome.models.design.protein_seq_des.canonicalize as canonicalize
 import proteome.models.design.protein_seq_des.voxelize as voxelize
-from proteome.models.design.protein_seq_des import atoms
 import torch
+from proteome.models.design.protein_seq_des import atoms
 from torch.utils import data
 
 CHI_BINS = np.linspace(-np.pi, np.pi, num=25)
@@ -233,9 +233,7 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                 atom_coords.append(c)
                 atom_data.append(index[None])
                 # if atom is BB atom, add to residue_bb_index dictionary
-                if (not skip_res) and (
-                    (res_name in atoms.res_label_dict.keys())
-                ):
+                if (not skip_res) and ((res_name in atoms.res_label_dict.keys())):
                     # map from residue index to atom coordinate
                     residue_bb_index[res_idx][atom.name] = len(atom_coords) - 1
 
@@ -260,12 +258,8 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                         )
                         if (
                             "chi_1"
-                            in atoms.chi_dict[
-                                atoms.label_res_dict[res_type]
-                            ].keys()
-                            and atoms.chi_dict[
-                                atoms.label_res_dict[res_type]
-                            ]["chi_1"]
+                            in atoms.chi_dict[atoms.label_res_dict[res_type]].keys()
+                            and atoms.chi_dict[atoms.label_res_dict[res_type]]["chi_1"]
                             in residue_bb_index[res_idx].keys()
                             and "CB" in residue_bb_index[res_idx].keys()
                         ):
@@ -275,9 +269,9 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                             cg = Bio.PDB.vectors.Vector(
                                 atom_coords[
                                     residue_bb_index[res_idx][
-                                        atoms.chi_dict[
-                                            atoms.label_res_dict[res_type]
-                                        ]["chi_1"]
+                                        atoms.chi_dict[atoms.label_res_dict[res_type]][
+                                            "chi_1"
+                                        ]
                                     ]
                                 ][0]
                             )
@@ -287,12 +281,10 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
 
                             if (
                                 "chi_2"
-                                in atoms.chi_dict[
-                                    atoms.label_res_dict[res_type]
-                                ].keys()
-                                and atoms.chi_dict[
-                                    atoms.label_res_dict[res_type]
-                                ]["chi_2"]
+                                in atoms.chi_dict[atoms.label_res_dict[res_type]].keys()
+                                and atoms.chi_dict[atoms.label_res_dict[res_type]][
+                                    "chi_2"
+                                ]
                                 in residue_bb_index[res_idx].keys()
                             ):
                                 cd = Bio.PDB.vectors.Vector(
@@ -313,18 +305,16 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                                     in atoms.chi_dict[
                                         atoms.label_res_dict[res_type]
                                     ].keys()
-                                    and atoms.chi_dict[
-                                        atoms.label_res_dict[res_type]
-                                    ]["chi_3"]
+                                    and atoms.chi_dict[atoms.label_res_dict[res_type]][
+                                        "chi_3"
+                                    ]
                                     in residue_bb_index[res_idx].keys()
                                 ):
                                     ce = Bio.PDB.vectors.Vector(
                                         atom_coords[
                                             residue_bb_index[res_idx][
                                                 atoms.chi_dict[
-                                                    atoms.label_res_dict[
-                                                        res_type
-                                                    ]
+                                                    atoms.label_res_dict[res_type]
                                                 ]["chi_3"]
                                             ]
                                         ][0]
@@ -349,9 +339,7 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
                                             atom_coords[
                                                 residue_bb_index[res_idx][
                                                     atoms.chi_dict[
-                                                        atoms.label_res_dict[
-                                                            res_type
-                                                        ]
+                                                        atoms.label_res_dict[res_type]
                                                     ]["chi_4"]
                                                 ]
                                             ][0]

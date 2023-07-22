@@ -121,14 +121,9 @@ def check_for_commands(args, command_id, list_id):
     command = args[command_id].upper()
     init_seq = False  # reflect if it's TPIKAA or TNOTAA
     if command in atoms.resfile_commands.keys():
-        constraint = (
-            atoms.resfile_commands["ALLAAwc"]
-            - atoms.resfile_commands[command]
-        )
+        constraint = atoms.resfile_commands["ALLAAwc"] - atoms.resfile_commands[command]
     elif "PIKAA" in command:  # allow only the specified amino acids
-        constraint = atoms.resfile_commands["ALLAAwc"] - set(
-            args[list_id].strip()
-        )
+        constraint = atoms.resfile_commands["ALLAAwc"] - set(args[list_id].strip())
     elif "NOTAA" in command:  # disallow only the specified amino acids
         constraint = set(args[list_id].strip())
 

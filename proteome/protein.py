@@ -404,6 +404,12 @@ def to_pdb(prot: Protein) -> str:
     return "\n".join(pdb_lines)
 
 
+def to_rosetta_pose(prot: Protein):  # can't type hint conditional import
+    from pyrosetta.rosetta.core.import_pose import pose_from_file
+    pdb = to_pdb(prot)
+    return pose_from_file(pdb)
+
+
 def to_modelcif(prot: Protein) -> str:
     """
     Converts a `Protein` instance to a ModelCIF string. Chains with identical modelled coordinates
