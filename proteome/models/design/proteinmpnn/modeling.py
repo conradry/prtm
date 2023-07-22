@@ -117,7 +117,7 @@ class ProteinMPNNForSequenceDesign:
         tied_featurize_output = self._featurize_input(structure)
 
         # Create a random noise for generator
-        noise_vec = torch.randn(tied_featurize_output.chain_M.shape, device=self.device)
+        noise_vec = torch.randn(tied_featurize_output.chain_M.shape, device=self.device)  # type: ignore
         pssm_log_odds_mask = (
             tied_featurize_output.pssm_log_odds_all > inference_config.pssm_threshold
         ).float()

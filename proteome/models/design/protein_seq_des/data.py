@@ -86,68 +86,12 @@ def download_pdb(pdb, data_dir, assembly=1):
     return f
 
 
-def get_pdb_chains(pdb, data_dir, assembly=1, skip_download=0):
-    """Function to load pdb structure via Biopython and extract all chains.
-    Uses biological assembly as default, otherwise gets default pdb.
-
-    Args:
-        pdb (str): pdb ID.
-        data_dir (str): path to pdb directory
-
-    Returns:
-        chains (list of (chain, chain_id)): all pdb chains
-
-    """
-    if not skip_download:
-        f = download_pdb(pdb, data_dir, assembly=assembly)
-
-    if assembly:
-        f = data_dir + "/" + pdb + ".pdb1"
-        if not os.path.isfile(f):
-            f = data_dir + "/" + pdb + ".pdb"
-    else:
-        f = data_dir + "/" + pdb + ".pdb"
-
-    assert os.path.isfile(f)
-    structure = Bio.PDB.PDBParser(QUIET=True).get_structure(pdb, f)
-
-    assert len(structure) > 0, pdb
-
-    # for assemblies -- sometimes chains are represented as different structures
-    if len(structure) > 1:
-        model = structure[0]
-        count = 0
-        for i in range(len(structure)):
-            for c in structure[i].get_chains():
-                try:
-                    c.id = atoms.rename_chains[count]
-                except:
-                    continue
-                count += 1
-                try:
-                    model.add(c)
-                except Bio.PDB.PDBExceptions.PDBConstructionException:
-                    continue
-    else:
-        model = structure[0]
-
-    # special hard-coded case with very large assembly -- not necessary to train on all
-    if "2y26" in pdb:
-        return [
-            (c, c.id) for c in model.get_chains() if c.id in ["B", "A", "E", "C", "D"]
-        ]
-
-    return [(c, c.id) for c in model.get_chains()]
-
-
-def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
+def get_pdb_data(chain_structures):
     """Function to get atom coordinates and atom/residue metadata from pdb structures.
 
     Args:
-        pdb (str): pdb ID
-        data_dir (str): path to pdb directory
-        assembly (int): 0/1 indicator of whether to use biological assembly or default pdb
-        skip_download (int): 0/1 indicator of whether to skip attempt to download pdb from remote server
+        chain_structures : Dict[str, BioPDB.Structure.Structure]
+            Dictionary of chain ID to BioPDB structure.
 
     Returns:
         atom_coords (np.array): num_atoms x 3 coordinates of all retained atoms in structure
@@ -158,11 +102,6 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
 
     """
 
-    # get pdb chain data
-    pdb_chains = get_pdb_chains(
-        pdb, data_dir, assembly=assembly, skip_download=skip_download
-    )
-
     res_idx = 0
     res_data = {}
     atom_coords = []
@@ -172,7 +111,7 @@ def get_pdb_data(pdb, data_dir="", assembly=1, skip_download=0):
     res_label = []
     chis = []
     # iterate over chains
-    for pdb_chain, chain_id in pdb_chains:
+    for chain_id, pdb_chain in chain_structures.items():
         # iterate over residues
         res_data[chain_id] = []
         for res in pdb_chain.get_residues():

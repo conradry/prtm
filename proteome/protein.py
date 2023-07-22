@@ -29,6 +29,7 @@ import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
 from Bio.PDB import PDBParser
+from Bio.PDB.Structure import Structure
 from proteome.constants import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
@@ -72,6 +73,14 @@ class Protein:
 
     # Chain corresponding to each parent
     parents_chain_index: Optional[Sequence[int]] = None
+
+
+def to_biopdb_structure(prot: Protein) -> Structure:
+    """Converts from a `Protein` to a BioPython PDB structure."""
+    pdb_str = to_pdb(prot)
+    pdb_fh = io.StringIO(pdb_str)
+    parser = PDBParser(QUIET=True)
+    return parser.get_structure("none", pdb_fh)
 
 
 def from_pdb_string(
@@ -405,9 +414,29 @@ def to_pdb(prot: Protein) -> str:
 
 
 def to_rosetta_pose(prot: Protein):  # can't type hint conditional import
-    from pyrosetta.rosetta.core.import_pose import pose_from_file
-    pdb = to_pdb(prot)
-    return pose_from_file(pdb)
+    """Converts a protein to a PyRosetta pose."""
+    try:
+        from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
+        from pyrosetta.rosetta.core.pose import Pose
+    except:
+        raise ImportError("PyRosetta is not installed")
+
+    pose = Pose()
+    pdb_str = to_pdb(prot)
+    pose_from_pdbstring(pose, pdb_str)
+    return pose
+
+
+def from_rosetta_pose(pose):  # can't type hint conditional import
+    """Converts a PyRosetta pose to a protein."""
+    try:
+        from pyrosetta.rosetta.std import ostringstream
+    except:
+        raise ImportError("PyRosetta is not installed")
+
+    buffer = ostringstream()
+    pose.dump_pdb(buffer)
+    return from_pdb_string(buffer.str())
 
 
 def to_modelcif(prot: Protein) -> str:
