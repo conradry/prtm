@@ -1,7 +1,7 @@
 import proteome.models.design.protein_seq_des.data as data
 import torch
 import torch.nn as nn
-from proteome.models.design.protein_seq_des import atoms
+from proteome.models.design.protein_seq_des import atoms, config
 
 
 def init_ortho_weights(self):
@@ -13,8 +13,11 @@ def init_ortho_weights(self):
 
 
 class SeqPred(nn.Module):
-    def __init__(self, nic, nf=64, momentum=0.01):
+    def __init__(self, cfg: config.BaselineModelConfig):
         super(SeqPred, self).__init__()
+        nic = cfg.nic
+        nf = cfg.nf
+        momentum = cfg.momemtum
         self.nic = nic
         self.model = nn.Sequential(
             # 20 -- 10

@@ -4,8 +4,8 @@ import proteome.models.design.protein_seq_des.data as data
 import proteome.models.design.protein_seq_des.voxelize as voxelize
 import torch
 import torch.nn.functional as F
-from proteome.models.design.protein_seq_des import atoms
 from proteome import protein
+from proteome.models.design.protein_seq_des import atoms
 from torch.distributions.categorical import Categorical
 
 

@@ -7,22 +7,19 @@ import proteome.models.design.protein_seq_des.pyrosetta_util as putil
 import proteome.models.design.protein_seq_des.resfile_util as resfile_util
 import proteome.models.design.protein_seq_des.sampler_util as sampler_util
 import torch
+from proteome import protein
 from proteome.models.design.protein_seq_des import atoms, config
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
-from pyrosetta.rosetta.protocols.denovo_design.filters import (
-    ExposedHydrophobicsFilterCreator,
-)
+from pyrosetta.rosetta.protocols.denovo_design.filters import \
+    ExposedHydrophobicsFilterCreator
 from pyrosetta.rosetta.protocols.simple_filters import (
-    BuriedUnsatHbondFilterCreator,
-    PackStatFilterCreator,
-)
+    BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
 from torch.distributions.categorical import Categorical
-from proteome import protein
 
 
 class Sampler(object):
     def __init__(
-        self, 
+        self,
         cfg: config.SamplerConfig,
         structure: protein.Protein,
         models: List[torch.nn.Module],
@@ -36,9 +33,9 @@ class Sampler(object):
         self.no_init_model = cfg.no_init_model
 
         # Use CUDA if models do
-        self.use_cuda = list(
-            self.models[0].named_parameters()
-        )[0][1].is_cuda  # check if model is cuda
+        self.use_cuda = list(self.models[0].named_parameters())[0][
+            1
+        ].is_cuda  # check if model is cuda
 
         self.iteration = 0
         assert not (
@@ -127,7 +124,6 @@ class Sampler(object):
         self.score_terms = list(self.gt_score_terms.dtype.fields)
 
         # set no gly indices
-        self.gt_pose.display_secstruct()
         ss = self.gt_pose.secstruct()
         self.no_gly_idx = [i for i in range(len(ss)) if ss[i] != "L"]
         self.n = self.gt_pose.residues.__len__()
@@ -246,7 +242,10 @@ class Sampler(object):
                             res_idx,
                         ) = self.sample_rotamer(
                             np.arange(self.n_k),
-                            [res_label[i] for i in range(0, len(res_label), self.cfg.k)],
+                            [
+                                res_label[i]
+                                for i in range(0, len(res_label), self.cfg.k)
+                            ],
                             self.chi_feat_temp,
                             bb_only=1,
                         )
