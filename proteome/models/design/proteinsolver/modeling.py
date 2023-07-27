@@ -1,17 +1,16 @@
-import random
 import io
-from typing import Optional, Tuple
+from typing import Tuple
 
-import numpy as np
 import torch
 from proteome import protein
 from proteome.models.design.proteinsolver import config
 from proteome.models.design.proteinsolver.proteinnet import ProteinNet
-from proteome.models.design.proteinsolver.protein_structure import extract_seq_and_adj
+from proteome.models.design.proteinsolver.protein_structure import (
+    AMINO_ACIDS, extract_seq_and_adj, row_to_data, transform_edge_attr
+)
 from proteome.models.design.proteinsolver import protein_design
 from proteome.models.folding.openfold.np.relax import cleanup
 from proteome.models.design.proteinsolver.parser import Parser
-from tqdm import tqdm
 
 PS_MODEL_URLS = {
     "model_0": "https://models.proteinsolver.org/v0.1/notebooks/protein_4xEdgeConv_bs4/e12-s1652709-d6610836.state",  # noqa: E501
@@ -26,7 +25,7 @@ def _get_model_config(model_name: str) -> config.ProteinNetConfig:
     return PS_MODEL_CONFIGS[model_name]
 
 
-class ProteinSeqDesForSequenceDesign:
+class ProteinSolverForSequenceDesign:
     def __init__(
         self,
         model_name: str = "model_0",
@@ -70,9 +69,19 @@ class ProteinSeqDesForSequenceDesign:
 
         ps_structure = Parser().get_structure(fixed_pdb.split("\n"))
         adj_data = extract_seq_and_adj(ps_structure, 'A')
-        data = dataset.row_to_data(pdata)
-data = dataset.transform_edge_attr(data)
-data.y = data.x
-x_in = torch.ones_like(data.x) * 20
+        data = row_to_data(adj_data)
+        data = transform_edge_attr(data)
+        data.y = data.x
+        x_placeholder = torch.ones_like(data.x) * 20
 
-        return sequence, total_prob
+        sequence_ids, mean_proba = protein_design.design_protein(
+            self.model, 
+            x_placeholder.to(self.device), 
+            data.edge_index.to(self.device), 
+            data.edge_attr.to(self.device), 
+            cutoff=inference_config.log_prob_cutoff,
+            max_sequences=inference_config.max_sequences,
+        )
+        sequence = "".join([AMINO_ACIDS[i] for i in sequence_ids])
+
+        return sequence, mean_proba

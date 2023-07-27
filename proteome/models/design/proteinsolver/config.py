@@ -1,6 +1,8 @@
 from typing import Optional
 from dataclasses import dataclass
 
+import numpy as np
+
 
 @dataclass
 class ProteinNetConfig:
@@ -13,3 +15,4 @@ class ProteinNetConfig:
 @dataclass
 class InferenceConfig:
     max_sequences: int = 1
+    log_prob_cutoff: float = np.log(0.15)

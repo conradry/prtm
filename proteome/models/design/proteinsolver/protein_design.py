@@ -259,7 +259,7 @@ def _select_residue_for_position(
 
 @torch.no_grad()
 def get_descendents(net, x, x_proba, edge_index, edge_attr, cutoff):
-    index_array = torch.arange(x.size(0))
+    index_array = torch.arange(x.size(0)).to(x.device)
     mask = x == 20
 
     output = net(x, edge_index, edge_attr)
@@ -322,4 +322,4 @@ def design_protein(net, x, edge_index, edge_attr, cutoff, max_sequences=100):
         raise Exception("Failed to design a sequence!")
     else:
         # Return the most likely sequence
-        return results[0].x, results[0].x_proba.sum()
+        return results[0].x, torch.exp(results[0].x_proba.mean())
