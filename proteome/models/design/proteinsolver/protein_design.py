@@ -296,18 +296,15 @@ class PrioritizedItem:
 
 
 @torch.no_grad()
-def design_protein(net, x, edge_index, edge_attr, results, cutoff):
+def design_protein(net, x, edge_index, edge_attr, cutoff, max_sequences=100):
     """Design protein sequences using a search strategy."""
     x_proba = torch.ones_like(x).to(torch.float) * cutoff
     heap = [PrioritizedItem(0, x, x_proba)]
+    results = []
     i = 0
-    while heap:
+    while len(results) <= max_sequences and heap:
         item = heapq.heappop(heap)
-        if i % 1000 == 0:
-            print(
-                f"i: {i}; p: {item.p:.4f}; num missing: {(item.x == 20).sum()}; "
-                f"heap size: {len(heap):7d}; results size: {len(results)}"
-            )
+
         if not (item.x == 20).any():
             results.append(item)
         else:
@@ -316,8 +313,13 @@ def design_protein(net, x, edge_index, edge_attr, results, cutoff):
             )
             for x, x_proba in children:
                 heapq.heappush(heap, PrioritizedItem(-x_proba.sum(), x, x_proba))
-        i += 1
-        if len(heap) > 1_000_000:
-            heap = heap[:700_000]
-            heapq.heapify(heap)
-    return results
+
+        if i > 2000:
+            print(f"Failed to gather 100 results after {i} iterations")
+            break
+
+    if not results:
+        raise Exception("Failed to design a sequence!")
+    else:
+        # Return the most likely sequence
+        return results[0].x, results[0].x_proba.sum()

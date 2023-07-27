@@ -1,8 +1,12 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.design.proteinsolver.edge_conv_mod import (EdgeConvBatch,
-                                                                EdgeConvMod)
 from torch_geometric.utils import remove_self_loops
+
+from proteome.models.design.proteinsolver.edge_conv_mod import (
+    EdgeConvBatch,
+    EdgeConvMod,
+)
+from proteome.models.design.proteinsolver import config 
 
 
 def get_graph_conv_layer(input_size, hidden_size, output_size):
@@ -18,39 +22,39 @@ def get_graph_conv_layer(input_size, hidden_size, output_size):
 
 
 class ProteinNet(nn.Module):
-    def __init__(self, x_input_size, adj_input_size, hidden_size, output_size):
+    def __init__(self, cfg: config.ProteinNetConfig):
         super().__init__()
 
         self.embed_x = nn.Sequential(
-            nn.Embedding(x_input_size, hidden_size),
+            nn.Embedding(cfg.num_in_features, cfg.hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.LayerNorm(hidden_size),
+            nn.Linear(cfg.hidden_size, cfg.hidden_size),
+            nn.LayerNorm(cfg.hidden_size),
         )
 
-        if adj_input_size:
+        if cfg.adj_input_size:
             self.embed_adj = nn.Sequential(
-                nn.Linear(adj_input_size, hidden_size),
+                nn.Linear(cfg.adj_input_size, cfg.hidden_size),
                 nn.ReLU(),
-                nn.Linear(hidden_size, hidden_size),
-                nn.LayerNorm(hidden_size),
+                nn.Linear(cfg.hidden_size, cfg.hidden_size),
+                nn.LayerNorm(cfg.hidden_size),
             )
         else:
             self.embed_adj = None
 
         self.graph_conv_1 = get_graph_conv_layer(
-            (2 + bool(adj_input_size)) * hidden_size, 2 * hidden_size, hidden_size
+            (2 + bool(cfg.adj_input_size)) * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size
         )
         self.graph_conv_2 = get_graph_conv_layer(
-            3 * hidden_size, 2 * hidden_size, hidden_size
+            3 * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size
         )
         self.graph_conv_3 = get_graph_conv_layer(
-            3 * hidden_size, 2 * hidden_size, hidden_size
+            3 * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size
         )
         self.graph_conv_4 = get_graph_conv_layer(
-            3 * hidden_size, 2 * hidden_size, hidden_size
+            3 * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size
         )
-        self.linear_out = nn.Linear(hidden_size, output_size)
+        self.linear_out = nn.Linear(cfg.hidden_size, cfg.num_out_features)
 
     def forward(self, x, edge_index, edge_attr=None):
         x = self.embed_x(x)

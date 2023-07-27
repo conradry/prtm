@@ -5,14 +5,13 @@
 """Parser for PDB files."""
 import logging
 import re
+from abc import ABC, abstractmethod
 from typing import Dict, NamedTuple, Tuple, Union
 
 import numpy as np
 from Bio import File
 from Bio.File import as_handle
-
-from .parser import Parser
-from .structure_builder import StructureBuilder
+from proteome.models.design.proteinsolver.type_definitions import StructureBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +35,7 @@ class AtomData(NamedTuple):
     residue_id: Tuple[str, int, str]
 
 
-# If PDB spec says "COLUMNS 18-20" this means line[17:20]
-
-
-class PDBParser(Parser):
+class Parser:
     """Parse a PDB file and return a Structure object."""
 
     # Private
@@ -75,15 +71,15 @@ class PDBParser(Parser):
 
     # Public methods
 
-    def get_structure(self, filename, structure_id: str = None):
+    def get_structure(self, data, structure_id: str = None):
         """Return the structure.
 
         Arguments:
          - id - string, the id that will be used for the structure
          - file - name of the PDB file OR an open filehandle
         """
-        with as_handle(filename, mode="r") as handle:
-            data = handle.readlines()
+        #with as_handle(filename, mode="r") as handle:
+        #    data = handle.readlines()
 
         self.header, coords_trailer = self._get_header(data)
         if structure_id is None:
