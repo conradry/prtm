@@ -62,6 +62,8 @@ dependencies:
   - tensorboard==2.11.2
   - spyrmsd==0.5.2 
   - python-igraph==0.10.3
+  - pynvml==11.0.0
+  - decorator==5.1.0
   - pip:
       - boto3
       - botocore
