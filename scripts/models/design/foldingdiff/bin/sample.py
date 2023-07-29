@@ -17,13 +17,13 @@ import torch
 from annot_secondary_structures import make_ss_cooccurrence_plot
 from astropy.visualization import LogStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
-from foldingdiff import modelling, plotting, sampling, utils
-from foldingdiff.angles_and_coords import create_new_chain_nerf
-from foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
+from proteome.models.design.foldingdiff import modelling, plotting, sampling, utils
+from proteome.models.design.foldingdiff.angles_and_coords import create_new_chain_nerf
+from proteome.models.design.foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
 from huggingface_hub import snapshot_download
 from matplotlib import pyplot as plt
 # Import data loading code from main training script
-from train import get_train_valid_test_sets
+from proteome.models.design.foldingdiff.train import get_train_valid_test_sets
 
 # :)
 SEED = int(
