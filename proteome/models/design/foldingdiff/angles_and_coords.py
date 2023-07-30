@@ -108,7 +108,6 @@ def canonical_distances_and_dihedrals(
 
 
 def create_new_chain_nerf(
-    out_fname: str,
     dists_and_angles: pd.DataFrame,
     angles_to_set: Optional[List[str]] = None,
     dists_to_set: Optional[List[str]] = None,
@@ -171,15 +170,7 @@ def create_new_chain_nerf(
         if center_coords
         else nerf_builder.cartesian_coords
     )
-    if np.any(np.isnan(coords)):
-        logging.warning(f"Found NaN values, not writing pdb file {out_fname}")
-        return ""
-
-    assert coords.shape == (
-        int(dists_and_angles.shape[0] * 3),
-        3,
-    ), f"Unexpected shape: {coords.shape} for input of {len(dists_and_angles)}"
-    return write_coords_to_pdb(coords, out_fname)
+    return coords.reshape(-1, 3, 3)
 
 
 def write_coords_to_pdb(coords: np.ndarray, out_fname: str) -> str:

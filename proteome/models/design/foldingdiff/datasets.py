@@ -28,8 +28,7 @@ CATH_DIR = LOCAL_DATA_DIR / "cath"
 ALPHAFOLD_DIR = LOCAL_DATA_DIR / "alphafold"
 
 
-from proteome.models.design.foldingdiff import beta_schedules
-from proteome.models.design.foldingdiff import utils
+from proteome.models.design.foldingdiff import beta_schedules, utils
 from proteome.models.design.foldingdiff.angles_and_coords import (
     EXHAUSTIVE_ANGLES, EXHAUSTIVE_DISTS, canonical_distances_and_dihedrals,
     extract_backbone_coords)

@@ -16,8 +16,7 @@ from typing import *
 
 import pytorch_lightning as pl
 import torch
-from proteome.models.design.foldingdiff import utils
-from proteome.models.design.foldingdiff import nerf
+from proteome.models.design.foldingdiff import config, nerf, utils
 from proteome.models.design.foldingdiff.datasets import \
     FEATURE_SET_NAMES_TO_ANGULARITY
 from torch import nn
@@ -363,9 +362,7 @@ class BertForDiffusionBase(BertPreTrainedModel):
     }
     angular_loss_fn_dict = {
         "l1": radian_l1_loss,
-        "smooth_l1": functools.partial(
-            radian_smooth_l1_loss, beta=torch.pi / 10
-        ),
+        "smooth_l1": functools.partial(radian_smooth_l1_loss, beta=torch.pi / 10),
     }
     # To have legacy models still work with these
     loss_autocorrect_dict = {
@@ -374,25 +371,21 @@ class BertForDiffusionBase(BertPreTrainedModel):
 
     def __init__(
         self,
-        config,
-        ft_is_angular: List[bool] = [False, True, True, True],
-        ft_names: Optional[List[str]] = None,
-        time_encoding: TIME_ENCODING = "gaussian_fourier",
-        decoder: DECODER_HEAD = "mlp",
+        cfg: config.FoldingDiffConfig,
     ) -> None:
         """
         dim should be the dimension of the inputs
         """
-        super().__init__(config)
-        self.config = config
-        if self.config.is_decoder:
+        super().__init__(cfg.bert_config)
+        self.bert_cfg = cfg.bert_config
+        if self.bert_cfg.is_decoder:
             raise NotImplementedError
-        self.ft_is_angular = ft_is_angular
-        n_inputs = len(ft_is_angular)
+        self.ft_is_angular = cfg.ft_is_angular
+        n_inputs = len(cfg.ft_is_angular)
         self.n_inputs = n_inputs
 
-        if ft_names is not None:
-            self.ft_names = ft_names
+        if cfg.ft_names is not None:
+            self.ft_names = cfg.ft_names
         else:
             self.ft_names = [f"ft{i}" for i in range(n_inputs)]
         assert (
@@ -401,26 +394,26 @@ class BertForDiffusionBase(BertPreTrainedModel):
 
         # Needed to project the low dimensional input to hidden dim
         self.inputs_to_hidden_dim = nn.Linear(
-            in_features=n_inputs, out_features=config.hidden_size
+            in_features=n_inputs, out_features=self.bert_cfg.hidden_size
         )
-        self.embeddings = BertEmbeddings(config)
-        self.encoder = BertEncoder(config)
+        self.embeddings = BertEmbeddings(self.bert_cfg)
+        self.encoder = BertEncoder(self.bert_cfg)
 
         # Set up the network to project token representation to our four outputs
-        if decoder == "linear":
-            self.token_decoder = nn.Linear(config.hidden_size, n_inputs)
-        elif decoder == "mlp":
-            self.token_decoder = AnglesPredictor(config.hidden_size, n_inputs)
+        if cfg.decoder == "linear":
+            self.token_decoder = nn.Linear(self.bert_cfg.hidden_size, n_inputs)
+        elif cfg.decoder == "mlp":
+            self.token_decoder = AnglesPredictor(self.bert_cfg.hidden_size, n_inputs)
         else:
-            raise ValueError(f"Unrecognized decoder: {decoder}")
+            raise ValueError(f"Unrecognized decoder: {cfg.decoder}")
 
         # Set up the time embedder
-        if time_encoding == "gaussian_fourier":
-            self.time_embed = GaussianFourierProjection(config.hidden_size)
-        elif time_encoding == "sinusoidal":
-            self.time_embed = SinusoidalPositionEmbeddings(config.hidden_size)
+        if cfg.time_encoding == "gaussian_fourier":
+            self.time_embed = GaussianFourierProjection(self.bert_cfg.hidden_size)
+        elif cfg.time_encoding == "sinusoidal":
+            self.time_embed = SinusoidalPositionEmbeddings(self.bert_cfg.hidden_size)
         else:
-            raise ValueError(f"Unknown time encoding: {time_encoding}")
+            raise ValueError(f"Unknown time encoding: {cfg.time_encoding}")
         pl.utilities.rank_zero_info(f"Using time embedding: {self.time_embed}")
 
         # Initialize weights and apply final processing
@@ -549,15 +542,15 @@ class BertForDiffusionBase(BertPreTrainedModel):
         output_attentions = (
             output_attentions
             if output_attentions is not None
-            else self.config.output_attentions
+            else self.bert_cfg.output_attentions
         )
         output_hidden_states = (
             output_hidden_states
             if output_hidden_states is not None
-            else self.config.output_hidden_states
+            else self.bert_cfg.output_hidden_states
         )
         return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
+            return_dict if return_dict is not None else self.bert_cfg.use_return_dict
         )
 
         input_shape = inputs.size()
@@ -592,9 +585,9 @@ class BertForDiffusionBase(BertPreTrainedModel):
         # attention_probs has shape bsz x n_heads x N x N
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
-        # msk = torch.ones(size=(self.config.num_attention_heads,))
+        # msk = torch.ones(size=(self.bert_cfg.num_attention_heads,))
         # msk = msk.type_as(inputs)
-        # head_mask = self.get_head_mask(msk, self.config.num_hidden_layers)
+        # head_mask = self.get_head_mask(msk, self.bert_cfg.num_hidden_layers)
 
         assert len(inputs.shape) == 3  # batch_size, seq_length, features
         inputs_upscaled = self.inputs_to_hidden_dim(inputs)  # Batch * seq_len * dim

@@ -83,6 +83,40 @@ def to_biopdb_structure(prot: Protein) -> Structure:
     return parser.get_structure("none", pdb_fh)
 
 
+def to_ca_only_protein(protein: Protein) -> Protein:
+    """
+    Strip out all atoms except CA
+    """
+    atom_indices = [residue_constants.atom_order["CA"]]
+    return Protein(
+        atom_positions=protein.atom_positions[:, atom_indices],
+        atom_mask=protein.atom_mask[:, atom_indices],
+        aatype=protein.aatype,
+        residue_index=protein.residue_index,
+        chain_index=protein.chain_index,
+        b_factors=protein.b_factors[:, atom_indices],
+        parents=protein.parents,
+        parents_chain_index=protein.parents_chain_index,
+    )
+
+
+def to_backbone_only_protein(protein: Protein) -> Protein:
+    """
+    Strip out all atoms except those in the backbone [N, CA, C, O]
+    """
+    atom_indices = [residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]]
+    return Protein(
+        atom_positions=protein.atom_positions[:, atom_indices],
+        atom_mask=protein.atom_mask[:, atom_indices],
+        aatype=protein.aatype,
+        residue_index=protein.residue_index,
+        chain_index=protein.chain_index,
+        b_factors=protein.b_factors[:, atom_indices],
+        parents=protein.parents,
+        parents_chain_index=protein.parents_chain_index,
+    )
+
+
 def from_pdb_string(
     pdb_str: str, 
     chain_id: Optional[str] = None, 
@@ -172,25 +206,23 @@ def from_pdb_string(
     chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
     chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
 
-    if ca_only:
-        # Strip out all atoms except CA
-        atom_indices = [residue_constants.atom_order["CA"]]
-    elif backbone_only:
-        # Strip out all atoms except N, CA, C, O
-        atom_indices = [residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]]
-    else:
-        atom_indices = list(residue_constants.atom_order.values())
-
-    return Protein(
-        atom_positions=np.array(atom_positions)[:, atom_indices],
-        atom_mask=np.array(atom_mask)[:, atom_indices],
+    protein = Protein(
+        atom_positions=np.array(atom_positions),
+        atom_mask=np.array(atom_mask),
         aatype=np.array(aatype),
         residue_index=np.array(residue_index),
         chain_index=chain_index,
-        b_factors=np.array(b_factors)[:, atom_indices],
+        b_factors=np.array(b_factors),
         parents=parents,
         parents_chain_index=parents_chain_index,
     )
+
+    if ca_only:
+        return to_ca_only_protein(protein)
+    elif backbone_only:
+        return to_backbone_only_protein(protein)
+    else:
+        return protein
 
 
 def from_proteinnet_string(proteinnet_str: str) -> Protein:
