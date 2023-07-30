@@ -28,9 +28,7 @@ CATH_DIR = LOCAL_DATA_DIR / "cath"
 ALPHAFOLD_DIR = LOCAL_DATA_DIR / "alphafold"
 
 
-from proteome.models.design.foldingdiff import beta_schedules
-from proteome.models.design.foldingdiff import custom_metrics as cm
-from proteome.models.design.foldingdiff import utils
+from proteome.models.design.foldingdiff import beta_schedules, utils
 from proteome.models.design.foldingdiff.angles_and_coords import (
     EXHAUSTIVE_ANGLES, EXHAUSTIVE_DISTS, canonical_distances_and_dihedrals,
     extract_backbone_coords)
@@ -66,6 +64,18 @@ FEATURE_SET_NAMES_TO_FEATURE_NAMES = {
     "canonical-minimal-angles": ["phi", "psi", "omega", "tau"],
     "cart-coords": ["x", "y", "z"],
 }
+
+
+def wrapped_mean(x: np.ndarray, axis=None) -> float:
+    """
+    Wrap the mean function about [-pi, pi]
+    """
+    # https://rosettacode.org/wiki/Averages/Mean_angle
+    sin_x = np.sin(x)
+    cos_x = np.cos(x)
+
+    retval = np.arctan2(np.nanmean(sin_x, axis=axis), np.nanmean(cos_x, axis=axis))
+    return retval
 
 
 class CathCanonicalAnglesDataset(Dataset):
@@ -207,7 +217,7 @@ class CathCanonicalAnglesDataset(Dataset):
             # Note that these angles are not yet padded
             structures_concat = np.concatenate([s["angles"] for s in self.structures])
             assert structures_concat.ndim == 2
-            self.means = cm.wrapped_mean(structures_concat, axis=0)
+            self.means = wrapped_mean(structures_concat, axis=0)
             assert self.means.shape == (structures_concat.shape[1],)
             # Subtract the mean and perform modulo where values are radial
             logging.info(

@@ -1,25 +1,15 @@
 """
 Code for sampling from diffusion models
 """
-import json
 import logging
-import multiprocessing as mp
-import os
-import tempfile
-from pathlib import Path
 from typing import *
 
 import numpy as np
-import pandas as pd
 import torch
-from huggingface_hub import snapshot_download
-from proteome.models.design.foldingdiff import angles_and_coords as ac
 from proteome.models.design.foldingdiff import beta_schedules
 from proteome.models.design.foldingdiff import datasets as dsets
-from proteome.models.design.foldingdiff import (modelling, sampling, tmalign,
-                                                utils)
+from proteome.models.design.foldingdiff import utils
 from torch import nn
-from torch.utils.data import default_collate
 from tqdm.auto import tqdm
 
 
@@ -211,135 +201,3 @@ def sample(
             )
 
     return retval
-
-
-def sample_simple(
-    model_dir: str, n: int = 10, sweep_lengths: Tuple[int, int] = (50, 128)
-) -> List[pd.DataFrame]:
-    """
-    Simple wrapper on sample to automatically load in the model and dummy dataset
-    Primarily for gradio integration
-    """
-    if utils.is_huggingface_hub_id(model_dir):
-        model_dir = snapshot_download(model_dir)
-    assert os.path.isdir(model_dir)
-
-    with open(os.path.join(model_dir, "training_args.json")) as source:
-        training_args = json.load(source)
-
-    model = modelling.BertForDiffusionBase.from_dir(model_dir)
-    if torch.cuda.is_available():
-        model = model.to("cuda:0")
-
-    dummy_dset = dsets.AnglesEmptyDataset.from_dir(model_dir)
-    dummy_noised_dset = dsets.NoisedAnglesDataset(
-        dset=dummy_dset,
-        dset_key="coords" if training_args == "cart-cords" else "angles",
-        timesteps=training_args["timesteps"],
-        exhaustive_t=False,
-        beta_schedule=training_args["variance_schedule"],
-        nonangular_variance=1.0,
-        angular_variance=training_args["variance_scale"],
-    )
-
-    sampled = sample(
-        model, dummy_noised_dset, n=n, sweep_lengths=sweep_lengths, disable_pbar=True
-    )
-    final_sampled = [s[-1] for s in sampled]
-    sampled_dfs = [
-        pd.DataFrame(s, columns=dummy_noised_dset.feature_names["angles"])
-        for s in final_sampled
-    ]
-    return sampled_dfs
-
-
-def _score_angles(
-    reconst_angles: pd.DataFrame, truth_angles: pd.DataFrame, truth_coords_pdb: str
-) -> Tuple[float, float]:
-    """
-    Helper function to scores sets of angles
-    """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        truth_path = Path(tmpdir) / "truth.pdb"
-        reconst_path = Path(tmpdir) / "reconst.pdb"
-
-        truth_pdb = ac.create_new_chain_nerf(str(truth_path), truth_angles)
-        reconst_pdb = ac.create_new_chain_nerf(str(reconst_path), reconst_angles)
-
-        # Calculate WRT the truth angles
-        score = tmalign.run_tmalign(reconst_pdb, truth_pdb)
-
-        score_coord = tmalign.run_tmalign(reconst_pdb, truth_coords_pdb)
-    return score, score_coord
-
-
-@torch.no_grad()
-def get_reconstruction_error(
-    model: nn.Module, dset, noise_timesteps: int = 250, bs: int = 512
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Get the reconstruction error when adding <noise_timesteps> noise to the idx-th
-    item in the dataset.
-    """
-    device = next(model.parameters()).device
-    model.eval()
-
-    recont_angle_sets = []
-    truth_angle_sets = []
-    truth_pdb_files = []
-    for idx_batch in tqdm(utils.seq_to_groups(list(range(len(dset))), bs)):
-        batch = default_collate(
-            [
-                {
-                    k: v.to(device)
-                    for k, v in dset.__getitem__(idx, use_t_val=noise_timesteps).items()
-                }
-                for idx in idx_batch
-            ]
-        )
-        img = batch["corrupted"].clone()
-        assert img.ndim == 3
-
-        # Record the actual files containing raw coordinates
-        for i in idx_batch:
-            truth_pdb_files.append(dset.filenames[i])
-
-        # Run the diffusion model for noise_timesteps steps
-        for i in tqdm(list(reversed(list(range(0, noise_timesteps))))):
-            img = sampling.p_sample(
-                model=model,
-                x=img,
-                t=torch.full((len(idx_batch),), fill_value=i, dtype=torch.long).to(
-                    device
-                ),
-                seq_lens=batch["lengths"],
-                t_index=i,
-                betas=dset.alpha_beta_terms["betas"],
-            )
-            img = utils.modulo_with_wrapped_range(img)
-
-        # Finished reconstruction, subset to lengths and add to running list
-        for i, l in enumerate(batch["lengths"].squeeze()):
-            recont_angle_sets.append(
-                pd.DataFrame(img[i, :l].cpu().numpy(), columns=ac.EXHAUSTIVE_ANGLES)
-            )
-            truth_angle_sets.append(
-                pd.DataFrame(
-                    batch["angles"][i, :l].cpu().numpy(), columns=ac.EXHAUSTIVE_ANGLES
-                )
-            )
-
-    # Get the reconstruction error as a TM score
-    logging.info(
-        f"Calculating TM scores for reconstruction error with {mp.cpu_count()} processes"
-    )
-    pool = mp.Pool(processes=mp.cpu_count())
-    results = pool.starmap(
-        _score_angles,
-        zip(recont_angle_sets, truth_angle_sets, truth_pdb_files),
-        chunksize=10,
-    )
-    pool.close()
-    pool.join()
-    scores, coord_scores = zip(*results)
-    return np.array(scores), np.array(coord_scores)

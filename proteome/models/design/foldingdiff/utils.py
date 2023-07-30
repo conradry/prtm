@@ -104,19 +104,6 @@ def modulo_with_wrapped_range(
     # Shift back down
     retval = vals_shifted_mod + range_min
 
-    # Checks
-    # print("Mod return", vals, " --> ", retval)
-    # if isinstance(retval, torch.Tensor):
-    #     notnan_idx = ~torch.isnan(retval)
-    #     assert torch.all(retval[notnan_idx] >= range_min)
-    #     assert torch.all(retval[notnan_idx] < range_max)
-    # else:
-    #     assert (
-    #         np.nanmin(retval) >= range_min
-    #     ), f"Illegal value: {np.nanmin(retval)} < {range_min}"
-    #     assert (
-    #         np.nanmax(retval) <= range_max
-    #     ), f"Illegal value: {np.nanmax(retval)} > {range_max}"
     return retval
 
 
