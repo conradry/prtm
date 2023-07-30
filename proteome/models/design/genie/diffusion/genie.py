@@ -3,13 +3,12 @@ from proteome.models.design.genie.diffusion.diffusion import Diffusion
 from proteome.models.design.genie.diffusion.schedule import get_betas
 from proteome.models.design.genie.utils.affine_utils import T
 from proteome.models.design.genie.utils.geo_utils import compute_frenet_frames
-from proteome.models.design.genie.utils.loss import rmsd
 
 
 class Genie(Diffusion):
     def setup_schedule(self):
         self.betas = get_betas(
-            self.config.diffusion["n_timestep"], self.config.diffusion["schedule"]
+            self.cfg.diffusion.n_timestep, self.cfg.diffusion.schedule
         ).to(self.device)
         self.alphas = 1.0 - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, 0)
@@ -54,7 +53,7 @@ class Genie(Diffusion):
 
     def sample_timesteps(self, num_samples):
         return torch.randint(
-            0, self.config.diffusion["n_timestep"], size=(num_samples,)
+            0, self.cfg.diffusion.n_timestep, size=(num_samples,)
         ).to(self.device)
 
     def sample_frames(self, mask):
@@ -120,10 +119,3 @@ class Genie(Diffusion):
             rots = compute_frenet_frames(trans, mask)
 
             return T(rots.detach(), trans.detach())
-
-    def loss_fn(self, tnoise, ts, s, mask):
-        noise_pred_trans = ts.trans - self.model(ts, s, mask).trans
-
-        trans_loss = rmsd(noise_pred_trans, tnoise.trans, mask)
-
-        return trans_loss

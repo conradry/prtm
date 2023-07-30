@@ -6,71 +6,49 @@ from proteome.models.design.genie.model.single_feature_net import \
 from proteome.models.design.genie.model.structure_net import StructureNet
 from torch import nn
 
+from proteome.models.design.genie import config
+
 
 class Denoiser(nn.Module):
     def __init__(
-        self,
-        c_s,
-        c_p,
-        n_timestep,
-        c_pos_emb,
-        c_timestep_emb,
-        relpos_k,
-        template_type,
-        n_pair_transform_layer,
-        include_mul_update,
-        include_tri_att,
-        c_hidden_mul,
-        c_hidden_tri_att,
-        n_head_tri,
-        tri_dropout,
-        pair_transition_n,
-        n_structure_layer,
-        n_structure_block,
-        c_hidden_ipa,
-        n_head_ipa,
-        n_qk_point,
-        n_v_point,
-        ipa_dropout,
-        n_structure_transition_layer,
-        structure_transition_dropout,
+        self, cfg: config.GenieConfig, n_timestep: int
     ):
         super(Denoiser, self).__init__()
 
         self.single_feature_net = SingleFeatureNet(
-            c_s, n_timestep, c_pos_emb, c_timestep_emb
+            cfg.c_s, n_timestep, cfg.c_pos_emb, cfg.c_timestep_emb
         )
 
-        self.pair_feature_net = PairFeatureNet(c_s, c_p, relpos_k, template_type)
+        self.pair_feature_net = PairFeatureNet(cfg.c_s, cfg.c_p, cfg.relpos_k, cfg.template_type)
 
         self.pair_transform_net = (
             PairTransformNet(
-                c_p,
-                n_pair_transform_layer,
-                include_mul_update,
-                include_tri_att,
-                c_hidden_mul,
-                c_hidden_tri_att,
-                n_head_tri,
-                tri_dropout,
-                pair_transition_n,
+                cfg.c_p,
+                cfg.n_pair_transform_layer,
+                cfg.include_mul_update,
+                cfg.include_tri_att,
+                cfg.c_hidden_mul,
+                cfg.c_hidden_tri_att,
+                cfg.n_head_tri,
+                cfg.tri_dropout,
+                cfg.pair_transition_n,
             )
-            if n_pair_transform_layer > 0
+            if cfg.n_pair_transform_layer > 0
             else None
         )
 
         self.structure_net = StructureNet(
-            c_s,
-            c_p,
-            n_structure_layer,
-            n_structure_block,
-            c_hidden_ipa,
-            n_head_ipa,
-            n_qk_point,
-            n_v_point,
-            ipa_dropout,
-            n_structure_transition_layer,
-            structure_transition_dropout,
+            cfg.c_s,
+            cfg.c_p,
+            cfg.n_structure_layer,
+            cfg.n_structure_block,
+            cfg.c_hidden_ipa,
+            cfg.n_head_ipa,
+            cfg.n_qk_point,
+            cfg.n_v_point,
+            cfg.ipa_dropout,
+            cfg.n_structure_transition_layer,
+            cfg.structure_transition_dropout,
         )
 
     def forward(self, ts, timesteps, mask):
