@@ -1,8 +1,7 @@
-from proteome.models.design.genie.model.modules.backbone_update import \
-    BackboneUpdate
-from proteome.models.design.genie.model.modules.invariant_point_attention import \
+from proteome.models.design.genie.modules.backbone_update import BackboneUpdate
+from proteome.models.design.genie.modules.invariant_point_attention import \
     InvariantPointAttention
-from proteome.models.design.genie.model.modules.structure_transition import \
+from proteome.models.design.genie.modules.structure_transition import \
     StructureTransition
 from torch import nn
 

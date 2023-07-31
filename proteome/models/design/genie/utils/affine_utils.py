@@ -255,8 +255,8 @@ class T:
         norm = torch.sqrt(eps + c_x**2 + c_y**2)
         sin_c1 = -c_y / norm
         cos_c1 = c_x / norm
-        zeros = sin_c1.new_zeros(sin_c1.shape)
-        ones = sin_c1.new_ones(sin_c1.shape)
+        sin_c1.new_zeros(sin_c1.shape)
+        sin_c1.new_ones(sin_c1.shape)
 
         c1_rots = sin_c1.new_zeros((*sin_c1.shape, 3, 3))
         c1_rots[..., 0, 0] = cos_c1
