@@ -36,5 +36,13 @@ class ModelConfig:
 
 @dataclass
 class GenieConfig:
-    model: ModelConfig
-    diffusion: DiffusionConfig
+    model: ModelConfig = ModelConfig()
+    diffusion: DiffusionConfig = DiffusionConfig()
+    max_seq_len: int = 128
+
+
+@dataclass
+class InferenceConfig:
+    seq_len: int = 128
+    batch_size: int = 1
+    verbose: bool = True

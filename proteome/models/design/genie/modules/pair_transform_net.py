@@ -1,7 +1,6 @@
-from proteome.models.design.genie.modules.dropout import (
-    DropoutColumnwise, DropoutRowwise)
-from proteome.models.design.genie.modules.pair_transition import \
-    PairTransition
+from proteome.models.design.genie.modules.dropout import (DropoutColumnwise,
+                                                          DropoutRowwise)
+from proteome.models.design.genie.modules.pair_transition import PairTransition
 from proteome.models.design.genie.modules.triangular_attention import (
     TriangleAttentionEndingNode, TriangleAttentionStartingNode)
 from proteome.models.design.genie.modules.triangular_multiplicative_update import (

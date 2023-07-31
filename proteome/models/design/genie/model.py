@@ -1,25 +1,25 @@
-from proteome.models.design.genie.model.pair_feature_net import PairFeatureNet
-from proteome.models.design.genie.model.pair_transform_net import \
-    PairTransformNet
-from proteome.models.design.genie.model.single_feature_net import \
-    SingleFeatureNet
-from proteome.models.design.genie.model.structure_net import StructureNet
-from torch import nn
-
 from proteome.models.design.genie import config
+from proteome.models.design.genie.modules.pair_feature_net import \
+    PairFeatureNet
+from proteome.models.design.genie.modules.pair_transform_net import \
+    PairTransformNet
+from proteome.models.design.genie.modules.single_feature_net import \
+    SingleFeatureNet
+from proteome.models.design.genie.modules.structure_net import StructureNet
+from torch import nn
 
 
 class Denoiser(nn.Module):
-    def __init__(
-        self, cfg: config.GenieConfig, n_timestep: int
-    ):
+    def __init__(self, cfg: config.GenieConfig, n_timestep: int):
         super(Denoiser, self).__init__()
 
         self.single_feature_net = SingleFeatureNet(
             cfg.c_s, n_timestep, cfg.c_pos_emb, cfg.c_timestep_emb
         )
 
-        self.pair_feature_net = PairFeatureNet(cfg.c_s, cfg.c_p, cfg.relpos_k, cfg.template_type)
+        self.pair_feature_net = PairFeatureNet(
+            cfg.c_s, cfg.c_p, cfg.relpos_k, cfg.template_type
+        )
 
         self.pair_transform_net = (
             PairTransformNet(

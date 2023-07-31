@@ -18,7 +18,7 @@ from functools import partialmethod
 
 import torch
 import torch.nn as nn
-from proteome.models.design.genie.model.modules.primitives import Linear
+from proteome.models.design.genie.modules.primitives import Linear
 from proteome.models.design.genie.utils.tensor_utils import permute_final_dims
 
 

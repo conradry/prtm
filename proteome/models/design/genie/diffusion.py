@@ -2,13 +2,11 @@ import math
 from abc import ABC, abstractmethod
 
 import torch
-from tqdm import tqdm
-
 from proteome.models.design.genie import config
-from proteome.models.design.genie.model.model import Denoiser
-from proteome.models.design.genie.diffusion.schedule import get_betas
+from proteome.models.design.genie.model import Denoiser
 from proteome.models.design.genie.utils.affine_utils import T
 from proteome.models.design.genie.utils.geo_utils import compute_frenet_frames
+from tqdm import tqdm
 
 
 def get_betas(n_timestep, schedule):
@@ -34,15 +32,13 @@ def cosine_beta_schedule(n_timestep):
     return torch.clip(betas, 0, 0.999)
 
 
-class Diffusion(ABC):
+class Diffusion(torch.nn.Module, ABC):
     def __init__(self, cfg: config.GenieConfig):
         super(Diffusion, self).__init__()
 
         self.cfg = cfg
 
-        self.model = Denoiser(
-            self.config.model, n_timestep=self.config.diffusion.n_timestep
-        )
+        self.model = Denoiser(self.cfg.model, n_timestep=self.cfg.diffusion.n_timestep)
 
         self.setup = False
 
@@ -82,18 +78,19 @@ class Diffusion(ABC):
         raise NotImplemented
 
     def p_sample_loop(self, mask, verbose=True):
+        device = list(self.model.parameters())[0].device
         if not self.setup:
             self.setup_schedule()
             self.setup = True
         ts = self.sample_frames(mask)
         ts_seq = [ts]
         for i in tqdm(
-            reversed(range(self.config.diffusion["n_timestep"])),
+            reversed(range(self.cfg.diffusion.n_timestep)),
             desc="sampling loop time step",
-            total=self.config.diffusion["n_timestep"],
+            total=self.cfg.diffusion.n_timestep,
             disable=not verbose,
         ):
-            s = torch.Tensor([i] * mask.shape[0]).long().to(self.device)
+            s = torch.Tensor([i] * mask.shape[0]).long().to(device)
             ts = self.p(ts, s, mask)
             ts_seq.append(ts)
         return ts_seq
@@ -101,13 +98,14 @@ class Diffusion(ABC):
 
 class Genie(Diffusion):
     def setup_schedule(self):
+        device = list(self.model.parameters())[0].device
         self.betas = get_betas(
             self.cfg.diffusion.n_timestep, self.cfg.diffusion.schedule
-        ).to(self.device)
+        ).to(device)
         self.alphas = 1.0 - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, 0)
         self.alphas_cumprod_prev = torch.cat(
-            [torch.Tensor([1.0]).to(self.device), self.alphas_cumprod[:-1]]
+            [torch.Tensor([1.0]).to(device), self.alphas_cumprod[:-1]]
         )
         self.one_minus_alphas_cumprod = 1.0 - self.alphas_cumprod
         self.one_minus_alphas_cumprod_prev = 1.0 - self.alphas_cumprod_prev
@@ -146,29 +144,32 @@ class Genie(Diffusion):
         return T(rots, trans), mask
 
     def sample_timesteps(self, num_samples):
-        return torch.randint(
-            0, self.cfg.diffusion.n_timestep, size=(num_samples,)
-        ).to(self.device)
+        device = list(self.model.parameters())[0].device
+        return torch.randint(0, self.cfg.diffusion.n_timestep, size=(num_samples,)).to(
+            device
+        )
 
     def sample_frames(self, mask):
-        trans = torch.randn((mask.shape[0], mask.shape[1], 3)).to(self.device)
+        device = list(self.model.parameters())[0].device
+        trans = torch.randn((mask.shape[0], mask.shape[1], 3)).to(device)
         trans = trans * mask.unsqueeze(-1)
         rots = compute_frenet_frames(trans, mask)
         return T(rots, trans)
 
     def q(self, t0, s, mask):
         # [b, n_res, 3]
+        device = list(self.model.parameters())[0].device
         trans_noise = torch.randn_like(t0.trans) * mask.unsqueeze(-1)
         rots_noise = (
             torch.eye(3)
             .view(1, 1, 3, 3)
             .repeat(t0.shape[0], t0.shape[1], 1, 1)
-            .to(self.device)
+            .to(device)
         )
 
         trans = (
-            self.sqrt_alphas_cumprod[s].view(-1, 1, 1).to(self.device) * t0.trans
-            + self.sqrt_one_minus_alphas_cumprod[s].view(-1, 1, 1).to(self.device)
+            self.sqrt_alphas_cumprod[s].view(-1, 1, 1).to(device) * t0.trans
+            + self.sqrt_one_minus_alphas_cumprod[s].view(-1, 1, 1).to(device)
             * trans_noise
         )
         rots = compute_frenet_frames(trans, mask)
@@ -176,10 +177,11 @@ class Genie(Diffusion):
         return T(rots, trans), T(rots_noise, trans_noise)
 
     def p(self, ts, s, mask):
+        device = list(self.model.parameters())[0].device
         # [b, 1, 1]
         w_noise = (
-            (1.0 - self.alphas[s].to(self.device))
-            / self.sqrt_one_minus_alphas_cumprod[s].to(self.device)
+            (1.0 - self.alphas[s].to(device))
+            / self.sqrt_one_minus_alphas_cumprod[s].to(device)
         ).view(-1, 1, 1)
 
         # [b, n_res]
@@ -190,7 +192,7 @@ class Genie(Diffusion):
         noise_pred = T(noise_pred_rots, noise_pred_trans)
 
         # [b, n_res, 3]
-        trans_mean = (1.0 / self.sqrt_alphas[s]).view(-1, 1, 1).to(self.device) * (
+        trans_mean = (1.0 / self.sqrt_alphas[s]).view(-1, 1, 1).to(device) * (
             ts.trans - w_noise * noise_pred.trans
         )
         trans_mean = trans_mean * mask.unsqueeze(-1)
@@ -200,10 +202,10 @@ class Genie(Diffusion):
             return T(rots_mean.detach(), trans_mean.detach())
         else:
             # [b, n_res, 3]
-            trans_z = torch.randn_like(ts.trans).to(self.device)
+            trans_z = torch.randn_like(ts.trans).to(device)
 
             # [b, 1, 1]
-            trans_sigma = self.sqrt_betas[s].view(-1, 1, 1).to(self.device)
+            trans_sigma = self.sqrt_betas[s].view(-1, 1, 1).to(device)
 
             # [b, n_res, 3]
             trans = trans_mean + trans_sigma * trans_z

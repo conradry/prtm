@@ -1,5 +1,5 @@
 import torch
-from proteome.models.design.genie.model.template import get_template_fn
+from proteome.models.design.genie.modules.template import get_template_fn
 from torch import nn
 
 
