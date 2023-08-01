@@ -27,13 +27,13 @@ from typing import Dict, Literal, Optional
 import torch
 import torch.nn as nn
 from dgl import DGLGraph
-from se3_transformer.model.basis import get_basis, update_basis_with_fused
-from se3_transformer.model.fiber import Fiber
-from se3_transformer.model.layers.attention import AttentionBlockSE3
-from se3_transformer.model.layers.convolution import ConvSE3, ConvSE3FuseLevel
-from se3_transformer.model.layers.norm import NormSE3
-from se3_transformer.model.layers.pooling import GPooling
-from se3_transformer.runtime.utils import str2bool
+from proteome.models.design.rfdiffusion.se3_transformer.model.basis import get_basis, update_basis_with_fused
+from proteome.models.design.rfdiffusion.se3_transformer.model.fiber import Fiber
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.attention import AttentionBlockSE3
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.convolution import ConvSE3, ConvSE3FuseLevel
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.norm import NormSE3
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.pooling import GPooling
+from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import str2bool
 from torch import Tensor
 
 

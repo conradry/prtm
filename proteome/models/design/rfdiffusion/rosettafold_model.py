@@ -28,8 +28,6 @@ class RoseTTAFoldModule(nn.Module):
         p_drop,
         d_t1d,
         d_t2d,
-        d_time_emb,  # total dims for input timestep emb
-        d_time_emb_proj,  # size of projected timestep emb
         T,  # total timesteps (used in timestep emb
         use_motif_timestep,  # Whether to have a distinct emb for motif
         freeze_track_motif,  # Whether to freeze updates to motif in track
@@ -74,24 +72,6 @@ class RoseTTAFoldModule(nn.Module):
             d_t1d=d_t1d,
             d_t2d=d_t2d,
         )
-
-        # timestep embedder
-        if d_time_emb:
-            print(
-                "NOTE: Using sinusoidal timestep embeddings of dim ",
-                d_time_emb,
-                " projected to dim ",
-                d_time_emb_proj,
-            )
-            assert (
-                d_t1d >= 22 + d_time_emb_proj
-            ), "timestep projection size doesn't fit into RF t1d projection layers"
-            self.timestep_embedder = Timestep_emb(
-                input_size=d_time_emb,
-                output_size=d_time_emb_proj,
-                T=T,
-                use_motif_timestep=use_motif_timestep,
-            )
 
         # Update inputs with outputs from previous round
         self.recycle = Recycling(d_msa=d_msa, d_pair=d_pair, d_state=d_state)
@@ -156,15 +136,6 @@ class RoseTTAFoldModule(nn.Module):
         msa_latent[:, 0] = msa_latent[:, 0] + msa_recycle.reshape(B, L, -1)
         pair = pair + pair_recycle
         state = state + state_recycle
-
-        # Get timestep embedding (if using)
-        if hasattr(self, "timestep_embedder"):
-            assert t is not None
-            time_emb = self.timestep_embedder(L, t, motif_mask)
-            n_tmpl = t1d.shape[1]
-            t1d = torch.cat(
-                [t1d, time_emb[None, None, ...].repeat(1, n_tmpl, 1, 1)], dim=-1
-            )
 
         # add template embedding
         pair, state = self.templ_emb(

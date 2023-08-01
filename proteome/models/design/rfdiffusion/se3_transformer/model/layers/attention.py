@@ -29,10 +29,10 @@ import torch
 import torch.nn as nn
 from dgl import DGLGraph
 from dgl.ops import edge_softmax
-from se3_transformer.model.fiber import Fiber
-from se3_transformer.model.layers.convolution import ConvSE3, ConvSE3FuseLevel
-from se3_transformer.model.layers.linear import LinearSE3
-from se3_transformer.runtime.utils import (
+from proteome.models.design.rfdiffusion.se3_transformer.model.fiber import Fiber
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.convolution import ConvSE3, ConvSE3FuseLevel
+from proteome.models.design.rfdiffusion.se3_transformer.model.layers.linear import LinearSE3
+from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import (
     aggregate_residual,
     degree_to_dim,
     unfuse_features,

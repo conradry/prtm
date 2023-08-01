@@ -27,7 +27,7 @@ from itertools import product
 from typing import Dict
 
 import torch
-from se3_transformer.runtime.utils import degree_to_dim
+from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import degree_to_dim
 from torch import Tensor
 
 FiberEl = namedtuple("FiberEl", ["degree", "channels"])
