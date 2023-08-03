@@ -6,9 +6,8 @@ import random
 import numpy as np
 import torch
 from omegaconf import DictConfig
-from proteome.models.design.rfdiffusion import util
+from proteome.models.design.rfdiffusion import samplers, util
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
-from proteome.models.design.rfdiffusion import samplers
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 from scipy.spatial.transform import Rotation as scipy_R

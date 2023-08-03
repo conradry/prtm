@@ -147,7 +147,7 @@ class PreprocessConfig:
 @dataclass
 class LoggingConfig:
     inputs: bool = False
-  
+
 
 @dataclass
 class ScaffoldGuidedConfig:

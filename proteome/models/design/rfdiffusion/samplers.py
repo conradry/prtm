@@ -6,20 +6,15 @@ import torch
 import torch.nn.functional as nn
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from proteome.models.design.rfdiffusion import util
+from proteome.models.design.rfdiffusion import inference_utils as iu
+from proteome.models.design.rfdiffusion import symmetry, util
 from proteome.models.design.rfdiffusion.chemical import seq2chars
 from proteome.models.design.rfdiffusion.contigs import ContigMap
 from proteome.models.design.rfdiffusion.diffusion import Diffuser
-from proteome.models.design.rfdiffusion import symmetry
-from proteome.models.design.rfdiffusion import inference_utils as iu
-from proteome.models.design.rfdiffusion.kinematics import (get_init_xyz,
-                                                           xyz_to_t2d)
-from proteome.models.design.rfdiffusion.model_input_logger import \
-    pickle_function_call
-from proteome.models.design.rfdiffusion.potentials_manager import \
-    PotentialManager
-from proteome.models.design.rfdiffusion.rosettafold_model import \
-    RoseTTAFoldModule
+from proteome.models.design.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.models.design.rfdiffusion.model_input_logger import pickle_function_call
+from proteome.models.design.rfdiffusion.potentials_manager import PotentialManager
+from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))

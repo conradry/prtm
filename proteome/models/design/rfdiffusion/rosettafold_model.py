@@ -2,11 +2,18 @@ import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
 from proteome.models.design.rfdiffusion.auxiliary_predictor import (
-    DistanceNetwork, ExpResolvedNetwork, LDDTNetwork, MaskedTokenNetwork)
-from proteome.models.design.rfdiffusion.embeddings import (Extra_emb, MSA_emb,
-                                                           Recycling,
-                                                           Templ_emb,
-                                                           Timestep_emb)
+    DistanceNetwork,
+    ExpResolvedNetwork,
+    LDDTNetwork,
+    MaskedTokenNetwork,
+)
+from proteome.models.design.rfdiffusion.embeddings import (
+    Extra_emb,
+    MSA_emb,
+    Recycling,
+    Templ_emb,
+    Timestep_emb,
+)
 from proteome.models.design.rfdiffusion.track_module import IterativeSimulator
 
 

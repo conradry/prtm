@@ -735,7 +735,7 @@ class binder_any_ReLU(Potential):
         binder = xyz[: self.binderlen, :, :]  # (Lb,27,3)
         target = xyz[self.hotspot_res, :, :]  # (N,27,3)
 
-        if use_Cb:
+        if self.use_Cb:
             N = binder[:, 0]
             Ca = binder[:, 1]
             C = binder[:, 2]
@@ -761,7 +761,7 @@ class binder_any_ReLU(Potential):
 
         closest_dist = torch.min(dgram.squeeze(0))  # (1)
 
-        potential = torch.maximum(min_dist, closest_dist)  # (1)
+        potential = torch.maximum(self.min_dist, closest_dist)  # (1)
 
         return -1 * self.weight * potential
 
