@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-from proteome.models.design.rfdiffusion.potentials import \
-    potentials as potentials
+from proteome.models.design.rfdiffusion import potentials
 
 
 def make_contact_matrix(nchain, intra_all=False, inter_all=False, contact_string=None):

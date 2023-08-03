@@ -8,7 +8,7 @@ import torch
 from omegaconf import DictConfig
 from proteome.models.design.rfdiffusion import util
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
-from proteome.models.design.rfdiffusion.inference import model_runners
+from proteome.models.design.rfdiffusion import samplers
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 from scipy.spatial.transform import Rotation as scipy_R
@@ -513,14 +513,14 @@ class Denoise:
 
 def sampler_selector(conf: DictConfig):
     if conf.scaffoldguided.scaffoldguided:
-        sampler = model_runners.ScaffoldedSampler(conf)
+        sampler = samplers.ScaffoldedSampler(conf)
     else:
         if conf.inference.model_runner == "default":
-            sampler = model_runners.Sampler(conf)
+            sampler = samplers.Sampler(conf)
         elif conf.inference.model_runner == "SelfConditioning":
-            sampler = model_runners.SelfConditioning(conf)
+            sampler = samplers.SelfConditioning(conf)
         elif conf.inference.model_runner == "ScaffoldedSampler":
-            sampler = model_runners.ScaffoldedSampler(conf)
+            sampler = samplers.ScaffoldedSampler(conf)
         else:
             raise ValueError(f"Unrecognized sampler {conf.model_runner}")
     return sampler
@@ -703,7 +703,7 @@ class BlockAdjacency:
         # either list or path to .txt file with list of scaffolds
         if conf.scaffold_list is not None:
             if type(conf.scaffold_list) == list:
-                self.scaffold_list = scaffold_list
+                self.scaffold_list = conf.scaffold_list
             elif conf.scaffold_list[-4:] == ".txt":
                 # txt file with list of ids
                 list_from_file = []
