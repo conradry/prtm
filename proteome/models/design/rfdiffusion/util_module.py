@@ -4,12 +4,10 @@ import dgl
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.design.rfdiffusion.util import (
-    RTs_by_torsion,
-    base_indices,
-    rigid_from_3_points,
-    xyzs_in_base_frame,
-)
+from proteome.models.design.rfdiffusion.util import (RTs_by_torsion,
+                                                     base_indices,
+                                                     rigid_from_3_points,
+                                                     xyzs_in_base_frame)
 
 
 def init_lecun_normal(module, scale=1.0):

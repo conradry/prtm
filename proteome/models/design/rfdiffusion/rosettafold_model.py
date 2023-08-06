@@ -2,18 +2,11 @@ import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
 from proteome.models.design.rfdiffusion.auxiliary_predictor import (
-    DistanceNetwork,
-    ExpResolvedNetwork,
-    LDDTNetwork,
-    MaskedTokenNetwork,
-)
-from proteome.models.design.rfdiffusion.embeddings import (
-    Extra_emb,
-    MSA_emb,
-    Recycling,
-    Templ_emb,
-    Timestep_emb,
-)
+    DistanceNetwork, ExpResolvedNetwork, LDDTNetwork, MaskedTokenNetwork)
+from proteome.models.design.rfdiffusion.embeddings import (Extra_emb, MSA_emb,
+                                                           Recycling,
+                                                           Templ_emb,
+                                                           Timestep_emb)
 from proteome.models.design.rfdiffusion.track_module import IterativeSimulator
 
 
@@ -36,7 +29,6 @@ class RoseTTAFoldModule(nn.Module):
         d_t1d,
         d_t2d,
         T,  # total timesteps (used in timestep emb
-        use_motif_timestep,  # Whether to have a distinct emb for motif
         freeze_track_motif,  # Whether to freeze updates to motif in track
         SE3_param_full={
             "l0_in_features": 32,
