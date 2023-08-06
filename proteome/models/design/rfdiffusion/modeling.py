@@ -7,8 +7,7 @@ import torch
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.design.rfdiffusion import config
-from proteome.models.design.rfdiffusion.rosettafold_model import \
-    RoseTTAFoldModule
+from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 
 RFD_MODEL_URLS = {
     "base": "http://files.ipd.uw.edu/pub/RFdiffusion/6f5902ac237024bdd0c176cb93063dc4/Base_ckpt.pt",
@@ -90,10 +89,12 @@ class RFDiffusionForUnconditionalStructureDesign(_RFDiffusionForStructureDesign)
     def design_structure(
         self,
         contig_map: config.ContigMap,
+        denoiser_params: config.DenoiserParams = config.DenoiserParams(),
         symmetry_params: Optional[config.SymmetryParams] = None,
         potentials_params: Optional[config.PotentialsParams] = None,
     ) -> protein.Protein:
         """Design a random protein structure."""
+        assert contig_map.inpaint_seq is None and contig_map.provide_seq is None
         return
 
 

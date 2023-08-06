@@ -201,7 +201,6 @@ class ScaffoldGuidedParams:
 class InferenceConfig:
     input_pdb: str = None
     num_designs: int = 10
-    design_startnum: int = 0
     ckpt_override_path: str = None
     symmetry: str = None
     recenter: bool = True
@@ -211,18 +210,16 @@ class InferenceConfig:
     write_trajectory: bool = True
     scaffold_guided: bool = False
     model_runner: str = "SelfConditioning"
-    cautious: bool = True
     align_motif: bool = True
     symmetric_self_cond: bool = True
     final_step: int = 1
-    deterministic: bool = False
     trb_save_ckpt_path: str = None
     schedule_directory_path: str = None
     model_directory_path: str = None
 
 
 @dataclass
-class RFDiffuserConfig:
+class RFDiffusionConfig:
     inference: InferenceConfig = InferenceConfig()
     contigmap: ContigMap = ContigMap()
     model: RoseTTAFoldModuleConfig = RoseTTAFoldModuleConfig()

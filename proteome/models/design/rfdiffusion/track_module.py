@@ -1,7 +1,6 @@
 import torch.utils.checkpoint as checkpoint
 from proteome.models.design.rfdiffusion.attention_module import *
-from proteome.models.design.rfdiffusion.se3_network import \
-    SE3TransformerWrapper
+from proteome.models.design.rfdiffusion.se3_network import SE3TransformerWrapper
 from proteome.models.design.rfdiffusion.util_module import *
 
 # Components for three-track blocks
