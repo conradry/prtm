@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from proteome import protein
+
 
 @dataclass
 class SE3Config:
@@ -61,8 +63,6 @@ class DiffuserConfig:
     max_b: float = 2.5
     min_sigma: float = 0.02
     max_sigma: float = 1.5
-    chi_type: str = "interp"
-    aa_decode_steps: int = 0
 
 
 @dataclass
@@ -142,7 +142,7 @@ class SymmetryParams:
     # - Tetrahedral symmetry # call as tetrahedral
     # - Octahedral symmetry # call as octahedral
     # - Icosahedral symmetry # call as icosahedral
-    symmetry: str = "c2"
+    symmetry: Optional[str] = None #"c2"
     model_only_neighbors: str = False
     output_prefix: str = "samples/c2"
 
@@ -199,13 +199,11 @@ class ScaffoldGuidedParams:
 
 @dataclass
 class InferenceConfig:
-    input_pdb: str = None
+    input_structure: protein.Protein = None
     num_designs: int = 10
     ckpt_override_path: str = None
-    symmetry: str = None
     recenter: bool = True
     radius: float = 10.0
-    model_only_neighbors: bool = False
     output_prefix: str = "samples/design"
     write_trajectory: bool = True
     scaffold_guided: bool = False

@@ -1,18 +1,18 @@
-import logging
 import os
+from typing import Optional
+from dataclasses import asdict
 
 import numpy as np
 import torch
 import torch.nn.functional as nn
-from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
+from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion import inference_utils as iu
 from proteome.models.design.rfdiffusion import symmetry, util
 from proteome.models.design.rfdiffusion.chemical import seq2chars
 from proteome.models.design.rfdiffusion.contigs import ContigMap
 from proteome.models.design.rfdiffusion.diffusion import Diffuser
 from proteome.models.design.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
-from proteome.models.design.rfdiffusion.model_input_logger import pickle_function_call
 from proteome.models.design.rfdiffusion.potentials_manager import PotentialManager
 from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
@@ -25,16 +25,42 @@ REF_ANGLES = util.reference_angles
 
 
 class Sampler:
-    def __init__(self, conf: DictConfig):
+    def __init__(
+        self, 
+        model: RoseTTAFoldModule, 
+        diffuser_conf: config.DiffuserConfig,
+        preprocess_conf: config.PreprocessConfig,
+        inference_conf: config.InferenceConfig, 
+        #contigmap_conf: Optional[config.ContigMap] = None,
+        #denoiser_conf: Optional[config.DenoiserParams] = None,
+        #ppi_conf: Optional[config.PPIParams] = None,
+        #potential_conf: Optional[config.PotentialsParams] = None,
+        #symmetry_conf: Optional[config.SymmetryParams] = None,
+        contigmap_conf: config.ContigMap = config.ContigMap(),
+        denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
+        ppi_conf: config.PPIParams = config.PPIParams(),
+        potential_conf: config.PotentialsParams = config.PotentialsParams(),
+        symmetry_conf: config.SymmetryParams = config.SymmetryParams(),
+    ):
         """
         Initialize sampler.
         Args:
             conf: Configuration.
         """
-        self.initialized = False
-        self.initialize(conf)
+        self.model = model
+        self.inf_conf = inference_conf
+        self.contig_conf = contigmap_conf
+        self.denoiser_conf = denoiser_conf
+        self.ppi_conf = ppi_conf
+        self.potential_conf = potential_conf
+        self.diffuser_conf = diffuser_conf
+        self.preprocess_conf = preprocess_conf
+        self.symmetry_conf = symmetry_conf
 
-    def initialize(self, conf: DictConfig) -> None:
+        self.device = list(self.model.parameters())[0].device
+        self.initialize()
+
+    def initialize(self) -> None:
         """
         Initialize sampler.
         Args:
@@ -44,113 +70,19 @@ class Sampler:
         - Assembles Config from model checkpoint and command line overrides
 
         """
-        self._log = logging.getLogger(__name__)
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
-        needs_model_reload = (
-            not self.initialized
-            or conf.inference.ckpt_override_path
-            != self._conf.inference.ckpt_override_path
-        )
-
-        # Assign config to Sampler
-        self._conf = conf
-
-        ################################
-        ### Select Appropriate Model ###
-        ################################
-
-        if conf.inference.model_directory_path is not None:
-            model_directory = conf.inference.model_directory_path
-        else:
-            model_directory = f"{SCRIPT_DIR}/../../models"
-
-        print(f"Reading models from {model_directory}")
-
-        # Initialize inference only helper objects to Sampler
-        if conf.inference.ckpt_override_path is not None:
-            self.ckpt_path = conf.inference.ckpt_override_path
-            print(
-                "WARNING: You're overriding the checkpoint path from the defaults. Check that the model you're providing can run with the inputs you're providing."
-            )
-        else:
-            if (
-                conf.contigmap.inpaint_seq is not None
-                or conf.contigmap.provide_seq is not None
-            ):
-                # use model trained for inpaint_seq
-                if conf.contigmap.provide_seq is not None:
-                    # this is only used for partial diffusion
-                    assert (
-                        conf.diffuser.partial_T is not None
-                    ), "The provide_seq input is specifically for partial diffusion"
-                if conf.scaffoldguided.scaffoldguided:
-                    self.ckpt_path = f"{model_directory}/InpaintSeq_Fold_ckpt.pt"
-                else:
-                    self.ckpt_path = f"{model_directory}/InpaintSeq_ckpt.pt"
-            elif (
-                conf.ppi.hotspot_res is not None
-                and conf.scaffoldguided.scaffoldguided is False
-            ):
-                # use complex trained model
-                self.ckpt_path = f"{model_directory}/Complex_base_ckpt.pt"
-            elif conf.scaffoldguided.scaffoldguided is True:
-                # use complex and secondary structure-guided model
-                self.ckpt_path = f"{model_directory}/Complex_Fold_base_ckpt.pt"
-            else:
-                # use default model
-                self.ckpt_path = f"{model_directory}/Base_ckpt.pt"
-        # for saving in trb file:
-        assert (
-            self._conf.inference.trb_save_ckpt_path is None
-        ), "trb_save_ckpt_path is not the place to specify an input model. Specify in inference.ckpt_override_path"
-        self._conf["inference"]["trb_save_ckpt_path"] = self.ckpt_path
-
-        #######################
-        ### Assemble Config ###
-        #######################
-
-        if needs_model_reload:
-            # Load checkpoint, so that we can assemble the config
-            self.load_checkpoint()
-            self.assemble_config_from_chk()
-            # Now actually load the model weights into RF
-            self.model = self.load_model()
-        else:
-            self.assemble_config_from_chk()
-
-        # self.initialize_sampler(conf)
-        self.initialized = True
-
         # Initialize helper objects
-        self.inf_conf = self._conf.inference
-        self.contig_conf = self._conf.contigmap
-        self.denoiser_conf = self._conf.denoiser
-        self.ppi_conf = self._conf.ppi
-        self.potential_conf = self._conf.potentials
-        self.diffuser_conf = self._conf.diffuser
-        self.preprocess_conf = self._conf.preprocess
-
-        if conf.inference.schedule_directory_path is not None:
-            schedule_directory = conf.inference.schedule_directory_path
-        else:
-            schedule_directory = f"{SCRIPT_DIR}/../../schedules"
-
-        # Check for cache schedule
-        if not os.path.exists(schedule_directory):
-            os.mkdir(schedule_directory)
-        self.diffuser = Diffuser(**self._conf.diffuser, cache_dir=schedule_directory)
+        schedule_directory = f"{SCRIPT_DIR}/../../schedules"
+        os.makedirs(schedule_directory, exist_ok=True)
+        self.diffuser = Diffuser(**asdict(self.diffuser_conf), cache_dir=schedule_directory)
 
         ###########################
         ### Initialise Symmetry ###
         ###########################
 
-        if self.inf_conf.symmetry is not None:
+        if self.symmetry_conf.symmetry is not None:
             self.symmetry = symmetry.SymGen(
-                self.inf_conf.symmetry,
-                self.inf_conf.model_only_neighbors,
+                self.symmetry_conf.symmetry,
+                self.symmetry_conf.model_only_neighbors,
                 self.inf_conf.recenter,
                 self.inf_conf.radius,
             )
@@ -159,14 +91,8 @@ class Sampler:
 
         self.allatom = ComputeAllAtomCoords().to(self.device)
 
-        if self.inf_conf.input_pdb is None:
-            # set default pdb
-            script_dir = os.path.dirname(os.path.realpath(__file__))
-            self.inf_conf.input_pdb = os.path.join(
-                script_dir, "../../examples/input_pdbs/1qys.pdb"
-            )
         self.target_feats = iu.process_target(
-            self.inf_conf.input_pdb, parse_hetatom=True, center=False
+            self.inf_conf.input_structure, center=False
         )
         self.chain_idx = None
 
@@ -191,90 +117,17 @@ class Sampler:
         """
         return self.diffuser_conf.T
 
-    def load_checkpoint(self) -> None:
-        """Loads RF checkpoint, from which config can be generated."""
-        self._log.info(f"Reading checkpoint from {self.ckpt_path}")
-        print("This is inf_conf.ckpt_path")
-        print(self.ckpt_path)
-        self.ckpt = torch.load(self.ckpt_path, map_location=self.device)
-
-    def assemble_config_from_chk(self) -> None:
-        """
-        Function for loading model config from checkpoint directly.
-
-        Takes:
-            - config file
-
-        Actions:
-            - Replaces all -model and -diffuser items
-            - Throws a warning if there are items in -model and -diffuser that aren't in the checkpoint
-
-        This throws an error if there is a flag in the checkpoint 'config_dict' that isn't in the inference config.
-        This should ensure that whenever a feature is added in the training setup, it is accounted for in the inference script.
-
-        """
-        # get overrides to re-apply after building the config from the checkpoint
-        overrides = []
-        if HydraConfig.initialized():
-            overrides = HydraConfig.get().overrides.task
-        print("Assembling -model, -diffuser and -preprocess configs from checkpoint")
-
-        for cat in ["model", "diffuser", "preprocess"]:
-            for key in self._conf[cat]:
-                try:
-                    print(
-                        f"USING MODEL CONFIG: self._conf[{cat}][{key}] = {self.ckpt['config_dict'][cat][key]}"
-                    )
-                    self._conf[cat][key] = self.ckpt["config_dict"][cat][key]
-                except:
-                    pass
-
-        # add overrides back in again
-        for override in overrides:
-            if override.split(".")[0] in ["model", "diffuser", "preprocess"]:
-                print(
-                    f'WARNING: You are changing {override.split("=")[0]} from the value this model was trained with. Are you sure you know what you are doing?'
-                )
-                mytype = type(
-                    self._conf[override.split(".")[0]][
-                        override.split(".")[1].split("=")[0]
-                    ]
-                )
-                self._conf[override.split(".")[0]][
-                    override.split(".")[1].split("=")[0]
-                ] = mytype(override.split("=")[1])
-
-    def load_model(self):
-        """Create RosettaFold model from preloaded checkpoint."""
-
-        # Read input dimensions from checkpoint.
-        self.d_t1d = self._conf.preprocess.d_t1d
-        self.d_t2d = self._conf.preprocess.d_t2d
-        model = RoseTTAFoldModule(
-            **self._conf.model,
-            d_t1d=self.d_t1d,
-            d_t2d=self.d_t2d,
-            T=self._conf.diffuser.T,
-        ).to(self.device)
-        if self._conf.logging.inputs:
-            pickle_dir = pickle_function_call(model, "forward", "inference")
-            print(f"pickle_dir: {pickle_dir}")
-        model = model.eval()
-        self._log.info(f"Loading checkpoint.")
-        model.load_state_dict(self.ckpt["model_state_dict"], strict=True)
-        return model
-
     def construct_contig(self, target_feats):
         """
         Construct contig class describing the protein to be generated
         """
-        self._log.info(f"Using contig: {self.contig_conf.contigs}")
-        return ContigMap(target_feats, **self.contig_conf)
+        contig_dict = asdict(self.contig_conf) if self.contig_conf else {}
+        return ContigMap(target_feats, **contig_dict)
 
     def construct_denoiser(self, L, visible):
         """Make length-specific denoiser."""
-        denoise_kwargs = OmegaConf.to_container(self.diffuser_conf)
-        denoise_kwargs.update(OmegaConf.to_container(self.denoiser_conf))
+        denoise_kwargs = asdict(self.diffuser_conf)
+        denoise_kwargs.update(asdict(self.denoiser_conf))
         denoise_kwargs.update(
             {
                 "L": L,
@@ -285,7 +138,7 @@ class Sampler:
         )
         return iu.Denoise(**denoise_kwargs)
 
-    def sample_init(self, return_forward_trajectory=False):
+    def sample_init(self):
         """
         Initial features to start the sampling process.
 
@@ -302,7 +155,7 @@ class Sampler:
         #######################
 
         self.target_feats = iu.process_target(
-            self.inf_conf.input_pdb, parse_hetatom=True, center=False
+            self.inf_conf.input_structure, center=False
         )
 
         ################################
@@ -377,7 +230,6 @@ class Sampler:
                 contig_map.ref_idx0, ...
             ]
             xyz_motif_prealign = xyz_mapped.clone()
-            motif_prealign_com = xyz_motif_prealign[0, 0, :, 1].mean(dim=0)
             self.motif_com = xyz_27[contig_map.ref_idx0, 1].mean(dim=0)
             xyz_mapped = get_init_xyz(xyz_mapped).squeeze()
             # adjust the size of the input atom map
@@ -402,7 +254,7 @@ class Sampler:
         seq_t[contig_map.hal_idx0] = seq_orig[contig_map.ref_idx0]
 
         # Unmask sequence if desired
-        if self._conf.contigmap.provide_seq is not None:
+        if self.contig_conf.provide_seq is not None:
             seq_t[self.mask_seq.squeeze()] = seq_orig[self.mask_seq.squeeze()]
 
         seq_t[~self.mask_seq.squeeze()] = 21
@@ -411,7 +263,7 @@ class Sampler:
             seq_orig, num_classes=22
         ).float()  # [L,22]
 
-        fa_stack, xyz_true = self.diffuser.diffuse_pose(
+        fa_stack, _ = self.diffuser.diffuse_pose(
             xyz_mapped,
             torch.clone(seq_t),
             atom_mask_mapped.squeeze(),
@@ -431,7 +283,6 @@ class Sampler:
 
         if self.symmetry is not None:
             xt, seq_t = self.symmetry.apply_symmetry(xt, seq_t)
-        self._log.info(f"Sequence init: {seq2chars(torch.argmax(seq_t, dim=-1))}")
 
         self.msa_prev = None
         self.pair_prev = None
@@ -458,7 +309,7 @@ class Sampler:
                     [i["name"].strip() for i in self.target_feats["info_het"]]
                 )
                 xyz_het = self.target_feats["xyz_het"][
-                    het_names == self._conf.potentials.substrate
+                    het_names == self.potential_conf.substrate
                 ]
                 xyz_het = torch.from_numpy(xyz_het)
                 assert (
@@ -467,8 +318,6 @@ class Sampler:
                 xyz_motif_prealign = xyz_motif_prealign[0, 0][
                     self.diffusion_mask.squeeze()
                 ]
-                motif_prealign_com = xyz_motif_prealign[:, 1].mean(dim=0)
-                xyz_het_com = xyz_het.mean(dim=0)
                 for pot in self.potential_manager.potentials_to_apply:
                     pot.motif_substrate_atoms = xyz_het
                     pot.diffusion_mask = self.diffusion_mask.squeeze()
@@ -476,7 +325,7 @@ class Sampler:
                     pot.diffuser = self.diffuser
         return xt, seq_t
 
-    def _preprocess(self, seq, xyz_t, t, repack=False):
+    def _preprocess(self, seq, xyz_t, t):
         """
         Function to prepare inputs to diffusion model
 
@@ -503,8 +352,6 @@ class Sampler:
 
         L = seq.shape[0]
         T = self.T
-        binderlen = self.binderlen
-        target_res = self.ppi_conf.hotspot_res
 
         ##################
         ### msa_masked ###
@@ -632,87 +479,7 @@ class Sampler:
         )
 
     def sample_step(self, *, t, x_t, seq_init, final_step):
-        """Generate the next pose that the model should be supplied at timestep t-1.
-
-        Args:
-            t (int): The timestep that has just been predicted
-            seq_t (torch.tensor): (L,22) The sequence at the beginning of this timestep
-            x_t (torch.tensor): (L,14,3) The residue positions at the beginning of this timestep
-            seq_init (torch.tensor): (L,22) The initialized sequence used in updating the sequence.
-
-        Returns:
-            px0: (L,14,3) The model's prediction of x0.
-            x_t_1: (L,14,3) The updated positions of the next step.
-            seq_t_1: (L,22) The updated sequence of the next step.
-            tors_t_1: (L, ?) The updated torsion angles of the next  step.
-            plddt: (L, 1) Predicted lDDT of x0.
-        """
-        (
-            msa_masked,
-            msa_full,
-            seq_in,
-            xt_in,
-            idx_pdb,
-            t1d,
-            t2d,
-            xyz_t,
-            alpha_t,
-        ) = self._preprocess(seq_init, x_t, t)
-
-        N, L = msa_masked.shape[:2]
-
-        if self.symmetry is not None:
-            idx_pdb, self.chain_idx = self.symmetry.res_idx_procesing(res_idx=idx_pdb)
-
-        msa_prev = None
-        pair_prev = None
-        state_prev = None
-
-        with torch.no_grad():
-            msa_prev, pair_prev, px0, state_prev, alpha, logits, plddt = self.model(
-                msa_masked,
-                msa_full,
-                seq_in,
-                xt_in,
-                idx_pdb,
-                t1d=t1d,
-                t2d=t2d,
-                xyz_t=xyz_t,
-                alpha_t=alpha_t,
-                msa_prev=msa_prev,
-                pair_prev=pair_prev,
-                state_prev=state_prev,
-                t=torch.tensor(t),
-                return_infer=True,
-                motif_mask=self.diffusion_mask.squeeze().to(self.device),
-            )
-
-        # prediction of X0
-        _, px0 = self.allatom(torch.argmax(seq_in, dim=-1), px0, alpha)
-        px0 = px0.squeeze()[:, :14]
-
-        #####################
-        ### Get next pose ###
-        #####################
-
-        if t > final_step:
-            seq_t_1 = nn.one_hot(seq_init, num_classes=22).to(self.device)
-            x_t_1, px0 = self.denoiser.get_next_pose(
-                xt=x_t,
-                px0=px0,
-                t=t,
-                diffusion_mask=self.mask_str.squeeze(),
-                align_motif=self.inf_conf.align_motif,
-            )
-        else:
-            x_t_1 = torch.clone(px0).to(x_t.device)
-            seq_t_1 = torch.clone(seq_init)
-            px0 = px0.to(x_t.device)
-
-        if self.symmetry is not None:
-            x_t_1, seq_t_1 = self.symmetry.apply_symmetry(x_t_1, seq_t_1)
-
-        return px0, x_t_1, seq_t_1, plddt
+        raise NotImplementedError
 
 
 class SelfConditioning(Sampler):
@@ -815,9 +582,6 @@ class SelfConditioning(Sampler):
                 align_motif=self.inf_conf.align_motif,
                 include_motif_sidechains=self.preprocess_conf.motif_sidechain_input,
             )
-            self._log.info(
-                f"Timestep {t}, input to next step: { seq2chars(torch.argmax(seq_t_1, dim=-1).tolist())}"
-            )
         else:
             x_t_1 = torch.clone(px0).to(x_t.device)
             px0 = px0.to(x_t.device)
@@ -825,7 +589,6 @@ class SelfConditioning(Sampler):
         ######################
         ### Apply symmetry ###
         ######################
-
         if self.symmetry is not None:
             x_t_1, seq_t_1 = self.symmetry.apply_symmetry(x_t_1, seq_t_1)
 
@@ -872,7 +635,7 @@ class ScaffoldedSampler(SelfConditioning):
 
         if conf.scaffoldguided.target_pdb:
             self.target = iu.Target(conf.scaffoldguided, conf.ppi.hotspot_res)
-            self.target_pdb = self.target.get_target()
+            self.target_struct = self.target.get_target()
             if conf.scaffoldguided.target_ss is not None:
                 self.target_ss = torch.load(conf.scaffoldguided.target_ss).long()
                 self.target_ss = torch.nn.functional.one_hot(
@@ -890,7 +653,7 @@ class ScaffoldedSampler(SelfConditioning):
                     self.target_adj = self.target_adj[:, self.target_pdb["crop_mask"]]
         else:
             self.target = None
-            self.target_pdb = False
+            self.target_struct = None
 
     def sample_init(self):
         """

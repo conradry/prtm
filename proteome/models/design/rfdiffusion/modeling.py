@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from typing import Optional
+from dataclasses import asdict
 
 import numpy as np
 import torch
@@ -31,7 +32,7 @@ RFD_MODEL_CONFIGS = {
 }
 
 
-def _get_model_config(model_name: str) -> config.RFDiffusionConfig:
+def _get_model_config(model_name: str) -> config.RFDiffusionModelConfig:
     """Get the model config for a given model name."""
     return RFD_MODEL_CONFIGS[model_name]
 
@@ -44,7 +45,12 @@ class _RFDiffusionForStructureDesign:
     ):
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
-        self.model = RoseTTAFoldModule(self.cfg)
+        self.model = RoseTTAFoldModule(
+            d_t1d=self.cfg.preprocess.d_t1d,
+            d_t2d=self.cfg.preprocess.d_t2d,
+            T=self.cfg.diffuser.T,
+            **asdict(self.cfg.model),
+        )
 
         self.load_weights(RFD_MODEL_URLS[model_name])
         self.model.eval()

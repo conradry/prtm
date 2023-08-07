@@ -2,10 +2,13 @@ import glob
 import logging
 import os
 import random
+from copy import deepcopy
+from typing import List, Optional
 
 import numpy as np
 import torch
 from omegaconf import DictConfig
+from proteome import protein
 from proteome.models.design.rfdiffusion import samplers, util
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
@@ -510,127 +513,15 @@ class Denoise:
         return fullatom_next.squeeze()[:, :14, :], px0
 
 
-def sampler_selector(conf: DictConfig):
-    if conf.scaffoldguided.scaffoldguided:
-        sampler = samplers.ScaffoldedSampler(conf)
-    else:
-        if conf.inference.model_runner == "default":
-            sampler = samplers.Sampler(conf)
-        elif conf.inference.model_runner == "SelfConditioning":
-            sampler = samplers.SelfConditioning(conf)
-        elif conf.inference.model_runner == "ScaffoldedSampler":
-            sampler = samplers.ScaffoldedSampler(conf)
-        else:
-            raise ValueError(f"Unrecognized sampler {conf.model_runner}")
-    return sampler
-
-
-def parse_pdb(filename, **kwargs):
-    """extract xyz coords for all heavy atoms"""
-    lines = open(filename, "r").readlines()
-    return parse_pdb_lines(lines, **kwargs)
-
-
-def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
-    # indices of residues observed in the structure
-    res, pdb_idx = [], []
-    for l in lines:
-        if l[:4] == "ATOM" and l[12:16].strip() == "CA":
-            res.append((l[22:26], l[17:20]))
-            # chain letter, res num
-            pdb_idx.append((l[21:22].strip(), int(l[22:26].strip())))
-    seq = [util.aa2num[r[1]] if r[1] in util.aa2num.keys() else 20 for r in res]
-    pdb_idx = [
-        (l[21:22].strip(), int(l[22:26].strip()))
-        for l in lines
-        if l[:4] == "ATOM" and l[12:16].strip() == "CA"
-    ]  # chain letter, res num
-
-    # 4 BB + up to 10 SC atoms
-    xyz = np.full((len(res), 14, 3), np.nan, dtype=np.float32)
-    for l in lines:
-        if l[:4] != "ATOM":
-            continue
-        chain, resNo, atom, aa = (
-            l[21:22],
-            int(l[22:26]),
-            " " + l[12:16].strip().ljust(3),
-            l[17:20],
-        )
-        if (chain, resNo) in pdb_idx:
-            idx = pdb_idx.index((chain, resNo))
-            # for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]]):
-            for i_atm, tgtatm in enumerate(util.aa2long[util.aa2num[aa]][:14]):
-                if (
-                    tgtatm is not None and tgtatm.strip() == atom.strip()
-                ):  # ignore whitespace
-                    xyz[idx, i_atm, :] = [
-                        float(l[30:38]),
-                        float(l[38:46]),
-                        float(l[46:54]),
-                    ]
-                    break
-
-    # save atom mask
-    mask = np.logical_not(np.isnan(xyz[..., 0]))
-    xyz[np.isnan(xyz[..., 0])] = 0.0
-
-    # remove duplicated (chain, resi)
-    new_idx = []
-    i_unique = []
-    for i, idx in enumerate(pdb_idx):
-        if idx not in new_idx:
-            new_idx.append(idx)
-            i_unique.append(i)
-
-    pdb_idx = new_idx
-    xyz = xyz[i_unique]
-    mask = mask[i_unique]
-
-    seq = np.array(seq)[i_unique]
-
-    out = {
-        "xyz": xyz,  # cartesian coordinates, [Lx14]
-        "mask": mask,  # mask showing which atoms are present in the PDB file, [Lx14]
-        "idx": np.array(
-            [i[1] for i in pdb_idx]
-        ),  # residue numbers in the PDB file, [L]
-        "seq": np.array(seq),  # amino acid sequence, [L]
-        "pdb_idx": pdb_idx,  # list of (chain letter, residue number) in the pdb file, [L]
-    }
-
-    # heteroatoms (ligands, etc)
-    if parse_hetatom:
-        xyz_het, info_het = [], []
-        for l in lines:
-            if l[:6] == "HETATM" and not (ignore_het_h and l[77] == "H"):
-                info_het.append(
-                    dict(
-                        idx=int(l[7:11]),
-                        atom_id=l[12:16],
-                        atom_type=l[77],
-                        name=l[16:20],
-                    )
-                )
-                xyz_het.append([float(l[30:38]), float(l[38:46]), float(l[46:54])])
-
-        out["xyz_het"] = np.array(xyz_het)
-        out["info_het"] = info_het
-
-    return out
-
-
-def process_target(pdb_path, parse_hetatom=False, center=True):
-    # Read target pdb and extract features.
-    target_struct = parse_pdb(pdb_path, parse_hetatom=parse_hetatom)
-
+def process_target(target_struct: protein.Protein, center=True):
     # Zero-center positions
-    ca_center = target_struct["xyz"][:, :1, :].mean(axis=0, keepdims=True)
+    ca_center = target_struct.atom_positions[:, :1, :].mean(axis=0, keepdims=True)
     if not center:
         ca_center = 0
-    xyz = torch.from_numpy(target_struct["xyz"] - ca_center)
-    seq_orig = torch.from_numpy(target_struct["seq"])
-    atom_mask = torch.from_numpy(target_struct["mask"])
+
+    xyz = torch.from_numpy(target_struct.atom_positions - ca_center)
+    seq_orig = torch.from_numpy(target_struct.aatype)
+    atom_mask = torch.from_numpy(target_struct.atom_mask)
     seq_len = len(xyz)
 
     # Make 27 atom representation
@@ -643,11 +534,11 @@ def process_target(pdb_path, parse_hetatom=False, center=True):
         "xyz_27": xyz_27,
         "mask_27": mask_27,
         "seq": seq_orig,
-        "pdb_idx": target_struct["pdb_idx"],
     }
-    if parse_hetatom:
-        out["xyz_het"] = target_struct["xyz_het"]
-        out["info_het"] = target_struct["info_het"]
+    if target_struct.hetatom_names is not None:
+        out["xyz_het"] = target_struct.hetatom_positions
+        out["info_het"] = target_struct.hetatom_names
+
     return out
 
 
@@ -923,22 +814,24 @@ class Target:
         - Dictionary of xyz coordinates, indices, pdb_indices, pdb mask
     """
 
-    def __init__(self, conf: DictConfig, hotspots=None):
-        self.pdb = parse_pdb(conf.target_path)
+    def __init__(
+        self, 
+        target_struct: protein.Protein, 
+        contig_crop: Optional[List[str]], 
+        hotspots: Optional[List[str]],
+    ):
+        self.target_struct = deepcopy(target_struct)
 
-        if hotspots is not None:
-            self.hotspots = hotspots
-        else:
-            self.hotspots = []
-        self.pdb["hotspots"] = np.array(
+        hotspots = [] if hotspots is None else hotspots
+        self.hotspots = np.array(
             [
-                True if f"{i[0]}{i[1]}" in self.hotspots else False
-                for i in self.pdb["pdb_idx"]
+                True if f"{protein.PDB_CHAIN_IDS[cix]}{rix}" in hotspots else False
+                for cix, rix in zip(target_struct.chain_index, target_struct.residue_index)
             ]
         )
 
-        if conf.contig_crop:
-            self.contig_crop(conf.contig_crop)
+        if contig_crop:
+            self.contig_crop(contig_crop)
 
     def parse_contig(self, contig_crop):
         """
@@ -970,9 +863,13 @@ class Target:
         """
 
         # add residue offset between chains if multiple chains in receptor file
-        for idx, val in enumerate(self.pdb["pdb_idx"]):
-            if idx != 0 and val != self.pdb["pdb_idx"][idx - 1]:
-                self.pdb["idx"][idx:] += residue_offset + idx
+        pdb_idx = list(zip(
+            [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index], 
+            self.target_struct.residue_index
+        ))
+        res_idx = self.target_struct.residue_index
+        for idx in range(1, len(pdb_idx) - 1):
+            res_idx[idx:] += residue_offset + idx
 
         # convert contig to mask
         contig_list = self.parse_contig(contig_crop)
@@ -980,24 +877,35 @@ class Target:
         # add residue offset to different parts of contig_list
         for contig in contig_list[1:]:
             start = int(contig[0][1])
-            self.pdb["idx"][start:] += residue_offset
+            res_idx[start:] += residue_offset
+
         # flatten list
         contig_list = [i for j in contig_list for i in j]
         mask = np.array(
-            [True if i in contig_list else False for i in self.pdb["pdb_idx"]]
+            [True if i in contig_list else False for i in pdb_idx]
         )
 
         # sanity check
-        assert np.sum(self.pdb["hotspots"]) == np.sum(
-            self.pdb["hotspots"][mask]
+        assert np.sum(self.hotspots) == np.sum(
+            self.hotspots[mask]
         ), "Supplied hotspot residues are missing from the target contig!"
-        # crop pdb
-        for key, val in self.pdb.items():
-            try:
-                self.pdb[key] = val[mask]
-            except:
-                self.pdb[key] = [i for idx, i in enumerate(val) if mask[idx]]
-        self.pdb["crop_mask"] = mask
+
+        # create new protein from the crop
+        print("aatype shape", self.target_struct.aatype.shape, mask)
+        crop_or_none = lambda x: x[mask] if x is not None else None
+        self.target_struct = protein.Protein(
+            atom_positions=crop_or_none(self.target_struct.atom_positions),
+            aatype=crop_or_none(self.target_struct.aatype),
+            atom_mask=crop_or_none(self.target_struct.atom_mask),
+            residue_index=crop_or_none(res_idx),
+            b_factors=crop_or_none(self.target_struct.b_factors),
+            chain_index=crop_or_none(self.target_struct.chain_index),
+            remark=self.target_struct.remark,
+            parents=self.target_struct.parents,
+            parents_chain_index=self.target_struct.parents_chain_index,
+            hetatom_positions=self.target_struct.hetatom_positions,
+            hetatom_names=self.target_struct.hetatom_names,
+        )
 
     def get_target(self):
-        return self.pdb
+        return self.target_struct
