@@ -5,7 +5,7 @@ from dataclasses import asdict
 import numpy as np
 import torch
 import torch.nn.functional as nn
-from omegaconf import DictConfig, OmegaConf
+from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion import inference_utils as iu
 from proteome.models.design.rfdiffusion import symmetry, util
@@ -31,11 +31,6 @@ class Sampler:
         diffuser_conf: config.DiffuserConfig,
         preprocess_conf: config.PreprocessConfig,
         inference_conf: config.InferenceConfig, 
-        #contigmap_conf: Optional[config.ContigMap] = None,
-        #denoiser_conf: Optional[config.DenoiserParams] = None,
-        #ppi_conf: Optional[config.PPIParams] = None,
-        #potential_conf: Optional[config.PotentialsParams] = None,
-        #symmetry_conf: Optional[config.SymmetryParams] = None,
         contigmap_conf: config.ContigMap = config.ContigMap(),
         denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
         ppi_conf: config.PPIParams = config.PPIParams(),
@@ -611,46 +606,60 @@ class ScaffoldedSampler(SelfConditioning):
     """
     Model Runner for Scaffold-Constrained diffusion
     """
-
-    def __init__(self, conf: DictConfig):
-        """
-        Initialize scaffolded sampler.
-        Two basic approaches here:
-            i) Given a block adjacency/secondary structure input, generate a fold (in the presence or absence of a target)
-                - This allows easy generation of binders or specific folds
-                - Allows simple expansion of an input, to sample different lengths
-            ii) Providing a contig input and corresponding block adjacency/secondary structure input
-                - This allows mixed motif scaffolding and fold-conditioning.
-                - Adjacency/secondary structure inputs must correspond exactly in length to the contig string
-        """
-        super().__init__(conf)
-        # initialize BlockAdjacency sampling class
+    def __init__(
+        self, 
+        model: RoseTTAFoldModule, 
+        diffuser_conf: config.DiffuserConfig,
+        preprocess_conf: config.PreprocessConfig,
+        inference_conf: config.InferenceConfig, 
+        contigmap_conf: config.ContigMap = config.ContigMap(),
+        denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
+        ppi_conf: config.PPIParams = config.PPIParams(),
+        potential_conf: config.PotentialsParams = config.PotentialsParams(),
+        symmetry_conf: config.SymmetryParams = config.SymmetryParams(),
+        scaffold_conf: config.ScaffoldGuidedParams = config.ScaffoldGuidedParams(),
+    ):
+        super().__init__(
+            model=model,
+            diffuser_conf=diffuser_conf,
+            preprocess_conf=preprocess_conf,
+            inference_conf=inference_conf,
+            contigmap_conf=contigmap_conf,
+            denoiser_conf=denoiser_conf,
+            ppi_conf=ppi_conf,
+            potential_conf=potential_conf,
+            symmetry_conf=symmetry_conf,
+        )
+        self.scaffold_conf = scaffold_conf
         self.blockadjacency = iu.BlockAdjacency(
-            conf.scaffoldguided, conf.inference.num_designs
+            scaffold_conf, inference_conf.num_designs
         )
 
         #################################################
         ### Initialize target, if doing binder design ###
         #################################################
 
-        if conf.scaffoldguided.target_pdb:
-            self.target = iu.Target(conf.scaffoldguided, conf.ppi.hotspot_res)
+        if scaffold_conf.target_pdb_str:
+            struct = protein.from_pdb_string(
+                scaffold_conf.target_pdb_str, atom14_format=True, parse_hetatom=True
+            )
+            self.target = iu.Target(struct, scaffold_conf.contig_crop, ppi_conf.hotspot_res)
             self.target_struct = self.target.get_target()
-            if conf.scaffoldguided.target_ss is not None:
-                self.target_ss = torch.load(conf.scaffoldguided.target_ss).long()
-                self.target_ss = torch.nn.functional.one_hot(
-                    self.target_ss, num_classes=4
-                )
-                if self._conf.scaffoldguided.contig_crop is not None:
-                    self.target_ss = self.target_ss[self.target_pdb["crop_mask"]]
-            if conf.scaffoldguided.target_adj is not None:
-                self.target_adj = torch.load(conf.scaffoldguided.target_adj).long()
-                self.target_adj = torch.nn.functional.one_hot(
-                    self.target_adj, num_classes=3
-                )
-                if self._conf.scaffoldguided.contig_crop is not None:
-                    self.target_adj = self.target_adj[self.target_pdb["crop_mask"]]
-                    self.target_adj = self.target_adj[:, self.target_pdb["crop_mask"]]
+
+            if scaffold_conf.target_ss is not False or scaffold_conf.target_adj is not False:
+                target_ss, target_adj = self.blockadjacency.get_ss_adj(scaffold_conf.target_pdb_str)
+
+            if scaffold_conf.target_ss is not False:
+                self.target_ss = torch.nn.functional.one_hot(target_ss.long(), num_classes=4)
+                if self.scaffold_conf.contig_crop is not None:
+                    self.target_ss = self.target_ss[self.target.crop_mask]
+
+            if scaffold_conf.target_adj is not None:
+                self.target_adj = torch.nn.functional.one_hot(target_adj.long(), num_classes=3)
+                if self.scaffold_conf.contig_crop is not None:
+                    self.target_adj = self.target_adj[self.target.crop_mask]
+                    self.target_adj = self.target_adj[:, self.target.crop_mask]
+
         else:
             self.target = None
             self.target_struct = None
@@ -680,14 +689,14 @@ class ScaffoldedSampler(SelfConditioning):
             self.binderlen = self.L
 
             if self.target:
-                target_L = np.shape(self.target_pdb["xyz"])[0]
+                target_L = len(self.target_struct.atom_positions)
                 # xyz
                 target_xyz = torch.full((target_L, 27, 3), np.nan)
-                target_xyz[:, :14, :] = torch.from_numpy(self.target_pdb["xyz"])
+                target_xyz[:, :14, :] = torch.from_numpy(self.target_struct.atom_positions)
                 xT = torch.cat((xT, target_xyz), dim=0)
                 # seq
                 seq_T = torch.cat(
-                    (seq_T, torch.from_numpy(self.target_pdb["seq"])), dim=0
+                    (seq_T, torch.from_numpy(self.target_struct.aatype)), dim=0
                 )
                 # diffusion mask
                 self.diffusion_mask = torch.cat(
@@ -695,28 +704,34 @@ class ScaffoldedSampler(SelfConditioning):
                 )
                 # atom mask
                 mask_27 = torch.full((target_L, 27), False)
-                mask_27[:, :14] = torch.from_numpy(self.target_pdb["mask"])
+                mask_27[:, :14] = torch.from_numpy(self.target_struct.atom_mask)
                 atom_mask = torch.cat((atom_mask, mask_27), dim=0)
                 self.L += target_L
                 # generate contigmap object
+                pdb_idx = list(zip(
+                    [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index], 
+                    self.target_struct.residue_index
+                ))
                 contig = []
-                for idx, i in enumerate(self.target_pdb["pdb_idx"][:-1]):
+                for idx, i in enumerate(pdb_idx[:-1]):
                     if idx == 0:
                         start = i[1]
                     if (
-                        i[1] + 1 != self.target_pdb["pdb_idx"][idx + 1][1]
-                        or i[0] != self.target_pdb["pdb_idx"][idx + 1][0]
+                        i[1] + 1 != pdb_idx[idx + 1][1]
+                        or i[0] != pdb_idx[idx + 1][0]
                     ):
                         contig.append(f"{i[0]}{start}-{i[1]}/0 ")
-                        start = self.target_pdb["pdb_idx"][idx + 1][1]
+                        start = pdb_idx[idx + 1][1]
+
                 contig.append(
-                    f"{self.target_pdb['pdb_idx'][-1][0]}{start}-{self.target_pdb['pdb_idx'][-1][1]}/0 "
+                    f"{pdb_idx[-1][0]}{start}-{pdb_idx[-1][1]}/0 "
                 )
                 contig.append(f"{self.binderlen}-{self.binderlen}")
                 contig = ["".join(contig)]
             else:
                 contig = [f"{self.binderlen}-{self.binderlen}"]
-            self.contig_map = ContigMap(self.target_pdb, contig)
+
+            self.contig_map = ContigMap(self.target_struct, contig)
             self.mappings = self.contig_map.get_mappings()
             self.mask_seq = self.diffusion_mask
             self.mask_str = self.diffusion_mask
@@ -733,7 +748,7 @@ class ScaffoldedSampler(SelfConditioning):
             ), "Giving a target is the wrong way of handling this is you're doing contigs and secondary structure"
 
             # process target and reinitialise potential_manager. This is here because the 'target' is always set up to be the second chain in out inputs.
-            self.target_feats = iu.process_target(self.inf_conf.input_pdb)
+            self.target_feats = iu.process_target(self.inf_conf.input_structure)
             self.contig_map = self.construct_contig(self.target_feats)
             self.mappings = self.contig_map.get_mappings()
             self.mask_seq = torch.from_numpy(self.contig_map.inpaint_seq)[None, :]
@@ -822,7 +837,7 @@ class ScaffoldedSampler(SelfConditioning):
             t2d,
             xyz_t,
             alpha_t,
-        ) = super()._preprocess(seq, xyz_t, t, repack=False)
+        ) = super()._preprocess(seq, xyz_t, t)
 
         ###################################
         ### Add Adj/Secondary Structure ###
@@ -844,7 +859,7 @@ class ScaffoldedSampler(SelfConditioning):
                 torch.full((self.L - self.binderlen,), 3), num_classes=4
             )
             full_ss = torch.cat((self.ss, blank_ss), dim=0)
-            if self._conf.scaffoldguided.target_ss is not None:
+            if self.scaffold_conf.target_ss is not None:
                 full_ss[self.binderlen :] = self.target_ss
         else:
             full_ss = self.ss
@@ -861,7 +876,7 @@ class ScaffoldedSampler(SelfConditioning):
                 full_adj = torch.zeros((self.L, self.L, 3))
                 full_adj[:, :, -1] = 1.0  # set to mask
                 full_adj[: self.binderlen, : self.binderlen] = self.adj
-                if self._conf.scaffoldguided.target_adj is not None:
+                if self.scaffold_conf.target_adj is not None:
                     full_adj[self.binderlen :, self.binderlen :] = self.target_adj
             else:
                 full_adj = self.adj

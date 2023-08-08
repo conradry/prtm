@@ -3,6 +3,8 @@ import sys
 
 import numpy as np
 
+from proteome import protein
+
 
 class ContigMap:
     """
@@ -16,7 +18,7 @@ class ContigMap:
 
     def __init__(
         self,
-        parsed_pdb,
+        structure: protein.Protein,
         contigs=None,
         inpaint_seq=None,
         inpaint_str=None,
@@ -57,7 +59,7 @@ class ContigMap:
         )
         self.inpaint_seq_tensor = inpaint_seq_tensor
         self.inpaint_str_tensor = inpaint_str_tensor
-        self.parsed_pdb = parsed_pdb
+        self.structure = structure
         self.topo = topo
         if ref_idx is None:
             # using default contig generation, which outputs in rosetta-like format
@@ -83,7 +85,8 @@ class ContigMap:
             # specifying precise mappings
             self.ref = ref_idx
             self.hal = hal_idx
-            self.rf = rf_idx
+            self.rf = idx_rf
+
         self.mask_1d = [False if i == ("_", "_") else True for i in self.ref]
         # take care of sequence and structure masking
         if self.inpaint_seq_tensor is None:
@@ -338,19 +341,23 @@ class ContigMap:
         hal_idx0_inpaint = []
         ref_idx0_receptor = []
         hal_idx0_receptor = []
+        pdb_idx = list(zip(
+            [protein.PDB_CHAIN_IDS[i] for i in self.structure.chain_index], 
+            self.structure.residue_index
+        ))
         for idx, val in enumerate(self.ref):
             if val != ("_", "_"):
-                assert val in self.parsed_pdb["pdb_idx"], f"{val} is not in pdb file!"
+                assert val in pdb_idx, f"{val} is not in pdb file!"
                 hal_idx0.append(idx)
-                ref_idx0.append(self.parsed_pdb["pdb_idx"].index(val))
+                ref_idx0.append(pdb_idx.index(val))
         for idx, val in enumerate(self.inpaint):
             if val != ("_", "_"):
                 hal_idx0_inpaint.append(idx)
-                ref_idx0_inpaint.append(self.parsed_pdb["pdb_idx"].index(val))
+                ref_idx0_inpaint.append(pdb_idx.index(val))
         for idx, val in enumerate(self.receptor):
             if val != ("_", "_"):
                 hal_idx0_receptor.append(idx)
-                ref_idx0_receptor.append(self.parsed_pdb["pdb_idx"].index(val))
+                ref_idx0_receptor.append(pdb_idx.index(val))
 
         return (
             ref_idx0,

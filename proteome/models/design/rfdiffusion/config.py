@@ -182,17 +182,15 @@ class LoggingConfig:
 @dataclass
 class ScaffoldGuidedParams:
     scaffoldguided: bool = False
-    target_pdb: bool = False
-    target_path: Optional[str] = None
-    scaffold_list: Optional[List[str]] = None
-    scaffold_dir: Optional[str] = None
+    target_pdb_str: bool = False
+    scaffold_pdb_str_list: Optional[List[str]] = None  # pdb str
     sampled_insertion: int = 0
     sampled_N: int = 0
     sampled_C: int = 0
     ss_mask: int = 0
     systematic: bool = False
-    target_ss: Optional[str] = None
-    target_adj: Optional[str] = None
+    target_ss: bool = False
+    target_adj: bool = False
     mask_loops: bool = True
     contig_crop: Optional[List[str]] = None
 

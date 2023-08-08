@@ -7,12 +7,12 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from omegaconf import DictConfig
 from proteome import protein
-from proteome.models.design.rfdiffusion import samplers, util
+from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.design.rfdiffusion.secstruct_adj import make_ss_block_adj_from_structure
 from scipy.spatial.transform import Rotation as scipy_R
 
 ###########################################################
@@ -582,7 +582,11 @@ class BlockAdjacency:
         - adj: block adjacency with equivalent masking as ss (L,L)
     """
 
-    def __init__(self, conf, num_designs):
+    def __init__(
+        self, 
+        conf: config.ScaffoldGuidedParams, 
+        num_designs: int,
+    ):
         """
         Parameters:
           inputs:
@@ -590,26 +594,8 @@ class BlockAdjacency:
              conf.inference.num_designs for sanity checking
         """
 
-        # either list or path to .txt file with list of scaffolds
-        if conf.scaffold_list is not None:
-            if type(conf.scaffold_list) == list:
-                self.scaffold_list = conf.scaffold_list
-            elif conf.scaffold_list[-4:] == ".txt":
-                # txt file with list of ids
-                list_from_file = []
-                with open(conf.scaffold_list, "r") as f:
-                    for line in f:
-                        list_from_file.append(line.strip())
-                self.scaffold_list = list_from_file
-            else:
-                raise NotImplementedError
-        else:
-            self.scaffold_list = [
-                os.path.split(i)[1][:-6]
-                for i in glob.glob(f"{conf.scaffold_dir}/*_ss.pt")
-            ]
-        # path to directory with scaffolds, ss files and block_adjacency files
-        self.scaffold_dir = conf.scaffold_dir
+        assert conf.scaffold_pdb_str_list is not None
+        self.scaffold_list = conf.scaffold_pdb_str_list
 
         # maximum sampled insertion in each loop segment
         if "-" in str(conf.sampled_insertion):
@@ -665,14 +651,13 @@ class BlockAdjacency:
         else:
             self.mask_loops = True
 
-    def get_ss_adj(self, item):
+    def get_ss_adj(self, pdb_str: str):
         """
         Given at item, get the ss tensor and block adjacency matrix for that item
         """
-        ss = torch.load(os.path.join(self.scaffold_dir, f'{item.split(".")[0]}_ss.pt'))
-        adj = torch.load(
-            os.path.join(self.scaffold_dir, f'{item.split(".")[0]}_adj.pt')
-        )
+        structure14 = protein.from_pdb_string(pdb_str, atom14_format=True)
+        structure27 = protein.pad_protein_14_to_27(structure14)
+        ss, adj = make_ss_block_adj_from_structure(structure27)
 
         return ss, adj
 
@@ -780,10 +765,9 @@ class BlockAdjacency:
             self.item_n += 1
         else:
             item = random.choice(self.scaffold_list)
-        print("Scaffold constrained based on file: ", item)
+
         # load files
         ss, adj = self.get_ss_adj(item)
-        adj_orig = torch.clone(adj)
         # separate into segments (loop or not)
         mask = torch.where(ss == 2, 1, 0).bool()
         segments = self.mask_to_segments(mask)
@@ -830,6 +814,7 @@ class Target:
             ]
         )
 
+        self.crop_mask = None
         if contig_crop:
             self.contig_crop(contig_crop)
 
@@ -891,7 +876,6 @@ class Target:
         ), "Supplied hotspot residues are missing from the target contig!"
 
         # create new protein from the crop
-        print("aatype shape", self.target_struct.aatype.shape, mask)
         crop_or_none = lambda x: x[mask] if x is not None else None
         self.target_struct = protein.Protein(
             atom_positions=crop_or_none(self.target_struct.atom_positions),
@@ -906,6 +890,7 @@ class Target:
             hetatom_positions=self.target_struct.hetatom_positions,
             hetatom_names=self.target_struct.hetatom_names,
         )
+        self.crop_mask = mask
 
     def get_target(self):
         return self.target_struct

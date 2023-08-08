@@ -92,6 +92,23 @@ class Protein:
             )
 
 
+def pad_protein_14_to_27(prot: Protein) -> Protein:
+    prot_27_padded = Protein(
+        atom_positions=np.pad(prot.atom_positions, ((0, 0), (0, 13), (0, 0))),
+        aatype=prot.aatype,
+        atom_mask=np.pad(prot.atom_mask, ((0, 0), (0, 13))),
+        residue_index=prot.residue_index,
+        b_factors=np.pad(prot.b_factors, ((0, 0), (0, 13))),
+        chain_index=prot.chain_index,
+        remark=prot.remark,
+        parents=prot.parents,
+        parents_chain_index=prot.parents_chain_index,
+        hetatom_positions=prot.hetatom_positions,
+        hetatom_names=prot.hetatom_names,
+    )
+    return prot_27_padded
+
+
 def to_biopdb_structure(prot: Protein) -> Structure:
     """Converts from a `Protein` to a BioPython PDB structure."""
     pdb_str = to_pdb(prot)
