@@ -1,6 +1,6 @@
 import os
-from typing import Optional
 from dataclasses import asdict
+from typing import Optional
 
 import numpy as np
 import torch
@@ -26,11 +26,11 @@ REF_ANGLES = util.reference_angles
 
 class Sampler:
     def __init__(
-        self, 
-        model: RoseTTAFoldModule, 
+        self,
+        model: RoseTTAFoldModule,
         diffuser_conf: config.DiffuserConfig,
         preprocess_conf: config.PreprocessConfig,
-        inference_conf: config.InferenceConfig, 
+        inference_conf: config.InferenceConfig,
         contigmap_conf: config.ContigMap = config.ContigMap(),
         denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
         ppi_conf: config.PPIParams = config.PPIParams(),
@@ -68,7 +68,9 @@ class Sampler:
         # Initialize helper objects
         schedule_directory = f"{SCRIPT_DIR}/../../schedules"
         os.makedirs(schedule_directory, exist_ok=True)
-        self.diffuser = Diffuser(**asdict(self.diffuser_conf), cache_dir=schedule_directory)
+        self.diffuser = Diffuser(
+            **asdict(self.diffuser_conf), cache_dir=schedule_directory
+        )
 
         ###########################
         ### Initialise Symmetry ###
@@ -606,12 +608,13 @@ class ScaffoldedSampler(SelfConditioning):
     """
     Model Runner for Scaffold-Constrained diffusion
     """
+
     def __init__(
-        self, 
-        model: RoseTTAFoldModule, 
+        self,
+        model: RoseTTAFoldModule,
         diffuser_conf: config.DiffuserConfig,
         preprocess_conf: config.PreprocessConfig,
-        inference_conf: config.InferenceConfig, 
+        inference_conf: config.InferenceConfig,
         contigmap_conf: config.ContigMap = config.ContigMap(),
         denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
         ppi_conf: config.PPIParams = config.PPIParams(),
@@ -643,19 +646,30 @@ class ScaffoldedSampler(SelfConditioning):
             struct = protein.from_pdb_string(
                 scaffold_conf.target_pdb_str, atom14_format=True, parse_hetatom=True
             )
-            self.target = iu.Target(struct, scaffold_conf.contig_crop, ppi_conf.hotspot_res)
+            self.target = iu.Target(
+                struct, scaffold_conf.contig_crop, ppi_conf.hotspot_res
+            )
             self.target_struct = self.target.get_target()
 
-            if scaffold_conf.target_ss is not False or scaffold_conf.target_adj is not False:
-                target_ss, target_adj = self.blockadjacency.get_ss_adj(scaffold_conf.target_pdb_str)
+            if (
+                scaffold_conf.target_ss is not False
+                or scaffold_conf.target_adj is not False
+            ):
+                target_ss, target_adj = self.blockadjacency.get_ss_adj(
+                    scaffold_conf.target_pdb_str
+                )
 
             if scaffold_conf.target_ss is not False:
-                self.target_ss = torch.nn.functional.one_hot(target_ss.long(), num_classes=4)
+                self.target_ss = torch.nn.functional.one_hot(
+                    target_ss.long(), num_classes=4
+                )
                 if self.scaffold_conf.contig_crop is not None:
                     self.target_ss = self.target_ss[self.target.crop_mask]
 
             if scaffold_conf.target_adj is not None:
-                self.target_adj = torch.nn.functional.one_hot(target_adj.long(), num_classes=3)
+                self.target_adj = torch.nn.functional.one_hot(
+                    target_adj.long(), num_classes=3
+                )
                 if self.scaffold_conf.contig_crop is not None:
                     self.target_adj = self.target_adj[self.target.crop_mask]
                     self.target_adj = self.target_adj[:, self.target.crop_mask]
@@ -692,7 +706,9 @@ class ScaffoldedSampler(SelfConditioning):
                 target_L = len(self.target_struct.atom_positions)
                 # xyz
                 target_xyz = torch.full((target_L, 27, 3), np.nan)
-                target_xyz[:, :14, :] = torch.from_numpy(self.target_struct.atom_positions)
+                target_xyz[:, :14, :] = torch.from_numpy(
+                    self.target_struct.atom_positions
+                )
                 xT = torch.cat((xT, target_xyz), dim=0)
                 # seq
                 seq_T = torch.cat(
@@ -708,24 +724,24 @@ class ScaffoldedSampler(SelfConditioning):
                 atom_mask = torch.cat((atom_mask, mask_27), dim=0)
                 self.L += target_L
                 # generate contigmap object
-                pdb_idx = list(zip(
-                    [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index], 
-                    self.target_struct.residue_index
-                ))
+                pdb_idx = list(
+                    zip(
+                        [
+                            protein.PDB_CHAIN_IDS[i]
+                            for i in self.target_struct.chain_index
+                        ],
+                        self.target_struct.residue_index,
+                    )
+                )
                 contig = []
                 for idx, i in enumerate(pdb_idx[:-1]):
                     if idx == 0:
                         start = i[1]
-                    if (
-                        i[1] + 1 != pdb_idx[idx + 1][1]
-                        or i[0] != pdb_idx[idx + 1][0]
-                    ):
+                    if i[1] + 1 != pdb_idx[idx + 1][1] or i[0] != pdb_idx[idx + 1][0]:
                         contig.append(f"{i[0]}{start}-{i[1]}/0 ")
                         start = pdb_idx[idx + 1][1]
 
-                contig.append(
-                    f"{pdb_idx[-1][0]}{start}-{pdb_idx[-1][1]}/0 "
-                )
+                contig.append(f"{pdb_idx[-1][0]}{start}-{pdb_idx[-1][1]}/0 ")
                 contig.append(f"{self.binderlen}-{self.binderlen}")
                 contig = ["".join(contig)]
             else:

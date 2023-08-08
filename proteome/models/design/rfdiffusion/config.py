@@ -142,7 +142,7 @@ class SymmetryParams:
     # - Tetrahedral symmetry # call as tetrahedral
     # - Octahedral symmetry # call as octahedral
     # - Icosahedral symmetry # call as icosahedral
-    symmetry: Optional[str] = None #"c2"
+    symmetry: Optional[str] = None  # "c2"
     model_only_neighbors: str = False
     output_prefix: str = "samples/c2"
 

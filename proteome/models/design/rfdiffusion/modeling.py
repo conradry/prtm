@@ -1,7 +1,7 @@
 import random
+from dataclasses import asdict
 from enum import Enum
 from typing import Optional
-from dataclasses import asdict
 
 import numpy as np
 import torch

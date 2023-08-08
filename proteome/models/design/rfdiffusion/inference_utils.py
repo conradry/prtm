@@ -10,9 +10,11 @@ import torch
 from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
+from proteome.models.design.rfdiffusion.secstruct_adj import (
+    make_ss_block_adj_from_structure,
+)
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
-from proteome.models.design.rfdiffusion.secstruct_adj import make_ss_block_adj_from_structure
 from scipy.spatial.transform import Rotation as scipy_R
 
 ###########################################################
@@ -583,8 +585,8 @@ class BlockAdjacency:
     """
 
     def __init__(
-        self, 
-        conf: config.ScaffoldGuidedParams, 
+        self,
+        conf: config.ScaffoldGuidedParams,
         num_designs: int,
     ):
         """
@@ -799,9 +801,9 @@ class Target:
     """
 
     def __init__(
-        self, 
-        target_struct: protein.Protein, 
-        contig_crop: Optional[List[str]], 
+        self,
+        target_struct: protein.Protein,
+        contig_crop: Optional[List[str]],
         hotspots: Optional[List[str]],
     ):
         self.target_struct = deepcopy(target_struct)
@@ -810,7 +812,9 @@ class Target:
         self.hotspots = np.array(
             [
                 True if f"{protein.PDB_CHAIN_IDS[cix]}{rix}" in hotspots else False
-                for cix, rix in zip(target_struct.chain_index, target_struct.residue_index)
+                for cix, rix in zip(
+                    target_struct.chain_index, target_struct.residue_index
+                )
             ]
         )
 
@@ -848,10 +852,12 @@ class Target:
         """
 
         # add residue offset between chains if multiple chains in receptor file
-        pdb_idx = list(zip(
-            [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index], 
-            self.target_struct.residue_index
-        ))
+        pdb_idx = list(
+            zip(
+                [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index],
+                self.target_struct.residue_index,
+            )
+        )
         res_idx = self.target_struct.residue_index
         for idx in range(1, len(pdb_idx) - 1):
             res_idx[idx:] += residue_offset + idx
@@ -866,9 +872,7 @@ class Target:
 
         # flatten list
         contig_list = [i for j in contig_list for i in j]
-        mask = np.array(
-            [True if i in contig_list else False for i in pdb_idx]
-        )
+        mask = np.array([True if i in contig_list else False for i in pdb_idx])
 
         # sanity check
         assert np.sum(self.hotspots) == np.sum(

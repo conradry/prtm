@@ -2,7 +2,6 @@ import random
 import sys
 
 import numpy as np
-
 from proteome import protein
 
 
@@ -341,10 +340,12 @@ class ContigMap:
         hal_idx0_inpaint = []
         ref_idx0_receptor = []
         hal_idx0_receptor = []
-        pdb_idx = list(zip(
-            [protein.PDB_CHAIN_IDS[i] for i in self.structure.chain_index], 
-            self.structure.residue_index
-        ))
+        pdb_idx = list(
+            zip(
+                [protein.PDB_CHAIN_IDS[i] for i in self.structure.chain_index],
+                self.structure.residue_index,
+            )
+        )
         for idx, val in enumerate(self.ref):
             if val != ("_", "_"):
                 assert val in pdb_idx, f"{val} is not in pdb file!"
