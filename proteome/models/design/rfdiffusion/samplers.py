@@ -103,6 +103,9 @@ class Sampler:
         else:
             self.t_step_input = int(self.diffuser_conf.T)
 
+        self.d_t1d = self.preprocess_conf.d_t1d
+        self.d_t2d = self.preprocess_conf.d_t2d
+
     @property
     def T(self):
         """
