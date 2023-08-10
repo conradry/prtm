@@ -1,6 +1,5 @@
 """Helper class for handle symmetric assemblies."""
 import functools as fn
-import logging
 import pathlib
 import string
 
@@ -22,7 +21,6 @@ saved_symmetries = ["tetrahedral", "octahedral", "icosahedral"]
 
 class SymGen:
     def __init__(self, global_sym, recenter, radius, model_only_neibhbors=False):
-        self._log = logging.getLogger(__name__)
         self._recenter = recenter
         self._radius = radius
 
@@ -30,7 +28,6 @@ class SymGen:
             # Cyclic symmetry
             if not global_sym[1:].isdigit():
                 raise ValueError(f"Invalid cyclic symmetry {global_sym}")
-            self._log.info(f"Initializing cyclic symmetry order {global_sym[1:]}.")
             self._init_cyclic(int(global_sym[1:]))
             self.apply_symmetry = self._apply_cyclic
 
@@ -38,14 +35,12 @@ class SymGen:
             # Dihedral symmetry
             if not global_sym[1:].isdigit():
                 raise ValueError(f"Invalid dihedral symmetry {global_sym}")
-            self._log.info(f"Initializing dihedral symmetry order {global_sym[1:]}.")
             self._init_dihedral(int(global_sym[1:]))
             # Applied the same way as cyclic symmetry
             self.apply_symmetry = self._apply_cyclic
 
         elif global_sym.lower() == "t3":
             # Tetrahedral (T3) symmetry
-            self._log.info("Initializing T3 symmetry order.")
             self.sym_rots = T3_ROTATIONS
             self.order = 4
             # Applied the same way as cyclic symmetry
@@ -53,13 +48,11 @@ class SymGen:
 
         elif global_sym == "octahedral":
             # Octahedral symmetry
-            self._log.info("Initializing octahedral symmetry.")
             self._init_octahedral()
             self.apply_symmetry = self._apply_octahedral
 
         elif global_sym.lower() in saved_symmetries:
             # Using a saved symmetry
-            self._log.info("Initializing %s symmetry order." % global_sym)
             self._init_from_symrots_file(global_sym)
 
             # Applied the same way as cyclic symmetry

@@ -5,6 +5,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn.functional as nn
+
 from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion import inference_utils as iu
@@ -88,7 +89,7 @@ class Sampler:
 
         self.allatom = ComputeAllAtomCoords().to(self.device)
 
-        self.target_feats = iu.process_target(
+        self.target_structure = iu.process_target(
             self.inf_conf.input_structure, center=False
         )
         self.chain_idx = None
@@ -117,12 +118,12 @@ class Sampler:
         """
         return self.diffuser_conf.T
 
-    def construct_contig(self, target_feats):
+    def construct_contig(self, target_structure):
         """
         Construct contig class describing the protein to be generated
         """
         contig_dict = asdict(self.contig_conf) if self.contig_conf else {}
-        return ContigMap(target_feats, **contig_dict)
+        return ContigMap(target_structure, **contig_dict)
 
     def construct_denoiser(self, L, visible):
         """Make length-specific denoiser."""
@@ -154,7 +155,7 @@ class Sampler:
         ### Parse input pdb ###
         #######################
 
-        self.target_feats = iu.process_target(
+        self.target_structure = iu.process_target(
             self.inf_conf.input_structure, center=False
         )
 
@@ -164,7 +165,7 @@ class Sampler:
 
         # Generate a specific contig from the range of possibilities specified at input
 
-        self.contig_map = self.construct_contig(self.target_feats)
+        self.contig_map = self.construct_contig(self.target_structure)
         self.mappings = self.contig_map.get_mappings()
         self.mask_seq = torch.from_numpy(self.contig_map.inpaint_seq)[None, :]
         self.mask_str = torch.from_numpy(self.contig_map.inpaint_str)[None, :]
@@ -186,7 +187,7 @@ class Sampler:
             self.potential_conf,
             self.ppi_conf,
             self.diffuser_conf,
-            self.inf_conf,
+            self.symmetry_conf,
             self.hotspot_0idx,
             self.binderlen,
         )
@@ -195,9 +196,9 @@ class Sampler:
         ### Initialize other attributes ###
         ###################################
 
-        xyz_27 = self.target_feats["xyz_27"]
-        mask_27 = self.target_feats["mask_27"]
-        seq_orig = self.target_feats["seq"]
+        xyz_27 = self.target_structure.atom_positions
+        mask_27 = self.target_structure.atom_mask > 0.5
+        seq_orig = self.target_structure.aatype
         L_mapped = len(self.contig_map.ref)
         contig_map = self.contig_map
 
@@ -302,24 +303,21 @@ class Sampler:
                 )
             ):
                 assert (
-                    len(self.target_feats["xyz_het"]) > 0
+                    len(self.target_structure.hetatom_positions) > 0
                 ), "If you're using the Substrate Contact potential, \
                         you need to make sure there's a ligand in the input_pdb file!"
-                het_names = np.array(
-                    [i["name"].strip() for i in self.target_feats["info_het"]]
-                )
-                xyz_het = self.target_feats["xyz_het"][
+                het_names = np.array(self.target_structure.hetatom_names)
+                xyz_het = self.target_structure.hetatom_positions[
                     het_names == self.potential_conf.substrate
                 ]
-                xyz_het = torch.from_numpy(xyz_het)
                 assert (
                     xyz_het.shape[0] > 0
-                ), f"expected >0 heteroatoms from ligand with name {self._conf.potentials.substrate}"
+                ), f"expected >0 heteroatoms from ligand with name {self.potential_conf.substrate}"
                 xyz_motif_prealign = xyz_motif_prealign[0, 0][
                     self.diffusion_mask.squeeze()
                 ]
                 for pot in self.potential_manager.potentials_to_apply:
-                    pot.motif_substrate_atoms = xyz_het
+                    pot.motif_substrate_atoms = xyz_het.double()
                     pot.diffusion_mask = self.diffusion_mask.squeeze()
                     pot.xyz_motif = xyz_motif_prealign
                     pot.diffuser = self.diffuser
@@ -767,18 +765,18 @@ class ScaffoldedSampler(SelfConditioning):
             ), "Giving a target is the wrong way of handling this is you're doing contigs and secondary structure"
 
             # process target and reinitialise potential_manager. This is here because the 'target' is always set up to be the second chain in out inputs.
-            self.target_feats = iu.process_target(self.inf_conf.input_structure)
-            self.contig_map = self.construct_contig(self.target_feats)
+            self.target_structure = iu.process_target(self.inf_conf.input_structure)
+            self.contig_map = self.construct_contig(self.target_structure)
             self.mappings = self.contig_map.get_mappings()
             self.mask_seq = torch.from_numpy(self.contig_map.inpaint_seq)[None, :]
             self.mask_str = torch.from_numpy(self.contig_map.inpaint_str)[None, :]
             self.binderlen = len(self.contig_map.inpaint)
-            target_feats = self.target_feats
+            target_structure = self.target_structure
             contig_map = self.contig_map
 
-            xyz_27 = target_feats["xyz_27"]
-            mask_27 = target_feats["mask_27"]
-            seq_orig = target_feats["seq"]
+            xyz_27 = target_structure.atom_positions
+            mask_27 = target_structure.atom_mask
+            seq_orig = target_structure.aatype
             L_mapped = len(self.contig_map.ref)
             seq_T = torch.full((L_mapped,), 21)
             seq_T[contig_map.hal_idx0] = seq_orig[contig_map.ref_idx0]
@@ -808,7 +806,7 @@ class ScaffoldedSampler(SelfConditioning):
             self.potential_conf,
             self.ppi_conf,
             self.diffuser_conf,
-            self.inf_conf,
+            self.symmetry_conf,
             self.hotspot_0idx,
             self.binderlen,
         )

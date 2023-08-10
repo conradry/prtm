@@ -1,12 +1,12 @@
-import glob
-import logging
-import os
 import random
 from copy import deepcopy
+from dataclasses import asdict
 from typing import List, Optional
 
 import numpy as np
 import torch
+from scipy.spatial.transform import Rotation as scipy_R
+
 from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
@@ -15,7 +15,6 @@ from proteome.models.design.rfdiffusion.secstruct_adj import (
 )
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
-from scipy.spatial.transform import Rotation as scipy_R
 
 ###########################################################
 #### Functions which can be called outside of Denoiser ####
@@ -274,7 +273,6 @@ class Denoise:
         self.final_noise_scale_frame = final_noise_scale_frame
         self.frame_noise_schedule_type = frame_noise_schedule_type
         self.potential_manager = potential_manager
-        self._log = logging.getLogger(__name__)
 
         self.schedule, self.alpha_schedule, self.alphabar_schedule = get_beta_schedule(
             self.T, self.b_0, self.b_T, self.schedule_type, inference=True
@@ -355,7 +353,6 @@ class Denoise:
 
         # calculate rmsd
         rms = rmsd(A, rB)
-        self._log.info(f"Sampled motif RMSD: {rms:.2f}")
 
         # 2 rotate whole px0 by rotation matrix
         atom_mask = atom_mask.cpu()
@@ -515,6 +512,7 @@ class Denoise:
         return fullatom_next.squeeze()[:, :14, :], px0
 
 
+"""
 def process_target(target_struct: protein.Protein, center=True):
     # Zero-center positions
     ca_center = target_struct.atom_positions[:, :1, :].mean(axis=0, keepdims=True)
@@ -542,6 +540,20 @@ def process_target(target_struct: protein.Protein, center=True):
         out["info_het"] = target_struct.hetatom_names
 
     return out
+"""
+
+
+def process_target(target_struct: protein.Protein, center=True):
+    # Zero-center positions
+    ca_center = target_struct.atom_positions[:, :1, :].mean(axis=0, keepdims=True)
+    if not center:
+        ca_center = 0
+
+    target_struct_dict = asdict(target_struct)
+    target_struct_dict["atom_positions"] -= ca_center
+    protein_27 = protein.pad_protein_14_to_27(protein.Protein(**target_struct_dict))
+
+    return protein.to_torch(protein_27)
 
 
 def get_idx0_hotspots(mappings, ppi_conf, binderlen):

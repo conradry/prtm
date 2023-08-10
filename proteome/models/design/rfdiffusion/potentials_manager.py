@@ -1,8 +1,10 @@
 import sys
+from typing import List
 
 import numpy as np
 import torch
-from proteome.models.design.rfdiffusion import potentials
+
+from proteome.models.design.rfdiffusion import config, potentials
 
 
 def make_contact_matrix(nchain, intra_all=False, inter_all=False, contact_string=None):
@@ -83,16 +85,16 @@ class PotentialManager:
 
     def __init__(
         self,
-        potentials_config,
-        ppi_config,
-        diffuser_config,
-        inference_config,
-        hotspot_0idx,
-        binderlen,
+        potentials_config: config.PotentialsParams,
+        ppi_config: config.PPIParams,
+        diffuser_config: config.DiffuserConfig,
+        symmetry_config: config.SymmetryParams,
+        hotspot_0idx: List[int],
+        binderlen: int,
     ):
         self.potentials_config = potentials_config
         self.ppi_config = ppi_config
-        self.inference_config = inference_config
+        self.symmetry_config = symmetry_config
 
         self.guide_scale = potentials_config.guide_scale
         self.guide_decay = potentials_config.guide_decay
@@ -162,9 +164,9 @@ class PotentialManager:
             kwargs = {k: potential_dict[k] for k in potential_dict.keys() - {"type"}}
 
             # symmetric oligomer contact potential args
-            if self.inference_config.symmetry:
+            if self.symmetry_config.symmetry:
                 num_chains = calc_nchains(
-                    symbol=self.inference_config.symmetry, components=1
+                    symbol=self.symmetry_config.symmetry, components=1
                 )  # hard code 1 for now
                 contact_kwargs = {
                     "nchain": num_chains,

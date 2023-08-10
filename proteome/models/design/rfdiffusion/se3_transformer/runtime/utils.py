@@ -23,7 +23,6 @@
 
 import argparse
 import ctypes
-import logging
 import os
 import random
 from functools import wraps
@@ -100,7 +99,7 @@ def init_distributed() -> bool:
         if backend == "nccl":
             torch.cuda.set_device(get_local_rank())
         else:
-            logging.warning("Running on CPU only!")
+            pass
         assert torch.distributed.is_initialized()
     return distributed
 

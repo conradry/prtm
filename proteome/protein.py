@@ -28,8 +28,10 @@ import modelcif.protocol
 import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
+import torch
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
+
 from proteome.constants import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
@@ -38,7 +40,7 @@ PICO_TO_ANGSTROM = 0.01
 
 PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
-assert(PDB_MAX_CHAINS == 62)
+assert PDB_MAX_CHAINS == 62
 
 
 @dataclasses.dataclass(frozen=True)
@@ -85,28 +87,43 @@ class Protein:
     hetatom_names: Optional[np.ndarray] = None
 
     def __post_init__(self):
-        if(len(np.unique(self.chain_index)) > PDB_MAX_CHAINS):
+        if len(np.unique(self.chain_index)) > PDB_MAX_CHAINS:
             raise ValueError(
                 f"Cannot build an instance with more than {PDB_MAX_CHAINS} "
                 "chains because these cannot be written to PDB format"
             )
 
 
-def pad_protein_14_to_27(prot: Protein) -> Protein:
-    prot_27_padded = Protein(
-        atom_positions=np.pad(prot.atom_positions, ((0, 0), (0, 13), (0, 0))),
-        aatype=prot.aatype,
-        atom_mask=np.pad(prot.atom_mask, ((0, 0), (0, 13))),
-        residue_index=prot.residue_index,
-        b_factors=np.pad(prot.b_factors, ((0, 0), (0, 13))),
-        chain_index=prot.chain_index,
-        remark=prot.remark,
-        parents=prot.parents,
-        parents_chain_index=prot.parents_chain_index,
-        hetatom_positions=prot.hetatom_positions,
-        hetatom_names=prot.hetatom_names,
+def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Protein:
+    prot_dict = dataclasses.asdict(prot)
+    prot_dict["atom_positions"] = np.pad(
+        prot.atom_positions,
+        ((0, 0), (0, 13), (0, 0)),
+        constant_values=atom_pos_pad_value,
     )
+    prot_dict["atom_mask"] = np.pad(
+        prot.atom_mask, ((0, 0), (0, 13)), constant_values=0
+    )
+    prot_dict["b_factors"] = np.pad(prot.b_factors, ((0, 0), (0, 13)))
+    prot_27_padded = Protein(**prot_dict)
+
     return prot_27_padded
+
+
+def to_torch(prot: Protein) -> Protein:
+    """Converts a `Protein` instance to torch tensors."""
+    prot_dict = dataclasses.asdict(prot)
+    for k, v in prot_dict.items():
+        if isinstance(v, np.ndarray):
+            # Check if array is any float or integer type
+            if np.issubdtype(v.dtype, np.floating):
+                prot_dict[k] = torch.from_numpy(v).float()
+            elif np.issubdtype(v.dtype, np.integer):
+                prot_dict[k] = torch.from_numpy(v).long()
+            elif np.issubdtype(v.dtype, np.bool_):
+                prot_dict[k] = torch.from_numpy(v).bool()
+
+    return Protein(**prot_dict)
 
 
 def to_biopdb_structure(prot: Protein) -> Structure:
@@ -138,7 +155,9 @@ def to_backbone_only_protein(protein: Protein) -> Protein:
     """
     Strip out all atoms except those in the backbone [N, CA, C, O]
     """
-    atom_indices = [residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]]
+    atom_indices = [
+        residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]
+    ]
     return Protein(
         atom_positions=protein.atom_positions[:, atom_indices],
         atom_mask=protein.atom_mask[:, atom_indices],
@@ -152,8 +171,8 @@ def to_backbone_only_protein(protein: Protein) -> Protein:
 
 
 def from_pdb_string(
-    pdb_str: str, 
-    chain_id: Optional[str] = None, 
+    pdb_str: str,
+    chain_id: Optional[str] = None,
     backbone_only: bool = False,
     ca_only: bool = False,
     atom14_format: bool = False,
@@ -178,7 +197,9 @@ def from_pdb_string(
     Returns:
         A new `Protein` parsed from the pdb contents.
     """
-    assert not (backbone_only and ca_only), "Cannot specify both backbone_only and ca_only"
+    assert not (
+        backbone_only and ca_only
+    ), "Cannot specify both backbone_only and ca_only"
     pdb_fh = io.StringIO(pdb_str)
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("none", pdb_fh)
@@ -226,10 +247,16 @@ def from_pdb_string(
             mask = np.zeros((atom_count,))
             res_b_factors = np.zeros((atom_count,))
             for atom in res:
-                if atom14_format and atom.name not in residue_constants.restype1_to_atom14_names[res_shortname]:
+                if (
+                    atom14_format
+                    and atom.name
+                    not in residue_constants.restype1_to_atom14_names[res_shortname]
+                ):
                     continue
                 elif atom14_format:
-                    atom_index = residue_constants.restype1_to_atom14_names[res_shortname].index(atom.name)
+                    atom_index = residue_constants.restype1_to_atom14_names[
+                        res_shortname
+                    ].index(atom.name)
                 elif atom.name not in residue_constants.atom_types:
                     continue
                 else:
@@ -423,10 +450,10 @@ def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
 
 
 def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
-    chain_end = 'TER'
-    return(
-        f'{chain_end:<6}{atom_index:>5}      {end_resname:>3} '
-        f'{chain_name:>1}{residue_index:>4}'
+    chain_end = "TER"
+    return (
+        f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
+        f"{chain_name:>1}{residue_index:>4}"
     )
 
 
@@ -441,7 +468,7 @@ def to_pdb(prot: Protein) -> str:
     """
     restypes = residue_constants.restypes + ["X"]
     res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], "UNK")
-    atom_types = residue_constants.atom_types 
+    atom_types = residue_constants.atom_types
 
     pdb_lines = []
 
@@ -460,7 +487,7 @@ def to_pdb(prot: Protein) -> str:
 
     # Construct a mapping from chain integer indices to chain ID strings.
     chain_ids = {}
-    for i in np.unique(chain_index): # np.unique gives sorted output.
+    for i in np.unique(chain_index):  # np.unique gives sorted output.
         if i >= PDB_MAX_CHAINS:
             raise ValueError(
                 f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
@@ -468,7 +495,7 @@ def to_pdb(prot: Protein) -> str:
         chain_ids[i] = PDB_CHAIN_IDS[i]
 
     headers = get_pdb_headers(prot)
-    if (len(headers) > 0):
+    if len(headers) > 0:
         pdb_lines.extend(headers)
 
     pdb_lines.append("MODEL     1")
@@ -484,14 +511,14 @@ def to_pdb(prot: Protein) -> str:
         if last_chain_index != chain_index[i]:
             pdb_lines.append(
                 _chain_end(
-                    atom_index, 
-                    res_1to3(aatype[i - 1]), 
-                    chain_ids[chain_index[i - 1]], 
-                    residue_index[i - 1]
+                    atom_index,
+                    res_1to3(aatype[i - 1]),
+                    chain_ids[chain_index[i - 1]],
+                    residue_index[i - 1],
                 )
             )
             last_chain_index = chain_index[i]
-            atom_index += 1 # Atom index increases at the TER symbol.
+            atom_index += 1  # Atom index increases at the TER symbol.
 
         res_name_3 = res_1to3(aatype[i])
         for atom_name, pos, mask, b_factor in zip(
@@ -505,20 +532,18 @@ def to_pdb(prot: Protein) -> str:
             alt_loc = ""
             insertion_code = ""
             occupancy = 1.00
-            element = atom_name[
-                0
-            ]  # Protein supports only C, N, O, S, this works.
+            element = atom_name[0]  # Protein supports only C, N, O, S, this works.
             charge = ""
 
             chain_tag = "A"
-            if(chain_index is not None):
+            if chain_index is not None:
                 chain_tag = chain_tags[chain_index[i]]
 
             # PDB is a columnar format, every space matters here!
             atom_line = (
                 f"{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}"
-                #TODO: check this refactor, chose main branch version
-                #f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
+                # TODO: check this refactor, chose main branch version
+                # f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
                 f"{res_name_3:>3} {chain_tag:>1}"
                 f"{residue_index[i]:>4}{insertion_code:>1}   "
                 f"{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}"
@@ -528,13 +553,13 @@ def to_pdb(prot: Protein) -> str:
             pdb_lines.append(atom_line)
             atom_index += 1
 
-        should_terminate = (i == n - 1)
-        if(chain_index is not None):
-            if(i != n - 1 and chain_index[i + 1] != prev_chain_index):
+        should_terminate = i == n - 1
+        if chain_index is not None:
+            if i != n - 1 and chain_index[i + 1] != prev_chain_index:
                 should_terminate = True
                 prev_chain_index = chain_index[i + 1]
 
-        if(should_terminate):
+        if should_terminate:
             # Close the chain.
             chain_end = "TER"
             chain_termination_line = (
@@ -545,7 +570,7 @@ def to_pdb(prot: Protein) -> str:
             pdb_lines.append(chain_termination_line)
             atom_index += 1
 
-            if(i != n - 1):
+            if i != n - 1:
                 # "prev" is a misnomer here. This happens at the beginning of
                 # each new chain.
                 pdb_lines.extend(get_pdb_headers(prot, prev_chain_index))
@@ -555,7 +580,7 @@ def to_pdb(prot: Protein) -> str:
 
     # Pad all lines to 80 characters
     pdb_lines = [line.ljust(80) for line in pdb_lines]
-    return '\n'.join(pdb_lines) + '\n' # Add terminating newline.
+    return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
 
 def to_rosetta_pose(prot: Protein):  # can't type hint conditional import
@@ -746,7 +771,7 @@ def ideal_atom_mask(prot: Protein) -> np.ndarray:
 
 def add_oxygen_to_atom_positions(atom_positions: np.ndarray) -> np.ndarray:
     """Adds oxygen atoms to the atom positions.
-    
+
     Args:
         atom_positions: A numpy array of shape [N, 3, 3] where N is the number of
             atoms in the protein. The last dimension is the x, y, z coordinates

@@ -2,6 +2,7 @@ import random
 import sys
 
 import numpy as np
+
 from proteome import protein
 
 
@@ -32,10 +33,10 @@ class ContigMap:
     ):
         # sanity checks
         if contigs is None and ref_idx is None:
-            sys.exit("Must either specify a contig string or precise mapping")
+            raise Exception("Must either specify a contig string or precise mapping")
         if idx_rf is not None or hal_idx is not None or ref_idx is not None:
             if idx_rf is None or hal_idx is None or ref_idx is None:
-                sys.exit(
+                raise Exception(
                     "If you're specifying specific contig mappings, the reference and output positions must be specified, AND the indexing for RoseTTAFold (idx_rf)"
                 )
 
