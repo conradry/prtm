@@ -108,15 +108,25 @@ class ContigMap:
                 )
         else:
             self.inpaint_str = self.inpaint_str_tensor
-        # get 0-indexed input/output (for trb file)
-        (
-            self.ref_idx0,
-            self.hal_idx0,
-            self.ref_idx0_inpaint,
-            self.hal_idx0_inpaint,
-            self.ref_idx0_receptor,
-            self.hal_idx0_receptor,
-        ) = self.get_idx0()
+
+        if structure is not None:
+            # get 0-indexed input/output (for trb file)
+            (
+                self.ref_idx0,
+                self.hal_idx0,
+                self.ref_idx0_inpaint,
+                self.hal_idx0_inpaint,
+                self.ref_idx0_receptor,
+                self.hal_idx0_receptor,
+            ) = self.get_idx0()
+        else:
+            self.ref_idx0 = None
+            self.hal_idx0 = None
+            self.ref_idx0_inpaint = None
+            self.hal_idx0_inpaint = None
+            self.ref_idx0_receptor = None
+            self.hal_idx0_receptor = None
+
         self.con_ref_pdb_idx = [i for i in self.ref if i != ("_", "_")]
 
         # Handle provide seq. This is zero-indexed, and used only for partial diffusion

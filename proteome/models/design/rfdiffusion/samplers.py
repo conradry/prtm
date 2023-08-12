@@ -441,10 +441,10 @@ class Sampler:
         if self.preprocess_conf.d_t1d >= 24:  # add hotspot residues
             hotspot_tens = torch.zeros(L).float()
             if self.ppi_conf.hotspot_res is None:
-                print(
-                    "WARNING: you're using a model trained on complexes and hotspot residues, without specifying hotspots.\
-                         If you're doing monomer diffusion this is fine"
-                )
+                #print(
+                #    "WARNING: you're using a model trained on complexes and hotspot residues, without specifying hotspots.\
+                #         If you're doing monomer diffusion this is fine"
+                #)
                 hotspot_idx = []
             else:
                 hotspots = [(i[0], int(i[1:])) for i in self.ppi_conf.hotspot_res]
@@ -667,7 +667,7 @@ class ScaffoldedSampler(SelfConditioning):
                 if self.scaffold_conf.contig_crop is not None:
                     self.target_ss = self.target_ss[self.target.crop_mask]
 
-            if scaffold_conf.target_adj is not None:
+            if scaffold_conf.target_adj is not False:
                 self.target_adj = torch.nn.functional.one_hot(
                     target_adj.long(), num_classes=3
                 )
@@ -745,14 +745,17 @@ class ScaffoldedSampler(SelfConditioning):
                 contig.append(f"{pdb_idx[-1][0]}{start}-{pdb_idx[-1][1]}/0 ")
                 contig.append(f"{self.binderlen}-{self.binderlen}")
                 contig = ["".join(contig)]
+
+                self.contig_map = ContigMap(self.target_struct, contig)
+                self.mappings = self.contig_map.get_mappings()
+                L_mapped = len(self.contig_map.ref)
             else:
                 contig = [f"{self.binderlen}-{self.binderlen}"]
+                self.contig_map = ContigMap(None, contig)
+                self.mappings = None
 
-            self.contig_map = ContigMap(self.target_struct, contig)
-            self.mappings = self.contig_map.get_mappings()
             self.mask_seq = self.diffusion_mask
             self.mask_str = self.diffusion_mask
-            L_mapped = len(self.contig_map.ref)
 
         ############################
         ### Specific Contig mode ###
@@ -794,9 +797,12 @@ class ScaffoldedSampler(SelfConditioning):
         ####################
         ### Get hotspots ###
         ####################
-        self.hotspot_0idx = iu.get_idx0_hotspots(
-            self.mappings, self.ppi_conf, self.binderlen
-        )
+        if self.mappings is None:
+            self.hotspot_0idx = iu.get_idx0_hotspots(
+                self.mappings, self.ppi_conf, self.binderlen
+            )
+        else:
+            self.hotspot_0idx = None
 
         #########################
         ### Set up potentials ###
@@ -876,7 +882,7 @@ class ScaffoldedSampler(SelfConditioning):
                 torch.full((self.L - self.binderlen,), 3), num_classes=4
             )
             full_ss = torch.cat((self.ss, blank_ss), dim=0)
-            if self.scaffold_conf.target_ss is not None:
+            if self.scaffold_conf.target_ss is not False:
                 full_ss[self.binderlen :] = self.target_ss
         else:
             full_ss = self.ss
@@ -893,7 +899,7 @@ class ScaffoldedSampler(SelfConditioning):
                 full_adj = torch.zeros((self.L, self.L, 3))
                 full_adj[:, :, -1] = 1.0  # set to mask
                 full_adj[: self.binderlen, : self.binderlen] = self.adj
-                if self.scaffold_conf.target_adj is not None:
+                if self.scaffold_conf.target_adj is not False:
                     full_adj[self.binderlen :, self.binderlen :] = self.target_adj
             else:
                 full_adj = self.adj

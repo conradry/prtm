@@ -37,11 +37,6 @@ def get_beta_schedule(T, b0, bT, schedule_type, schedule_params={}, inference=Fa
     alpha_schedule = 1 - schedule
     alphabar_t_schedule = torch.cumprod(alpha_schedule, dim=0)
 
-    if inference:
-        print(
-            f"With this beta schedule ({schedule_type} schedule, beta_0 = {round(b0, 3)}, beta_T = {round(bT,3)}), alpha_bar_T = {alphabar_t_schedule[-1]}"
-        )
-
     return schedule, alpha_schedule, alphabar_t_schedule
 
 
@@ -588,8 +583,6 @@ class Diffuser:
         self.eucl_diffuser = EuclideanDiffuser(
             self.T, b_0, b_T, schedule_type=schedule_type, **schedule_kwargs
         )
-
-        print("Successful diffuser __init__")
 
     def diffuse_pose(
         self,
