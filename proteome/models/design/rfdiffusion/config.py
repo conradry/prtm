@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Union
+
+import torch
 
 from proteome import protein
 
@@ -127,45 +129,59 @@ class DenoiserParams:
     final_noise_scale_frame: float = 1.0
     frame_noise_schedule_type: str = "constant"
 
+    def __post_init__(self):
+        assert self.ca_noise_schedule_type in ["constant", "linear"]
+        assert self.frame_noise_schedule_type in ["constant", "linear"]
+
 
 @dataclass
 class PPIParams:
-    hotspot_res: Optional[List[int]] = None
+    # Hotspot residues denoted by chain letter
+    # and residue number (e.g. "A12", "B3")
+    hotspot_res: Optional[List[str]] = None
 
 
 @dataclass
 class SymmetryParams:
-    # Symmetry to sample
-    # Available symmetries:
-    # - Cyclic symmetry (C_n) # call as c5
-    # - Dihedral symmetry (D_n) # call as d5
-    # - Tetrahedral symmetry # call as tetrahedral
-    # - Octahedral symmetry # call as octahedral
-    # - Icosahedral symmetry # call as icosahedral
-    symmetry: Optional[str] = None  # "c2"
-    model_only_neighbors: str = False
+    symmetry: Optional[str] = None
+    model_only_neighbors: bool = False
     recenter: bool = True
     radius: float = 10.0
     symmetric_self_cond: bool = True
 
+    def __post_init__(self):
+        self.symmetry = self.symmetry.lower() if self.symmetry is not None else None
+        if self.symmetry is not None:
+            assert (self.symmetry in ["tetrahedral", "octahedral", "icosahedral"]) or (
+                self.symmetry[0] in ["c", "d"] and self.symmetry[1:].isdigit()
+            )
+
 
 @dataclass
 class PotentialsParams:
-    guiding_potentials: Optional[List] = None
+    guiding_potentials: Optional[List[str]] = None
     guide_scale: float = 10.0
     guide_decay: str = "constant"
-    olig_inter_all: Optional[List] = None
-    olig_intra_all: Optional[List] = None
+    olig_inter_all: bool = False
+    olig_intra_all: bool = False
     olig_custom_contact: Optional[List] = None
-    substrate: Optional[List] = None
+    substrate: Optional[str] = None
+
+    def __post_init__(self):
+        assert self.guide_decay in ["constant", "linear", "quadratic", "cubic"]
 
 
 @dataclass
 class ContigSettings:
+    """
+    This is currently unused in the Samplers but could be used in place of ContigMap
+    to avoid the need for contig string syntax and parsing.
+    """
+
     ref_idx: int = None
     hal_idx: int = None
     idx_rf: int = None
-    inpaint_seq_tensor: Optional[List] = None
+    inpaint_seq_tensor: Optional[torch.Tensor] = None
 
 
 @dataclass
@@ -192,12 +208,54 @@ class ScaffoldGuidedParams:
 
 
 @dataclass
-class InferenceConfig:
+class InferenceParams:
     reference_structure: protein.Protein = None
     num_designs: int = 10
     align_motif: bool = True
     final_step: int = 1
 
+
+@dataclass
+class UnconditionalSamplerConfig:
+    inference_params: InferenceParams = InferenceParams()
+    contigmap_params: ContigMap = ContigMap()
+    denoiser_params: DenoiserParams = DenoiserParams()
+    potentials_params: PotentialsParams = PotentialsParams()
+    symmetry_params: SymmetryParams = SymmetryParams()
+
+    def __post_init__(self):
+        assert self.inference_params.reference_structure is None
+        assert self.contigmap_params.inpaint_seq is None
+        assert self.contigmap_params.provide_seq is None
+        assert self.contigmap_params.contigs is not None
+
+
+@dataclass
+class SelfConditioningSamplerConfig:
+    inference_params: InferenceParams = InferenceParams()
+    contigmap_params: ContigMap = ContigMap()
+    denoiser_params: DenoiserParams = DenoiserParams()
+    ppi_params: PPIParams = PPIParams()
+    potentials_params: PotentialsParams = PotentialsParams()
+    symmetry_params: SymmetryParams = SymmetryParams()
+
+
+@dataclass
+class ScaffoldedSamplerConfig:
+    inference_params: InferenceParams = InferenceParams()
+    contigmap_params: ContigMap = ContigMap()
+    denoiser_params: DenoiserParams = DenoiserParams()
+    ppi_params: PPIParams = PPIParams()
+    potentials_params: PotentialsParams = PotentialsParams()
+    symmetry_params: SymmetryParams = SymmetryParams()
+    scaffoldguided_params: ScaffoldGuidedParams = ScaffoldGuidedParams()
+
+
+SamplerConfigType = Union[
+    UnconditionalSamplerConfig,
+    SelfConditioningSamplerConfig,
+    ScaffoldedSamplerConfig,
+]
 
 """
 @dataclass

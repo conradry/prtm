@@ -86,14 +86,12 @@ class PotentialManager:
     def __init__(
         self,
         potentials_config: config.PotentialsParams,
-        ppi_config: config.PPIParams,
         diffuser_config: config.DiffuserConfig,
         symmetry_config: config.SymmetryParams,
         hotspot_0idx: List[int],
         binderlen: int,
     ):
         self.potentials_config = potentials_config
-        self.ppi_config = ppi_config
         self.symmetry_config = symmetry_config
 
         self.guide_scale = potentials_config.guide_scale

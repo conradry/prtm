@@ -1,6 +1,5 @@
 import os
 from dataclasses import asdict
-from typing import Optional
 
 import numpy as np
 import torch
@@ -10,15 +9,11 @@ from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion import inference_utils as iu
 from proteome.models.design.rfdiffusion import symmetry, util
-from proteome.models.design.rfdiffusion.chemical import seq2chars
 from proteome.models.design.rfdiffusion.contigs import ContigMap
 from proteome.models.design.rfdiffusion.diffusion import Diffuser
-from proteome.models.design.rfdiffusion.kinematics import (get_init_xyz,
-                                                           xyz_to_t2d)
-from proteome.models.design.rfdiffusion.potentials_manager import \
-    PotentialManager
-from proteome.models.design.rfdiffusion.rosettafold_model import \
-    RoseTTAFoldModule
+from proteome.models.design.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.models.design.rfdiffusion.potentials_manager import PotentialManager
+from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -34,12 +29,7 @@ class UnconditionalSampler:
         model: RoseTTAFoldModule,
         diffuser_conf: config.DiffuserConfig,
         preprocess_conf: config.PreprocessConfig,
-        inference_conf: config.InferenceConfig,
-        contigmap_conf: config.ContigMap = config.ContigMap(),
-        denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
-        ppi_conf: config.PPIParams = config.PPIParams(),
-        potential_conf: config.PotentialsParams = config.PotentialsParams(),
-        symmetry_conf: config.SymmetryParams = config.SymmetryParams(),
+        sampler_conf: config.UnconditionalSamplerConfig,
     ):
         """
         Initialize sampler.
@@ -47,14 +37,13 @@ class UnconditionalSampler:
             conf: Configuration.
         """
         self.model = model
-        self.inf_conf = inference_conf
-        self.contig_conf = contigmap_conf
-        self.denoiser_conf = denoiser_conf
-        self.ppi_conf = ppi_conf
-        self.potential_conf = potential_conf
         self.diffuser_conf = diffuser_conf
         self.preprocess_conf = preprocess_conf
-        self.symmetry_conf = symmetry_conf
+        self.inf_conf = sampler_conf.inference_params
+        self.contig_conf = sampler_conf.contigmap_params
+        self.denoiser_params = sampler_conf.denoiser_params
+        self.potentials_params = sampler_conf.potentials_params
+        self.symmetry_params = sampler_conf.symmetry_params
 
         self.device = list(self.model.parameters())[0].device
         self.initialize()
@@ -80,12 +69,12 @@ class UnconditionalSampler:
         ### Initialise Symmetry ###
         ###########################
 
-        if self.symmetry_conf.symmetry is not None:
+        if self.symmetry_params.symmetry is not None:
             self.symmetry = symmetry.SymGen(
-                self.symmetry_conf.symmetry,
-                self.symmetry_conf.model_only_neighbors,
-                self.symmetry_conf.recenter,
-                self.symmetry_conf.radius,
+                self.symmetry_params.symmetry,
+                self.symmetry_params.model_only_neighbors,
+                self.symmetry_params.recenter,
+                self.symmetry_params.radius,
             )
         else:
             self.symmetry = None
@@ -127,7 +116,7 @@ class UnconditionalSampler:
     def construct_denoiser(self, L, visible):
         """Make length-specific denoiser."""
         denoise_kwargs = asdict(self.diffuser_conf)
-        denoise_kwargs.update(asdict(self.denoiser_conf))
+        denoise_kwargs.update(asdict(self.denoiser_params))
         denoise_kwargs.update(
             {
                 "L": L,
@@ -160,10 +149,9 @@ class UnconditionalSampler:
 
         self.hotspot_0idx = None
         self.potential_manager = PotentialManager(
-            self.potential_conf,
-            self.ppi_conf,
+            self.potentials_params,
             self.diffuser_conf,
-            self.symmetry_conf,
+            self.symmetry_params,
             self.hotspot_0idx,
             self.binderlen,
         )
@@ -328,20 +316,6 @@ class UnconditionalSampler:
         ######################
         if self.preprocess_conf.d_t1d >= 24:  # add hotspot residues
             hotspot_tens = torch.zeros(L).float()
-            if self.ppi_conf.hotspot_res is None:
-                # print(
-                #    "WARNING: you're using a model trained on complexes and hotspot residues, without specifying hotspots.\
-                #         If you're doing monomer diffusion this is fine"
-                # )
-                hotspot_idx = []
-            else:
-                hotspots = [(i[0], int(i[1:])) for i in self.ppi_conf.hotspot_res]
-                hotspot_idx = []
-                for i, res in enumerate(self.contig_map.con_ref_pdb_idx):
-                    if res in hotspots:
-                        hotspot_idx.append(self.contig_map.hal_idx0[i])
-                hotspot_tens[hotspot_idx] = 1.0
-
             # Add blank (legacy) feature and hotspot tensor
             t1d = torch.cat(
                 (
@@ -433,7 +407,7 @@ class UnconditionalSampler:
                 motif_mask=self.diffusion_mask.squeeze().to(self.device),
             )
 
-            if self.symmetry is not None and self.symmetry_conf.symmetric_self_cond:
+            if self.symmetry is not None and self.symmetry_params.symmetric_self_cond:
                 px0 = self.symmetrise_prev_pred(px0=px0, seq_in=seq_in, alpha=alpha)[
                     :, :, :3
                 ]
@@ -483,11 +457,31 @@ class UnconditionalSampler:
         return px0_sym
 
 
-class SelfConditioning(UnconditionalSampler):
+class SelfConditioningSampler(UnconditionalSampler):
     """
     Model Runner for self conditioning
     pX0[t+1] is provided as a template input to the model at time t
     """
+
+    def __init__(
+        self,
+        model: RoseTTAFoldModule,
+        diffuser_conf: config.DiffuserConfig,
+        preprocess_conf: config.PreprocessConfig,
+        sampler_conf: config.SelfConditioningSamplerConfig,
+    ):
+        self.model = model
+        self.diffuser_conf = diffuser_conf
+        self.preprocess_conf = preprocess_conf
+        self.inf_conf = sampler_conf.inference_params
+        self.contig_conf = sampler_conf.contigmap_params
+        self.denoiser_params = sampler_conf.denoiser_params
+        self.ppi_params = sampler_conf.ppi_params
+        self.potentials_params = sampler_conf.potentials_params
+        self.symmetry_params = sampler_conf.symmetry_params
+
+        self.device = list(self.model.parameters())[0].device
+        self.initialize()
 
     def initialize(self) -> None:
         """
@@ -510,12 +504,12 @@ class SelfConditioning(UnconditionalSampler):
         ### Initialise Symmetry ###
         ###########################
 
-        if self.symmetry_conf.symmetry is not None:
+        if self.symmetry_params.symmetry is not None:
             self.symmetry = symmetry.SymGen(
-                self.symmetry_conf.symmetry,
-                self.symmetry_conf.model_only_neighbors,
-                self.symmetry_conf.recenter,
-                self.symmetry_conf.radius,
+                self.symmetry_params.symmetry,
+                self.symmetry_params.model_only_neighbors,
+                self.symmetry_params.recenter,
+                self.symmetry_params.radius,
             )
         else:
             self.symmetry = None
@@ -570,7 +564,7 @@ class SelfConditioning(UnconditionalSampler):
         ####################
 
         self.hotspot_0idx = iu.get_idx0_hotspots(
-            self.mappings, self.ppi_conf, self.binderlen
+            self.mappings, self.ppi_params, self.binderlen
         )
 
         #####################################
@@ -578,10 +572,9 @@ class SelfConditioning(UnconditionalSampler):
         #####################################
 
         self.potential_manager = PotentialManager(
-            self.potential_conf,
-            self.ppi_conf,
+            self.potentials_params,
             self.diffuser_conf,
-            self.symmetry_conf,
+            self.symmetry_params,
             self.hotspot_0idx,
             self.binderlen,
         )
@@ -687,12 +680,12 @@ class SelfConditioning(UnconditionalSampler):
         ### Parse ligand for ligand potential ###
         #########################################
 
-        if self.potential_conf.guiding_potentials is not None:
+        if self.potentials_params.guiding_potentials is not None:
             if any(
                 list(
                     filter(
                         lambda x: "substrate_contacts" in x,
-                        self.potential_conf.guiding_potentials,
+                        self.potentials_params.guiding_potentials,
                     )
                 )
             ):
@@ -702,11 +695,11 @@ class SelfConditioning(UnconditionalSampler):
                         you need to make sure there's a ligand in the input_pdb file!"
                 het_names = np.array(self.reference_structure.hetatom_names)
                 xyz_het = self.reference_structure.hetatom_positions[
-                    het_names == self.potential_conf.substrate
+                    het_names == self.potentials_params.substrate
                 ]
                 assert (
                     xyz_het.shape[0] > 0
-                ), f"expected >0 heteroatoms from ligand with name {self.potential_conf.substrate}"
+                ), f"expected >0 heteroatoms from ligand with name {self.potentials_params.substrate}"
                 xyz_motif_prealign = xyz_motif_prealign[0, 0][
                     self.diffusion_mask.squeeze()
                 ]
@@ -717,6 +710,155 @@ class SelfConditioning(UnconditionalSampler):
                     pot.diffuser = self.diffuser
 
         return xt, seq_t
+
+    def _preprocess(self, seq, xyz_t, t):
+        """
+        Function to prepare inputs to diffusion model
+
+            seq (L,22) one-hot sequence
+
+            msa_masked (1,1,L,48)
+
+            msa_full (1,1,L,25)
+
+            xyz_t (L,14,3) template crds (diffused)
+
+            t1d (1,L,28) this is the t1d before tacking on the chi angles:
+                - seq + unknown/mask (21)
+                - global timestep (1-t/T if not motif else 1) (1)
+
+                MODEL SPECIFIC:
+                - contacting residues: for ppi. Target residues in contact with binder (1)
+                - empty feature (legacy) (1)
+                - ss (H, E, L, MASK) (4)
+
+            t2d (1, L, L, 45)
+                - last plane is block adjacency
+        """
+
+        L = seq.shape[0]
+        T = self.T
+
+        ##################
+        ### msa_masked ###
+        ##################
+        msa_masked = torch.zeros((1, 1, L, 48))
+        msa_masked[:, :, :, :22] = seq[None, None]
+        msa_masked[:, :, :, 22:44] = seq[None, None]
+        msa_masked[:, :, 0, 46] = 1.0
+        msa_masked[:, :, -1, 47] = 1.0
+
+        ################
+        ### msa_full ###
+        ################
+        msa_full = torch.zeros((1, 1, L, 25))
+        msa_full[:, :, :, :22] = seq[None, None]
+        msa_full[:, :, 0, 23] = 1.0
+        msa_full[:, :, -1, 24] = 1.0
+
+        ###########
+        ### t1d ###
+        ###########
+
+        # Here we need to go from one hot with 22 classes to one hot with 21 classes (last plane is missing token)
+        t1d = torch.zeros((1, 1, L, 21))
+
+        seqt1d = torch.clone(seq)
+        for idx in range(L):
+            if seqt1d[idx, 21] == 1:
+                seqt1d[idx, 20] = 1
+                seqt1d[idx, 21] = 0
+
+        t1d[:, :, :, :21] = seqt1d[None, None, :, :21]
+
+        # Set timestep feature to 1 where diffusion mask is True, else 1-t/T
+        timefeature = torch.zeros((L)).float()
+        timefeature[self.mask_str.squeeze()] = 1
+        timefeature[~self.mask_str.squeeze()] = 1 - t / self.T
+        timefeature = timefeature[None, None, ..., None]
+
+        t1d = torch.cat((t1d, timefeature), dim=-1).float()
+
+        #############
+        ### xyz_t ###
+        #############
+        if self.preprocess_conf.sidechain_input:
+            xyz_t[torch.where(seq == 21, True, False), 3:, :] = float("nan")
+        else:
+            xyz_t[~self.mask_str.squeeze(), 3:, :] = float("nan")
+
+        xyz_t = xyz_t[None, None]
+        xyz_t = torch.cat((xyz_t, torch.full((1, 1, L, 13, 3), float("nan"))), dim=3)
+
+        ###########
+        ### t2d ###
+        ###########
+        t2d = xyz_to_t2d(xyz_t)
+
+        ###########
+        ### idx ###
+        ###########
+        idx = torch.tensor(self.contig_map.rf)[None]
+
+        ###############
+        ### alpha_t ###
+        ###############
+        seq_tmp = t1d[..., :-1].argmax(dim=-1).reshape(-1, L)
+        alpha, _, alpha_mask, _ = util.get_torsions(
+            xyz_t.reshape(-1, L, 27, 3), seq_tmp, TOR_INDICES, TOR_CAN_FLIP, REF_ANGLES
+        )
+        alpha_mask = torch.logical_and(alpha_mask, ~torch.isnan(alpha[..., 0]))
+        alpha[torch.isnan(alpha)] = 0.0
+        alpha = alpha.reshape(1, -1, L, 10, 2)
+        alpha_mask = alpha_mask.reshape(1, -1, L, 10, 1)
+        alpha_t = torch.cat((alpha, alpha_mask), dim=-1).reshape(1, -1, L, 30)
+
+        # put tensors on device
+        msa_masked = msa_masked.to(self.device)
+        msa_full = msa_full.to(self.device)
+        seq = seq.to(self.device)
+        xyz_t = xyz_t.to(self.device)
+        idx = idx.to(self.device)
+        t1d = t1d.to(self.device)
+        t2d = t2d.to(self.device)
+        alpha_t = alpha_t.to(self.device)
+
+        ######################
+        ### added_features ###
+        ######################
+        if self.preprocess_conf.d_t1d >= 24:  # add hotspot residues
+            hotspot_tens = torch.zeros(L).float()
+            if self.ppi_params.hotspot_res is None:
+                hotspot_idx = []
+            else:
+                hotspots = [(i[0], int(i[1:])) for i in self.ppi_params.hotspot_res]
+                hotspot_idx = []
+                for i, res in enumerate(self.contig_map.con_ref_pdb_idx):
+                    if res in hotspots:
+                        hotspot_idx.append(self.contig_map.hal_idx0[i])
+                hotspot_tens[hotspot_idx] = 1.0
+
+            # Add blank (legacy) feature and hotspot tensor
+            t1d = torch.cat(
+                (
+                    t1d,
+                    torch.zeros_like(t1d[..., :1]),
+                    hotspot_tens[None, None, ..., None].to(self.device),
+                ),
+                dim=-1,
+            )
+
+        return (
+            msa_masked,
+            msa_full,
+            seq[None],
+            torch.squeeze(xyz_t, dim=0),
+            idx,
+            t1d,
+            t2d,
+            xyz_t,
+            alpha_t,
+        )
 
     def sample_step(self, *, t, x_t, seq_init, final_step):
         """
@@ -787,7 +929,7 @@ class SelfConditioning(UnconditionalSampler):
                 motif_mask=self.diffusion_mask.squeeze().to(self.device),
             )
 
-            if self.symmetry is not None and self.symmetry_conf.symmetric_self_cond:
+            if self.symmetry is not None and self.symmetry_params.symmetric_self_cond:
                 px0 = self.symmetrise_prev_pred(px0=px0, seq_in=seq_in, alpha=alpha)[
                     :, :, :3
                 ]
@@ -837,7 +979,7 @@ class SelfConditioning(UnconditionalSampler):
         return px0_sym
 
 
-class ScaffoldedSampler(SelfConditioning):
+class ScaffoldedSampler(SelfConditioningSampler):
     """
     Model Runner for Scaffold-Constrained diffusion
     """
@@ -847,62 +989,57 @@ class ScaffoldedSampler(SelfConditioning):
         model: RoseTTAFoldModule,
         diffuser_conf: config.DiffuserConfig,
         preprocess_conf: config.PreprocessConfig,
-        inference_conf: config.InferenceConfig,
-        contigmap_conf: config.ContigMap = config.ContigMap(),
-        denoiser_conf: config.DenoiserParams = config.DenoiserParams(),
-        ppi_conf: config.PPIParams = config.PPIParams(),
-        potential_conf: config.PotentialsParams = config.PotentialsParams(),
-        symmetry_conf: config.SymmetryParams = config.SymmetryParams(),
-        scaffold_conf: config.ScaffoldGuidedParams = config.ScaffoldGuidedParams(),
+        sampler_conf: config.ScaffoldedSamplerConfig,
     ):
-        super().__init__(
-            model=model,
-            diffuser_conf=diffuser_conf,
-            preprocess_conf=preprocess_conf,
-            inference_conf=inference_conf,
-            contigmap_conf=contigmap_conf,
-            denoiser_conf=denoiser_conf,
-            ppi_conf=ppi_conf,
-            potential_conf=potential_conf,
-            symmetry_conf=symmetry_conf,
-        )
-        self.scaffold_conf = scaffold_conf
+        self.model = model
+        self.diffuser_conf = diffuser_conf
+        self.preprocess_conf = preprocess_conf
+        self.inf_conf = sampler_conf.inference_params
+        self.contig_conf = sampler_conf.contigmap_params
+        self.denoiser_params = sampler_conf.denoiser_params
+        self.ppi_params = sampler_conf.ppi_params
+        self.potentials_params = sampler_conf.potentials_params
+        self.symmetry_params = sampler_conf.symmetry_params
+        self.scaffold_params = sampler_conf.scaffoldguided_params
+
+        self.device = list(self.model.parameters())[0].device
+        self.initialize()
         self.blockadjacency = iu.BlockAdjacency(
-            scaffold_conf, inference_conf.num_designs
+            self.scaffold_params, self.inference_params.num_designs
         )
 
         #################################################
         ### Initialize target, if doing binder design ###
         #################################################
 
-        if scaffold_conf.target_structure:
+        if self.scaffold_params.target_structure:
             self.target = iu.Target(
-                scaffold_conf.target_structure,
-                scaffold_conf.contig_crop,
-                ppi_conf.hotspot_res,
+                self.scaffold_params.target_structure,
+                self.scaffold_params.contig_crop,
+                self.ppi_params.hotspot_res,
             )
             self.target_struct = self.target.get_target()
 
             if (
-                scaffold_conf.target_ss is not False
-                or scaffold_conf.target_adj is not False
+                self.scaffold_params.target_ss is not False
+                or self.scaffold_params.target_adj is not False
             ):
                 target_ss, target_adj = self.blockadjacency.get_ss_adj(
-                    scaffold_conf.target_structure
+                    self.scaffold_params.target_structure
                 )
 
-            if scaffold_conf.target_ss is not False:
+            if self.scaffold_params.target_ss is not False:
                 self.target_ss = torch.nn.functional.one_hot(
                     target_ss.long(), num_classes=4
                 )
-                if self.scaffold_conf.contig_crop is not None:
+                if self.scaffold_params.contig_crop is not None:
                     self.target_ss = self.target_ss[self.target.crop_mask]
 
-            if scaffold_conf.target_adj is not False:
+            if self.scaffold_params.target_adj is not False:
                 self.target_adj = torch.nn.functional.one_hot(
                     target_adj.long(), num_classes=3
                 )
-                if self.scaffold_conf.contig_crop is not None:
+                if self.scaffold_params.contig_crop is not None:
                     self.target_adj = self.target_adj[self.target.crop_mask]
                     self.target_adj = self.target_adj[:, self.target.crop_mask]
 
@@ -1030,7 +1167,7 @@ class ScaffoldedSampler(SelfConditioning):
         ####################
         if self.mappings is None:
             self.hotspot_0idx = iu.get_idx0_hotspots(
-                self.mappings, self.ppi_conf, self.binderlen
+                self.mappings, self.ppi_params, self.binderlen
             )
         else:
             self.hotspot_0idx = None
@@ -1040,10 +1177,9 @@ class ScaffoldedSampler(SelfConditioning):
         #########################
 
         self.potential_manager = PotentialManager(
-            self.potential_conf,
-            self.ppi_conf,
+            self.potentials_params,
             self.diffuser_conf,
-            self.symmetry_conf,
+            self.symmetry_params,
             self.hotspot_0idx,
             self.binderlen,
         )
@@ -1113,7 +1249,7 @@ class ScaffoldedSampler(SelfConditioning):
                 torch.full((self.L - self.binderlen,), 3), num_classes=4
             )
             full_ss = torch.cat((self.ss, blank_ss), dim=0)
-            if self.scaffold_conf.target_ss is not False:
+            if self.scaffold_params.target_ss is not False:
                 full_ss[self.binderlen :] = self.target_ss
         else:
             full_ss = self.ss
@@ -1130,7 +1266,7 @@ class ScaffoldedSampler(SelfConditioning):
                 full_adj = torch.zeros((self.L, self.L, 3))
                 full_adj[:, :, -1] = 1.0  # set to mask
                 full_adj[: self.binderlen, : self.binderlen] = self.adj
-                if self.scaffold_conf.target_adj is not False:
+                if self.scaffold_params.target_adj is not False:
                     full_adj[self.binderlen :, self.binderlen :] = self.target_adj
             else:
                 full_adj = self.adj
