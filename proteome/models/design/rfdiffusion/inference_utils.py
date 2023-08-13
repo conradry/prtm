@@ -10,9 +10,8 @@ from scipy.spatial.transform import Rotation as scipy_R
 from proteome import protein
 from proteome.models.design.rfdiffusion import config
 from proteome.models.design.rfdiffusion.diffusion import get_beta_schedule
-from proteome.models.design.rfdiffusion.secstruct_adj import (
-    make_ss_block_adj_from_structure,
-)
+from proteome.models.design.rfdiffusion.secstruct_adj import \
+    make_ss_block_adj_from_structure
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
 
@@ -608,8 +607,8 @@ class BlockAdjacency:
              conf.inference.num_designs for sanity checking
         """
 
-        assert conf.scaffold_pdb_str_list is not None
-        self.scaffold_list = conf.scaffold_pdb_str_list
+        assert conf.scaffold_structure_list is not None
+        self.scaffold_list = conf.scaffold_structure_list
 
         # maximum sampled insertion in each loop segment
         if "-" in str(conf.sampled_insertion):
@@ -665,11 +664,10 @@ class BlockAdjacency:
         else:
             self.mask_loops = True
 
-    def get_ss_adj(self, pdb_str: str):
+    def get_ss_adj(self, structure14: protein.Protein):
         """
         Given at item, get the ss tensor and block adjacency matrix for that item
         """
-        structure14 = protein.from_pdb_string(pdb_str, atom14_format=True)
         structure27 = protein.pad_protein_14_to_27(structure14)
         ss, adj = make_ss_block_adj_from_structure(structure27)
 

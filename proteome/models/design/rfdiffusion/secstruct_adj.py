@@ -1,7 +1,11 @@
+import os
 import random
+import sys
+from contextlib import contextmanager
 
 import numpy as np
 import torch
+
 from proteome import protein
 
 try:
@@ -14,17 +18,40 @@ except:
     APPROX = True
 
 
+@contextmanager
+def stdout_redirected(to=os.devnull):
+    """
+    Helper to prevent pyrosetta from over-printing.
+    """
+    fd = sys.stdout.fileno()
+
+    def _redirect_stdout(to):
+        sys.stdout.close()
+        os.dup2(to.fileno(), fd)
+        sys.stdout = os.fdopen(fd, "w")
+
+    with os.fdopen(os.dup(fd), "w") as old_stdout:
+        with open(to, "w") as file:
+            _redirect_stdout(to=file)
+        try:
+            yield
+        finally:
+            _redirect_stdout(to=old_stdout)
+
+
 def extract_secstruc(structure: protein.Protein):
     idx = structure.residue_index
     if APPROX:
         aa_sequence = structure.aatype
         secstruct = get_sse(structure.atom_positions[:, 1])
     else:
+        # with stdout_redirected():
         dssp = pyrosetta.rosetta.core.scoring.dssp
         pose = protein.to_rosetta_pose(structure)
         dssp.Dssp(pose).insert_ss_into_pose(pose, True)
         aa_sequence = pose.sequence()
         secstruct = pose.secstruct()
+
     secstruc_dict = {
         "sequence": [i for i in aa_sequence],
         "idx": [int(i) for i in idx],

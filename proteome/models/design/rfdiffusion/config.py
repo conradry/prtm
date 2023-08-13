@@ -144,7 +144,9 @@ class SymmetryParams:
     # - Icosahedral symmetry # call as icosahedral
     symmetry: Optional[str] = None  # "c2"
     model_only_neighbors: str = False
-    output_prefix: str = "samples/c2"
+    recenter: bool = True
+    radius: float = 10.0
+    symmetric_self_cond: bool = True
 
 
 @dataclass
@@ -175,15 +177,9 @@ class ContigMap:
 
 
 @dataclass
-class LoggingConfig:
-    inputs: bool = False
-
-
-@dataclass
 class ScaffoldGuidedParams:
-    scaffoldguided: bool = False
-    target_pdb_str: bool = False
-    scaffold_pdb_str_list: Optional[List[str]] = None  # pdb str
+    target_structure: Optional[protein.Protein] = None
+    scaffold_structure_list: List[protein.Protein] = None
     sampled_insertion: int = 0
     sampled_N: int = 0
     sampled_C: int = 0
@@ -197,36 +193,10 @@ class ScaffoldGuidedParams:
 
 @dataclass
 class InferenceConfig:
-    input_structure: protein.Protein = None
+    reference_structure: protein.Protein = None
     num_designs: int = 10
-    ckpt_override_path: str = None
-    recenter: bool = True
-    radius: float = 10.0
-    output_prefix: str = "samples/design"
-    write_trajectory: bool = True
-    scaffold_guided: bool = False
-    model_runner: str = "SelfConditioning"
     align_motif: bool = True
-    symmetric_self_cond: bool = True
     final_step: int = 1
-    trb_save_ckpt_path: str = None
-    schedule_directory_path: str = None
-    model_directory_path: str = None
-
-
-@dataclass
-class RFDiffusionConfig:
-    inference: InferenceConfig = InferenceConfig()
-    contigmap: ContigMap = ContigMap()
-    model: RoseTTAFoldModuleConfig = RoseTTAFoldModuleConfig()
-    diffuser: DiffuserConfig = DiffuserConfig()
-    denoiser: DenoiserParams = DenoiserParams()
-    ppi: PPIParams = PPIParams()
-    potentials: PotentialsParams = PotentialsParams()
-    contig_settings: ContigSettings = ContigSettings()
-    preprocess: PreprocessConfig = PreprocessConfig()
-    logging: LoggingConfig = LoggingConfig()
-    scaffoldguided: ScaffoldGuidedParams = ScaffoldGuidedParams()
 
 
 """
