@@ -26,9 +26,6 @@ def pickle_function_call_wrapper(func, output_dir="pickled_inputs"):
         # Perform the print so that it shows the function name
         # and arguments as a dictionary
         path = os.path.join(output_dir, f"{i:05d}.pkl")
-        print(
-            f"logging {func.__name__} arguments: {[k for k in argument_map]} to {path}"
-        )
         argument_map["stack"] = traceback.format_stack()
 
         for k, v in argument_map.items():

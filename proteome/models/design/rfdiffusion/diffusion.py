@@ -1,15 +1,15 @@
 # script for diffusion protocols
-import logging
 import os
 import pickle
 import time
 
 import numpy as np
 import torch
+from scipy.spatial.transform import Rotation as scipy_R
+
 from proteome.models.design.rfdiffusion import igso3
 from proteome.models.design.rfdiffusion.util import rigid_from_3_points
 from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
-from scipy.spatial.transform import Rotation as scipy_R
 
 torch.set_printoptions(sci_mode=False)
 
@@ -36,11 +36,6 @@ def get_beta_schedule(T, b0, bT, schedule_type, schedule_params={}, inference=Fa
     # get alphabar_t for convenience
     alpha_schedule = 1 - schedule
     alphabar_t_schedule = torch.cumprod(alpha_schedule, dim=0)
-
-    if inference:
-        print(
-            f"With this beta schedule ({schedule_type} schedule, beta_0 = {round(b0, 3)}, beta_T = {round(bT,3)}), alpha_bar_T = {alphabar_t_schedule[-1]}"
-        )
 
     return schedule, alpha_schedule, alphabar_t_schedule
 
@@ -175,8 +170,6 @@ class IGSO3:
             schedule: currently only linear and exponential are supported.  The exponential schedule may be noising too slowly.
             L: truncation level
         """
-        self._log = logging.getLogger(__name__)
-
         self.T = T
 
         self.schedule = schedule
@@ -226,10 +219,8 @@ class IGSO3:
             os.makedirs(self.cache_dir)
 
         if os.path.exists(cache_fname):
-            self._log.info("Using cached IGSO3.")
             igso3_vals = read_pkl(cache_fname)
         else:
-            self._log.info("Calculating IGSO3.")
             igso3_vals = igso3.calculate_igso3(
                 num_sigma=self.num_sigma,
                 min_sigma=self.min_sigma,
@@ -592,8 +583,6 @@ class Diffuser:
         self.eucl_diffuser = EuclideanDiffuser(
             self.T, b_0, b_T, schedule_type=schedule_type, **schedule_kwargs
         )
-
-        print("Successful diffuser __init__")
 
     def diffuse_pose(
         self,

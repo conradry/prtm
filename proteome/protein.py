@@ -28,13 +28,19 @@ import modelcif.protocol
 import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
+import torch
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
+
 from proteome.constants import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
 PICO_TO_ANGSTROM = 0.01
+
+PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
+assert PDB_MAX_CHAINS == 62
 
 
 @dataclasses.dataclass(frozen=True)
@@ -74,6 +80,51 @@ class Protein:
     # Chain corresponding to each parent
     parents_chain_index: Optional[Sequence[int]] = None
 
+    # HETATM positions
+    hetatom_positions: Optional[np.ndarray] = None
+
+    # HETATM names
+    hetatom_names: Optional[np.ndarray] = None
+
+    def __post_init__(self):
+        if len(np.unique(self.chain_index)) > PDB_MAX_CHAINS:
+            raise ValueError(
+                f"Cannot build an instance with more than {PDB_MAX_CHAINS} "
+                "chains because these cannot be written to PDB format"
+            )
+
+
+def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Protein:
+    prot_dict = dataclasses.asdict(prot)
+    prot_dict["atom_positions"] = np.pad(
+        prot.atom_positions,
+        ((0, 0), (0, 13), (0, 0)),
+        constant_values=atom_pos_pad_value,
+    )
+    prot_dict["atom_mask"] = np.pad(
+        prot.atom_mask, ((0, 0), (0, 13)), constant_values=0
+    )
+    prot_dict["b_factors"] = np.pad(prot.b_factors, ((0, 0), (0, 13)))
+    prot_27_padded = Protein(**prot_dict)
+
+    return prot_27_padded
+
+
+def to_torch(prot: Protein) -> Protein:
+    """Converts a `Protein` instance to torch tensors."""
+    prot_dict = dataclasses.asdict(prot)
+    for k, v in prot_dict.items():
+        if isinstance(v, np.ndarray):
+            # Check if array is any float or integer type
+            if np.issubdtype(v.dtype, np.floating):
+                prot_dict[k] = torch.from_numpy(v).float()
+            elif np.issubdtype(v.dtype, np.integer):
+                prot_dict[k] = torch.from_numpy(v).long()
+            elif np.issubdtype(v.dtype, np.bool_):
+                prot_dict[k] = torch.from_numpy(v).bool()
+
+    return Protein(**prot_dict)
+
 
 def to_biopdb_structure(prot: Protein) -> Structure:
     """Converts from a `Protein` to a BioPython PDB structure."""
@@ -104,7 +155,9 @@ def to_backbone_only_protein(protein: Protein) -> Protein:
     """
     Strip out all atoms except those in the backbone [N, CA, C, O]
     """
-    atom_indices = [residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]]
+    atom_indices = [
+        residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]
+    ]
     return Protein(
         atom_positions=protein.atom_positions[:, atom_indices],
         atom_mask=protein.atom_mask[:, atom_indices],
@@ -118,10 +171,12 @@ def to_backbone_only_protein(protein: Protein) -> Protein:
 
 
 def from_pdb_string(
-    pdb_str: str, 
-    chain_id: Optional[str] = None, 
+    pdb_str: str,
+    chain_id: Optional[str] = None,
     backbone_only: bool = False,
     ca_only: bool = False,
+    atom14_format: bool = False,
+    parse_hetatom: bool = False,
 ) -> Protein:
     """Takes a PDB string and constructs a Protein object.
 
@@ -134,11 +189,17 @@ def from_pdb_string(
         is parsed.
         backbone_only: If True, then only the 3 backbone atoms are parsed for each residue.
         ca_only: If True, then only the CA atom is parsed for each residue.
+        atom14_format: If True, only 14 atoms are parsed. The order of the atoms is defined in
+        residue_constants.restype1_to_atom14_names. This is used by some RoseTTAFOld models.
+        Unlike the full 37 atom parser, an atoms position is not fixed in the array. For example,
+        in ILE, the CD1 atom is at index 7, but in LEU it's at index 6.
 
     Returns:
         A new `Protein` parsed from the pdb contents.
     """
-    assert not (backbone_only and ca_only), "Cannot specify both backbone_only and ca_only"
+    assert not (
+        backbone_only and ca_only
+    ), "Cannot specify both backbone_only and ca_only"
     pdb_fh = io.StringIO(pdb_str)
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("none", pdb_fh)
@@ -156,6 +217,10 @@ def from_pdb_string(
     chain_ids = []
     b_factors = []
 
+    if parse_hetatom:
+        hetatom_positions = []
+        hetatom_names = []
+
     for chain in model:
         if chain_id is not None and chain.id != chain_id:
             continue
@@ -169,15 +234,38 @@ def from_pdb_string(
             restype_idx = residue_constants.restype_order.get(
                 res_shortname, residue_constants.restype_num
             )
-            pos = np.zeros((residue_constants.atom_type_num, 3))
-            mask = np.zeros((residue_constants.atom_type_num,))
-            res_b_factors = np.zeros((residue_constants.atom_type_num,))
-            for atom in res:
-                if atom.name not in residue_constants.atom_types:
+
+            if parse_hetatom:
+                if len(res.id[0].strip()) > 0:
+                    for atom in res:
+                        hetatom_positions.append(atom.coord)
+                        hetatom_names.append(res.id[0].lstrip("H_"))
                     continue
-                pos[residue_constants.atom_order[atom.name]] = atom.coord
-                mask[residue_constants.atom_order[atom.name]] = 1.0
-                res_b_factors[residue_constants.atom_order[atom.name]] = atom.bfactor
+
+            atom_count = 14 if atom14_format else residue_constants.atom_type_num
+            pos = np.zeros((atom_count, 3))
+            mask = np.zeros((atom_count,))
+            res_b_factors = np.zeros((atom_count,))
+            for atom in res:
+                if (
+                    atom14_format
+                    and atom.name
+                    not in residue_constants.restype1_to_atom14_names[res_shortname]
+                ):
+                    continue
+                elif atom14_format:
+                    atom_index = residue_constants.restype1_to_atom14_names[
+                        res_shortname
+                    ].index(atom.name)
+                elif atom.name not in residue_constants.atom_types:
+                    continue
+                else:
+                    atom_index = residue_constants.atom_order[atom.name]
+
+                pos[atom_index] = atom.coord
+                mask[atom_index] = 1.0
+                res_b_factors[atom_index] = atom.bfactor
+
             if np.sum(mask) < 0.5:
                 # If no known atom positions are reported for the residue then skip it.
                 continue
@@ -206,6 +294,13 @@ def from_pdb_string(
     chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
     chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
 
+    if parse_hetatom:
+        hetatom_positions = np.array(hetatom_positions)
+        hetatom_names = np.array(hetatom_names)
+    else:
+        hetatom_positions = None
+        hetatom_names = None
+
     protein = Protein(
         atom_positions=np.array(atom_positions),
         atom_mask=np.array(atom_mask),
@@ -215,6 +310,8 @@ def from_pdb_string(
         b_factors=np.array(b_factors),
         parents=parents,
         parents_chain_index=parents_chain_index,
+        hetatom_positions=hetatom_positions,
+        hetatom_names=hetatom_names,
     )
 
     if ca_only:
@@ -352,6 +449,14 @@ def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
     return "\n".join(out_pdb_lines)
 
 
+def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
+    chain_end = "TER"
+    return (
+        f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
+        f"{chain_name:>1}{residue_index:>4}"
+    )
+
+
 def to_pdb(prot: Protein) -> str:
     """Converts a `Protein` instance to a PDB string.
 
@@ -363,7 +468,7 @@ def to_pdb(prot: Protein) -> str:
     """
     restypes = residue_constants.restypes + ["X"]
     res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], "UNK")
-    atom_types = residue_constants.restype_name_to_atom14_names
+    atom_types = residue_constants.atom_types
 
     pdb_lines = []
 
@@ -374,24 +479,52 @@ def to_pdb(prot: Protein) -> str:
     b_factors = prot.b_factors
     chain_index = prot.chain_index
 
+    if chain_index is None:
+        chain_index = np.zeros(residue_index.shape, dtype=np.int32)
+
     if np.any(aatype > residue_constants.restype_num):
         raise ValueError("Invalid aatypes.")
+
+    # Construct a mapping from chain integer indices to chain ID strings.
+    chain_ids = {}
+    for i in np.unique(chain_index):  # np.unique gives sorted output.
+        if i >= PDB_MAX_CHAINS:
+            raise ValueError(
+                f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
+            )
+        chain_ids[i] = PDB_CHAIN_IDS[i]
 
     headers = get_pdb_headers(prot)
     if len(headers) > 0:
         pdb_lines.extend(headers)
 
+    pdb_lines.append("MODEL     1")
     n = aatype.shape[0]
     atom_index = 1
+    last_chain_index = chain_index[0]
     prev_chain_index = 0
     chain_tags = string.ascii_uppercase
+
     # Add all atom sites.
-    for i in range(n):
+    for i in range(aatype.shape[0]):
+        # Close the previous chain if in a multichain PDB.
+        if last_chain_index != chain_index[i]:
+            pdb_lines.append(
+                _chain_end(
+                    atom_index,
+                    res_1to3(aatype[i - 1]),
+                    chain_ids[chain_index[i - 1]],
+                    residue_index[i - 1],
+                )
+            )
+            last_chain_index = chain_index[i]
+            atom_index += 1  # Atom index increases at the TER symbol.
+
         res_name_3 = res_1to3(aatype[i])
         for atom_name, pos, mask, b_factor in zip(
-            atom_types[res_name_3], atom_positions[i], atom_mask[i], b_factors[i]
+            atom_types, atom_positions[i], atom_mask[i], b_factors[i]
         ):
-            if mask < 0.5 or not atom_name:
+            if mask < 0.5:
                 continue
 
             record_type = "ATOM"
@@ -409,6 +542,8 @@ def to_pdb(prot: Protein) -> str:
             # PDB is a columnar format, every space matters here!
             atom_line = (
                 f"{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}"
+                # TODO: check this refactor, chose main branch version
+                # f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
                 f"{res_name_3:>3} {chain_tag:>1}"
                 f"{residue_index[i]:>4}{insertion_code:>1}   "
                 f"{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}"
@@ -440,9 +575,12 @@ def to_pdb(prot: Protein) -> str:
                 # each new chain.
                 pdb_lines.extend(get_pdb_headers(prot, prev_chain_index))
 
+    pdb_lines.append("ENDMDL")
     pdb_lines.append("END")
-    pdb_lines.append("")
-    return "\n".join(pdb_lines)
+
+    # Pad all lines to 80 characters
+    pdb_lines = [line.ljust(80) for line in pdb_lines]
+    return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
 
 def to_rosetta_pose(prot: Protein):  # can't type hint conditional import
@@ -633,7 +771,7 @@ def ideal_atom_mask(prot: Protein) -> np.ndarray:
 
 def add_oxygen_to_atom_positions(atom_positions: np.ndarray) -> np.ndarray:
     """Adds oxygen atoms to the atom positions.
-    
+
     Args:
         atom_positions: A numpy array of shape [N, 3, 3] where N is the number of
             atoms in the protein. The last dimension is the x, y, z coordinates

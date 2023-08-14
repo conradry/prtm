@@ -967,6 +967,14 @@ restype_rigidgroup_mask[:, 0] = 1
 restype_rigidgroup_mask[:, 3] = 1
 restype_rigidgroup_mask[:, 4:] = np.array(chi_angles_mask).astype(np.float32)
 
+
+# Needed for RFDiffusion
+restype1_to_atom14_names = {
+    restype: restype_name_to_atom14_names[restype_1to3[restype]]
+    for restype in restypes
+} | {"X": restype_name_to_atom14_names["UNK"]}
+
+
 # Compute a mask whether the group exists.
 # (N, 8)
 def residx_to_3(idx):
