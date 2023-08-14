@@ -179,10 +179,10 @@ class RFDiffusionForStructureDesign:
         seq_t = torch.clone(seq_init)
         # Loop over number of reverse diffusion time steps.
         for t in tqdm(
-            range(int(sampler.t_step_input), sampler.inf_conf.final_step - 1, -1)
+            range(int(sampler.t_step_input), sampler.inference_params.final_step - 1, -1)
         ):
             px0, x_t, seq_t, plddt = sampler.sample_step(
-                t=t, x_t=x_t, seq_init=seq_t, final_step=sampler.inf_conf.final_step
+                t=t, x_t=x_t, seq_init=seq_t, final_step=sampler.inference_params.final_step
             )
             px0_xyz_stack.append(px0)
             denoised_xyz_stack.append(x_t)

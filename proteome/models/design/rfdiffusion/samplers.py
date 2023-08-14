@@ -39,7 +39,7 @@ class UnconditionalSampler:
         self.model = model
         self.diffuser_conf = diffuser_conf
         self.preprocess_conf = preprocess_conf
-        self.inf_conf = sampler_conf.inference_params
+        self.inference_params = sampler_conf.inference_params
         self.contig_conf = sampler_conf.contigmap_params
         self.denoiser_params = sampler_conf.denoiser_params
         self.potentials_params = sampler_conf.potentials_params
@@ -429,7 +429,7 @@ class UnconditionalSampler:
                 px0=px0,
                 t=t,
                 diffusion_mask=self.mask_str.squeeze(),
-                align_motif=self.inf_conf.align_motif,
+                align_motif=self.inference_params.align_motif,
                 include_motif_sidechains=self.preprocess_conf.motif_sidechain_input,
             )
         else:
@@ -473,7 +473,7 @@ class SelfConditioningSampler(UnconditionalSampler):
         self.model = model
         self.diffuser_conf = diffuser_conf
         self.preprocess_conf = preprocess_conf
-        self.inf_conf = sampler_conf.inference_params
+        self.inference_params = sampler_conf.inference_params
         self.contig_conf = sampler_conf.contigmap_params
         self.denoiser_params = sampler_conf.denoiser_params
         self.ppi_params = sampler_conf.ppi_params
@@ -517,7 +517,7 @@ class SelfConditioningSampler(UnconditionalSampler):
         self.allatom = ComputeAllAtomCoords().to(self.device)
 
         self.reference_structure = iu.process_target(
-            self.inf_conf.reference_structure, center=False
+            self.inference_params.reference_structure, center=False
         )
 
         self.chain_idx = None
@@ -951,7 +951,7 @@ class SelfConditioningSampler(UnconditionalSampler):
                 px0=px0,
                 t=t,
                 diffusion_mask=self.mask_str.squeeze(),
-                align_motif=self.inf_conf.align_motif,
+                align_motif=self.inference_params.align_motif,
                 include_motif_sidechains=self.preprocess_conf.motif_sidechain_input,
             )
         else:
@@ -994,7 +994,7 @@ class ScaffoldedSampler(SelfConditioningSampler):
         self.model = model
         self.diffuser_conf = diffuser_conf
         self.preprocess_conf = preprocess_conf
-        self.inf_conf = sampler_conf.inference_params
+        self.inference_params = sampler_conf.inference_params
         self.contig_conf = sampler_conf.contigmap_params
         self.denoiser_params = sampler_conf.denoiser_params
         self.ppi_params = sampler_conf.ppi_params
@@ -1136,7 +1136,7 @@ class ScaffoldedSampler(SelfConditioningSampler):
             ), "Giving a target is the wrong way of handling this is you're doing contigs and secondary structure"
 
             # process target and reinitialise potential_manager. This is here because the 'target' is always set up to be the second chain in out inputs.
-            self.target_structure = iu.process_target(self.inf_conf.reference_structure)
+            self.target_structure = iu.process_target(self.inference_params.reference_structure)
             self.contig_map = self.construct_contig(self.target_structure)
             self.mappings = self.contig_map.get_mappings()
             self.mask_seq = torch.from_numpy(self.contig_map.inpaint_seq)[None, :]

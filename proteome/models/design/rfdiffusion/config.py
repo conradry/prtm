@@ -210,7 +210,7 @@ class ScaffoldGuidedParams:
 @dataclass
 class InferenceParams:
     reference_structure: protein.Protein = None
-    num_designs: int = 10
+    num_designs: int = 1
     align_motif: bool = True
     final_step: int = 1
 
@@ -256,39 +256,3 @@ SamplerConfigType = Union[
     SelfConditioningSamplerConfig,
     ScaffoldedSamplerConfig,
 ]
-
-"""
-@dataclass
-class InpaintSeqConfig(RFDiffuserConfig):
-    if (
-        conf.contigmap.inpaint_seq is not None
-        or conf.contigmap.provide_seq is not None
-    ):
-        # use model trained for inpaint_seq
-        if conf.contigmap.provide_seq is not None:
-            # this is only used for partial diffusion
-            assert (
-                conf.diffuser.partial_T is not None
-            ), "The provide_seq input is specifically for partial diffusion"
-        if conf.scaffoldguided.scaffoldguided:
-            self.ckpt_path = f"{model_directory}/InpaintSeq_Fold_ckpt.pt"
-        else:
-            self.ckpt_path = f"{model_directory}/InpaintSeq_ckpt.pt"
-    elif (
-        conf.ppi.hotspot_res is not None
-        and conf.scaffoldguided.scaffoldguided is False
-    ):
-        # use complex trained model
-        self.ckpt_path = f"{model_directory}/Complex_base_ckpt.pt"
-    elif conf.scaffoldguided.scaffoldguided is True:
-        # use complex and secondary structure-guided model
-        self.ckpt_path = f"{model_directory}/Complex_Fold_base_ckpt.pt"
-    else:
-        # use default model
-        self.ckpt_path = f"{model_directory}/Base_ckpt.pt"
-# for saving in trb file:
-assert (
-    self._conf.inference.trb_save_ckpt_path is None
-), "trb_save_ckpt_path is not the place to specify an input model. Specify in inference.ckpt_override_path"
-self._conf["inference"]["trb_save_ckpt_path"] = self.ckpt_path
-"""
