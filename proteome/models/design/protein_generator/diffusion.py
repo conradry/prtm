@@ -1,37 +1,36 @@
-import enum
 import math
 
 import numpy as np
 import torch as th
 
-
 ##########################################################################################
 
 #    DIFFUSION CODE BASE FOR PROTEIN SEQUENCE DIFFUSION WAS ADAPTED FROM LM-DIFFUSION    #
 
-                # (https://github.com/XiangLi1999/Diffusion-LM) #
-    
+# (https://github.com/XiangLi1999/Diffusion-LM) #
+
 ##########################################################################################
+
 
 class GaussianDiffusion_SEQDIFF:
     """
     T = number of timesteps to set up diffuser with
-    
+
     schedule = type of noise schedule to use linear, cosine, gaussian
-    
+
     noise = type of ditribution to sample from; DEFAULT - normal_gaussian
-    
+
     """
 
-    def __init__(self,
-                T=1000,
-                schedule='sqrt', 
-                sample_distribution='normal',
-                sample_distribution_gmm_means=[-1.0, 1.0],
-                sample_distribution_gmm_variances=[1.0, 1.0],
-                F=1,
-                ):
-        
+    def __init__(
+        self,
+        T=1000,
+        schedule="sqrt",
+        sample_distribution="normal",
+        sample_distribution_gmm_means=[-1.0, 1.0],
+        sample_distribution_gmm_variances=[1.0, 1.0],
+        F=1,
+    ):
         # Use float64 for accuracy.
         betas = np.array(get_named_beta_schedule(schedule, T), dtype=np.float64)
         self.betas = betas
@@ -48,29 +47,42 @@ class GaussianDiffusion_SEQDIFF:
         assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
-        self.posterior_variance = (betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod))
+        self.posterior_variance = (
+            betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        )
         # log calculation clipped because the posterior variance is 0 at the
         # beginning of the diffusion chain.
-        self.posterior_log_variance_clipped = np.log(np.append(self.posterior_variance[1], self.posterior_variance[1:]))
-        self.posterior_mean_coef1 = (betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod))
-        self.posterior_mean_coef2 = ((1.0 - self.alphas_cumprod_prev) * np.sqrt(alphas) / (1.0 - self.alphas_cumprod))
-        
+        self.posterior_log_variance_clipped = np.log(
+            np.append(self.posterior_variance[1], self.posterior_variance[1:])
+        )
+        self.posterior_mean_coef1 = (
+            betas * np.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+        )
+        self.posterior_mean_coef2 = (
+            (1.0 - self.alphas_cumprod_prev)
+            * np.sqrt(alphas)
+            / (1.0 - self.alphas_cumprod)
+        )
+
         # calculations for diffusion q(x_t | x_{t-1}) and others
         self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
         self.sqrt_one_minus_alphas_cumprod = np.sqrt(1.0 - self.alphas_cumprod)
         self.log_one_minus_alphas_cumprod = np.log(1.0 - self.alphas_cumprod)
         self.sqrt_recip_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod)
-        
+
         # sample_distribution_params
         self.sample_distribution = sample_distribution
-        self.sample_distribution_gmm_means = [float(mean) for mean in sample_distribution_gmm_means]
-        self.sample_distribution_gmm_variances = [float(variance) for variance in sample_distribution_gmm_variances]
-        
-        if self.sample_distribution == 'normal':
+        self.sample_distribution_gmm_means = [
+            float(mean) for mean in sample_distribution_gmm_means
+        ]
+        self.sample_distribution_gmm_variances = [
+            float(variance) for variance in sample_distribution_gmm_variances
+        ]
+
+        if self.sample_distribution == "normal":
             self.noise_function = th.randn_like
         else:
             self.noise_function = self.randnmixture_like
-
 
     def q_mean_variance(self, x_start, t):
         """
@@ -79,13 +91,9 @@ class GaussianDiffusion_SEQDIFF:
         :param t: the number of diffusion steps (minus 1). Here, 0 means one step.
         :return: A tuple (mean, variance, log_variance), all of x_start's shape.
         """
-        mean = (
-            _extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-        )
+        mean = _extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
         variance = _extract(1.0 - self.alphas_cumprod, t, x_start.shape)
-        log_variance = _extract(
-            self.log_one_minus_alphas_cumprod, t, x_start.shape
-        )
+        log_variance = _extract(self.log_one_minus_alphas_cumprod, t, x_start.shape)
         return mean, variance, log_variance
 
     def q_sample(self, x_start, t, mask=None, DEVICE=None):
@@ -97,38 +105,41 @@ class GaussianDiffusion_SEQDIFF:
         :param noise: if specified, the split-out normal noise.
         :return: A noisy version of x_start.
         """
-        
+
         # noise_function is determined in init depending on type of noise specified
-        noise = self.noise_function(x_start)*(self.F**2)
+        noise = self.noise_function(x_start) * (self.F**2)
         if DEVICE != None:
             noise = noise.to(DEVICE)
 
         assert noise.shape == x_start.shape
-        x_sample =  (
+        x_sample = (
             _extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + _extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
-            * noise)
-        
+            + _extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
+        )
+
         if mask is not None:
-            x_sample[mask]=x_start[mask]
-        
+            x_sample[mask] = x_start[mask]
+
         return x_sample
 
-        
     def q_posterior_mean_variance(self, x_start, x_t, t):
         """
         Compute the mean and variance of the diffusion posterior:
             q(x_{t-1} | x_t, x_0)
         """
         assert x_start.shape == x_t.shape
-        
-        posterior_mean = (_extract(self.posterior_mean_coef1, t, x_t.shape) * x_start
-            + _extract(self.posterior_mean_coef2, t, x_t.shape) * x_t)
-        
+
+        posterior_mean = (
+            _extract(self.posterior_mean_coef1, t, x_t.shape) * x_start
+            + _extract(self.posterior_mean_coef2, t, x_t.shape) * x_t
+        )
+
         posterior_variance = _extract(self.posterior_variance, t, x_t.shape)
-        
-        posterior_log_variance_clipped = _extract(self.posterior_log_variance_clipped, t, x_t.shape)
-        
+
+        posterior_log_variance_clipped = _extract(
+            self.posterior_log_variance_clipped, t, x_t.shape
+        )
+
         assert (
             posterior_mean.shape[0]
             == posterior_variance.shape[0]
@@ -136,26 +147,35 @@ class GaussianDiffusion_SEQDIFF:
             == x_start.shape[0]
         )
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
-        
-    
+
     def randnmixture_like(self, tensor_like, number_normal=3, weights_normal=None):
-    
-        if self.sample_distribution_gmm_means and self.sample_distribution_gmm_variances:
-            assert len(self.sample_distribution_gmm_means) == len(self.sample_distribution_gmm_variances)
+        if (
+            self.sample_distribution_gmm_means
+            and self.sample_distribution_gmm_variances
+        ):
+            assert len(self.sample_distribution_gmm_means) == len(
+                self.sample_distribution_gmm_variances
+            )
 
         if not weights_normal:
-            mix = th.distributions.Categorical(th.ones(len(self.sample_distribution_gmm_means))) #number_normal
+            mix = th.distributions.Categorical(
+                th.ones(len(self.sample_distribution_gmm_means))
+            )  # number_normal
         else:
             assert len(weights_normal) == number_normal
             mix = th.distributions.Categorical(weights_normal)
-        #comp = torch.distributions.Normal(torch.randn(number_normal), torch.rand(number_normal))
-        comp = th.distributions.Normal(th.tensor(self.sample_distribution_gmm_means), th.tensor(self.sample_distribution_gmm_variances))
-        #comp = torch.distributions.Normal([-3, 3], [1, 1])
-        #comp = torch.distributions.Normal([-3, 0, 3], [1, 1, 1])
-        #comp = torch.distributions.Normal([-3, 0, 3], [1, 1, 1])
+        # comp = torch.distributions.Normal(torch.randn(number_normal), torch.rand(number_normal))
+        comp = th.distributions.Normal(
+            th.tensor(self.sample_distribution_gmm_means),
+            th.tensor(self.sample_distribution_gmm_variances),
+        )
+        # comp = torch.distributions.Normal([-3, 3], [1, 1])
+        # comp = torch.distributions.Normal([-3, 0, 3], [1, 1, 1])
+        # comp = torch.distributions.Normal([-3, 0, 3], [1, 1, 1])
         gmm = th.distributions.mixture_same_family.MixtureSameFamily(mix, comp)
-        return th.tensor([gmm.sample() for _ in range(np.prod(tensor_like.shape))]).reshape(tensor_like.shape)
-
+        return th.tensor(
+            [gmm.sample() for _ in range(np.prod(tensor_like.shape))]
+        ).reshape(tensor_like.shape)
 
 
 def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
@@ -172,16 +192,25 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
         scale = 1000 / num_diffusion_timesteps
         beta_start = scale * 0.0001
         beta_end = scale * 0.02
-        return np.linspace(beta_start, beta_end, num_diffusion_timesteps, dtype=np.float64)
+        return np.linspace(
+            beta_start, beta_end, num_diffusion_timesteps, dtype=np.float64
+        )
 
     elif schedule_name == "cosine":
-        return betas_for_alpha_bar(num_diffusion_timesteps, lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,)
+        return betas_for_alpha_bar(
+            num_diffusion_timesteps,
+            lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,
+        )
 
-    elif schedule_name == 'sqrt':
-        return betas_for_alpha_bar(num_diffusion_timesteps, lambda t: 1-np.sqrt(t + 0.0001),)
+    elif schedule_name == "sqrt":
+        return betas_for_alpha_bar(
+            num_diffusion_timesteps,
+            lambda t: 1 - np.sqrt(t + 0.0001),
+        )
 
     else:
         raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
+
 
 def betas_for_alpha_bar(num_diffusion_timesteps, alpha_bar, max_beta=0.999):
     """
