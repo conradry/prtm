@@ -8,9 +8,7 @@ from proteome.models.design.protein_generator.attention_module import (
     FeedForwardLayer,
 )
 from proteome.models.design.protein_generator.track_module import PairStr2Pair
-from proteome.models.design.protein_generator.util import get_tips
-from proteome.models.design.protein_generator.util_module import (
-    Dropout,
+from proteome.models.design.protein_generator.util import (
     create_custom_forward,
     init_lecun_normal,
     rbf,

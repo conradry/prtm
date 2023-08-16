@@ -6,8 +6,7 @@ from icecream import ic
 from opt_einsum import contract as einsum
 from proteome.models.design.protein_generator.attention_module import *
 from proteome.models.design.protein_generator.se3_network import SE3TransformerWrapper
-from proteome.models.design.protein_generator.util import cross_product_matrix
-from proteome.models.design.protein_generator.util_module import *
+from proteome.models.design.protein_generator.util import *
 
 # Components for three-track blocks
 # 1. MSA -> MSA update (biased attention. bias from pair & structure)

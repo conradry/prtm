@@ -1,7 +1,6 @@
 import torch
 from proteome.models.design.protein_generator.kinematics import get_init_xyz
 from proteome.models.design.protein_generator.util import *
-from proteome.models.design.protein_generator.util_module import ComputeAllAtomCoords
 
 from inpainting_util import lddt_unbin
 
