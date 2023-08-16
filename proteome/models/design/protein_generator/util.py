@@ -1,10 +1,8 @@
-import numpy as np
-import scipy.sparse
-import torch
 import copy
 
 import dgl
 import numpy as np
+import scipy.sparse
 import torch
 import torch.nn as nn
 from proteome.models.design.protein_generator.chemical import *
@@ -654,6 +652,7 @@ def get_rmsd(a, b, eps=1e-6):
     rmsd = torch.sqrt(torch.sum((rP - a) * (rP - a), axis=(0, 1)) / L + eps)
 
     return rmsd, U
+
 
 def init_lecun_normal(module, scale=1.0):
     def truncated_normal(uniform, mu=0.0, sigma=1.0, a=-2, b=2):
