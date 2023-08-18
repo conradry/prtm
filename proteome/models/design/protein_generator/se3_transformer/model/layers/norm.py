@@ -26,7 +26,7 @@ from typing import Dict
 
 import torch
 import torch.nn as nn
-from proteome.models.design.rfdiffusion.se3_transformer.model.fiber import Fiber
+from proteome.models.design.protein_generator.se3_transformer.model.fiber import Fiber
 from torch import Tensor
 from torch.cuda.nvtx import range as nvtx_range
 

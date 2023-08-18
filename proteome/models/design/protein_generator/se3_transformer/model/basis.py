@@ -28,7 +28,7 @@ from typing import Dict, List
 import e3nn.o3 as o3
 import torch
 import torch.nn.functional as F
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import degree_to_dim
+from proteome.models.design.protein_generator.se3_transformer.runtime.utils import degree_to_dim
 from torch import Tensor
 from torch.cuda.nvtx import range as nvtx_range
 

@@ -28,8 +28,8 @@ from typing import Optional
 
 import numpy as np
 import torch
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.loggers import Logger
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.metrics import MeanAbsoluteError
+from proteome.models.design.protein_generator.se3_transformer.runtime.loggers import Logger
+from proteome.models.design.protein_generator.se3_transformer.runtime.metrics import MeanAbsoluteError
 
 
 class BaseCallback(ABC):
