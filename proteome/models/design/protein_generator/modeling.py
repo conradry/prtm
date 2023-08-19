@@ -1,13 +1,13 @@
 import random
 from dataclasses import asdict
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
 from proteome import protein
+from proteome.constants.residue_constants import restypes
 from proteome.models.design.protein_generator import config
-from proteome.models.design.protein_generator.rosettafold_model import \
-    RoseTTAFoldModule
+from proteome.models.design.protein_generator.rosettafold_model import RoseTTAFoldModule
 from proteome.models.design.protein_generator.sampler import SeqDiffSampler
 from tqdm import tqdm
 
@@ -105,7 +105,7 @@ class ProteinGeneratorForJointDesign:
     def design_structure_and_sequence(
         self,
         inference_config: config.InferenceConfig,
-    ) -> protein.Protein:
+    ) -> Tuple[protein.Protein, str]:
         """Design a protein structure."""
         if self.model_name == "auto":
             self.set_model(_select_model_from_config(inference_config))
@@ -115,5 +115,24 @@ class ProteinGeneratorForJointDesign:
         # Setup the sampler class
         sampler = SeqDiffSampler(self.model, inference_config)
         sampler.diffuser_init()
+        features = sampler.generate_sample()
 
-        return sampler.generate_sample()
+        # Decode the sequence and make the structure
+        L = len(features["best_seq"])
+        num_atoms = features["best_xyz"].shape[2]
+        sequence = "".join([restypes[aa] for aa in features["best_seq"].cpu().numpy()])
+        structure = protein.Protein(
+            atom_positions=features["best_xyz"].squeeze().cpu().numpy(),
+            aatype=features["best_seq"].cpu().numpy(),
+            atom_mask=np.ones((L, num_atoms)),
+            residue_index=np.array([t[1] for t in features["pdb_idx"]]),
+            b_factors=features["best_pred_lddt"][0]
+            .cpu()
+            .numpy()[..., None]
+            .repeat(num_atoms, axis=1),
+            chain_index=np.array(
+                [protein.PDB_CHAIN_IDS.index(t[0]) for t in features["pdb_idx"]]
+            ),
+        )
+
+        return structure, sequence

@@ -1,5 +1,5 @@
 import torch
-from proteome.models.design.protein_generator.inpainting_util import lddt_unbin
+from proteome.models.design.protein_generator.contigs import lddt_unbin
 from proteome.models.design.protein_generator.kinematics import get_init_xyz
 from proteome.models.design.protein_generator.util import *
 
@@ -161,9 +161,6 @@ def mask_inputs(
     assert torch.sum(torch.isnan(xyz_t[:, :, :3, :])) == 0
 
     return seq, msa_masked, msa_full, xyz_t, t1d, seq_diffused
-
-
-conversion = "ARNDCQEGHILKMFPSTWYVX-"
 
 
 def take_step(

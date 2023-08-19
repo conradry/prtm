@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
+import torch
 from proteome import protein
 
 
@@ -55,74 +56,139 @@ ComplexConfig = RoseTTAFoldModuleConfig(d_t1d=29)
 
 
 @dataclass
-class InferenceConfig:
-    F: int = 1
-    T: int = 25
+class HydrophobicBiasParams:
+    hydrophobic_score: int = -10
+    hydrophobic_loss_type: str = "complex"
+
+    def __post_init__(self):
+        self._potential_type = "hydrophobic"
+        if self.hydrophobic_loss_type not in ["complex", "simple"]:
+            raise ValueError(
+                f"hydrophobic_loss_type must be one of ['complex', 'simple'], got {self.hydrophobic_loss_type}"
+            )
+
+
+@dataclass
+class AACompositionalBiasParams:
     aa_composition: str = "W0.2"
     aa_spec: Optional[str] = None
     aa_weight: Optional[str] = None
     aa_weights_json: Optional[str] = None
     add_weight_every_n: int = 1
-    argmax_seq: bool = False
-    cautious: bool = False
-    checkpoint: str = "./SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt"
-    clamp_seqout: bool = False
-    contigs: Tuple[str] = "0"
-    d_t1d: int = 24
-    dssp_pdb: Optional[str] = None
-    dump_all: bool = False
-    dump_npz: bool = False
-    dump_pdb: bool = True
-    dump_trb: bool = True
     frac_seq_to_weight: float = 0.0
-    hal_idx: Optional[str] = None
-    helix_bias: float = 0.0
-    hotspots: Optional[str] = None
-    idx_rf: Optional[str] = None
-    inpaint_seq: Optional[str] = None
-    inpaint_seq_tensor: Optional[str] = None
-    inpaint_str: Optional[str] = None
-    inpaint_str_tensor: Optional[str] = None
-    input_json: Optional[str] = None
-    length: Optional[int] = None
-    loop_bias: float = 0.0
-    loop_design: bool = False
-    min_decoding_distance: int = 15
-    multi_templates: Optional[str] = None
-    multi_tmpl_conf: Optional[str] = None
-    n_cycle: int = 4
-    noise_schedule: str = "sqrt"
-    num_designs: int = 500
     one_weight_per_position: bool = False
-    out: str = "./"
-    pdb: Optional[str] = None
-    potential_scale: str = ""
-    ref_idx: Optional[str] = None
-    sampling_temp: float = 1.0
-    save_all_steps: bool = False
-    save_best_plddt: bool = True
-    save_seqs: bool = False
-    scheduled_str_cond: bool = False
-    secondary_structure: Optional[str] = None
-    softmax_seqout: bool = False
-    start_num: int = 0
-    strand_bias: float = 0.0
-    struc_cond_sc: bool = False
-    symmetry: int = 1
-    symmetry_cap: int = 0
-    temperature: float = 0.1
-    tmpl_conf: str = "1"
-    trb: Optional[str] = None
-    sample_distribution: str = "normal"
-    sample_distribution_gmm_means: Tuple[float] = (0,)
-    sample_distribution_gmm_variances: Tuple[float] = (1,)
+
+    def __post_init__(self):
+        self._potential_type = "aa_bias"
+
+
+@dataclass
+class ChargeBiasParams:
     target_charge: int = -10
     charge_loss_type: str = "complex"
     target_pH: float = 7.4
-    hydrophobic_score: int = -10
-    hydrophobic_loss_type: str = "complex"
-    save_args: bool = True
-    potentials: str = ""
-    sequence: str = "XXXXXXXXXXXXXXXXPEPSEQXXXXXXXXXXXXXXXX"
-    sampler: str = "default"
-    predict_symmetric: str = "false"
+
+    def __post_init__(self):
+        self._potential_type = "charge"
+
+
+PotentialParamType = Union[
+    HydrophobicBiasParams, AACompositionalBiasParams, ChargeBiasParams
+]
+
+
+@dataclass
+class PotentialsConfig:
+    potentials: Optional[List[PotentialParamType]] = None
+    potential_scales: Optional[List[float]] = None
+
+    def __post_init__(self):
+        assert len(self.potentials) == len(self.potential_scales)
+
+
+@dataclass
+class ContigSettings:
+    """
+    This is currently unused in the Samplers but could be used in place of ContigMap
+    to avoid the need for contig string syntax and parsing.
+    """
+
+    ref_idx: int = None
+    hal_idx: int = None
+    idx_rf: int = None
+    inpaint_seq_tensor: Optional[torch.Tensor] = None
+
+
+@dataclass
+class ContigMap:
+    contigs: str = "0"
+    inpaint_seq: Optional[str] = None
+    provide_seq: Optional[str] = None
+    length: Optional[int] = None
+
+
+@dataclass
+class StructureBiasParams:
+    helix_bias: float = 0.0
+    strand_bias: float = 0.0
+    loop_bias: float = 0.0
+
+
+class DiffuserParams:
+    T: int = 25
+    schedule: str = "sqrt"
+    sample_distribution: str = "normal"
+    sample_distribution_gmm_means: Tuple[float] = (0,)
+    sample_distribution_gmm_variances: Tuple[float] = (1,)
+
+    def __post_init__(self):
+        assert self.schedule in ["sqrt", "linear", "none"]
+        assert self.sample_distribution in ["normal", "uniform", "none"]
+
+
+@dataclass
+class SequenceParams:
+    sequence: Optional[str] = None  # "XXXXXXXXXXXXXXXXPEPSEQXXXXXXXXXXXXXXXX"
+    length: Optional[int] = None
+
+    def __post_init__(self):
+        if self.sequence is None and self.length is None:
+            raise ValueError("Either sequence or length must be specified")
+
+        if self.sequence is not None and self.length is not None:
+            raise ValueError("Only one of sequence or length can be specified")
+
+        if self.sequence is None and self.length is not None:
+            self.sequence = "X" * self.length
+
+
+@dataclass
+class InferenceConfig:
+    pdb: Optional[str] = None
+    dssp_pdb: Optional[str] = None
+    contigmap_params: ContigMap = ContigMap()
+    potentials_config: PotentialsConfig = PotentialsConfig()
+    structure_bias_params: StructureBiasParams = StructureBiasParams()
+    diffuser_params: DiffuserParams = DiffuserParams()
+
+    # F: int = 1
+    clamp_seqout: bool = False
+    softmax_seqout: bool = False
+
+    d_t1d: int = 24
+    hotspots: Optional[str] = None
+
+    n_cycle: int = 4
+
+    sampling_temp: float = 1.0
+    scheduled_str_cond: bool = False
+    secondary_structure: Optional[str] = None
+    struc_cond_sc: bool = False
+
+    symmetry: int = 1
+    symmetry_cap: int = 0
+    predict_symmetric: bool = False
+
+    tmpl_conf: str = 1
+
+    trb: Optional[str] = None

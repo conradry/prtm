@@ -3,10 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from proteome.models.design.protein_generator.attention_module import (
-    Attention, AttentionWithBias, FeedForwardLayer)
+    Attention,
+    AttentionWithBias,
+    FeedForwardLayer,
+)
 from proteome.models.design.protein_generator.track_module import PairStr2Pair
 from proteome.models.design.protein_generator.util import (
-    create_custom_forward, init_lecun_normal, rbf)
+    create_custom_forward,
+    init_lecun_normal,
+    rbf,
+)
 
 # Module contains classes and functions to generate initial embeddings
 

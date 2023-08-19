@@ -1,22 +1,18 @@
-#####################################################################
-############# PROTEIN SEQUENCE DIFFUSION SAMPLER ####################
-#####################################################################
-
-import time
+from dataclasses import asdict
 
 import numpy as np
 import proteome.models.design.protein_generator.diff_utils as diff_utils
 import proteome.models.design.protein_generator.parsers_inference as parsers
 import torch
+from proteome.constants.residue_constants import restypes_with_x_dash
 from proteome.models.design.protein_generator import config
 from proteome.models.design.protein_generator.calc_dssp import annotate_sse
-from proteome.models.design.protein_generator.diffusion import \
-    GaussianDiffusion_SEQDIFF
-from proteome.models.design.protein_generator.inpainting_util import *
-from proteome.models.design.protein_generator.kinematics import (get_init_xyz,
-                                                                 xyz_to_t2d)
+from proteome.models.design.protein_generator.contigs import *
+from proteome.models.design.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
+from proteome.models.design.protein_generator.kinematics import get_init_xyz, xyz_to_t2d
 from proteome.models.design.protein_generator.potentials import POTENTIALS
 from proteome.models.design.protein_generator.util import *
+from tqdm import tqdm
 
 
 class SeqDiffSampler:
@@ -43,28 +39,24 @@ class SeqDiffSampler:
         """
         self.model = model
         self.cfg = cfg
-        self.conversion = "ARNDCQEGHILKMFPSTWYVX-"
         self.dssp_dict = {"X": 3, "H": 0, "E": 1, "L": 2}
-        self.use_potentials = False
         self.device = list(self.model.parameters())[0].device
-        self.reset_design_num()
 
-    def reset_design_num(self):
-        """
-        reset design num to 0
-        """
-        self.design_num = 0
+        self.potentials_conf = cfg.potentials_config
+        self.contig_conf = cfg.contigmap_params
+        self.structure_bias_conf = cfg.structure_bias_params
+        self.diffuser_conf = cfg.diffuser_params
 
     def diffuser_init(self):
         """
         set up diffuser object of GaussianDiffusion_SEQDIFF
         """
         self.diffuser = GaussianDiffusion_SEQDIFF(
-            T=self.cfg.T,
-            schedule=self.cfg.noise_schedule,
-            sample_distribution=self.cfg.sample_distribution,
-            sample_distribution_gmm_means=self.cfg.sample_distribution_gmm_means,
-            sample_distribution_gmm_variances=self.cfg.sample_distribution_gmm_variances,
+            T=self.diffuser_conf.T,
+            schedule=self.diffuser_conf.schedule,
+            sample_distribution=self.diffuser_conf.sample_distribution,
+            sample_distribution_gmm_means=self.diffuser_conf.sample_distribution_gmm_means,
+            sample_distribution_gmm_variances=self.diffuser_conf.sample_distribution_gmm_variances,
         )
         self.betas = self.diffuser.betas
         self.alphas = 1 - self.betas
@@ -130,14 +122,20 @@ class SeqDiffSampler:
             # we assume binder is chain A
             self.features["dssp_feat"][: dssp_pdb.shape[0]] = dssp_pdb
 
-        elif (self.cfg.helix_bias + self.cfg.strand_bias + self.cfg.loop_bias) > 0.0:
-            tmp_mask = torch.rand(self.features["L"]) < self.cfg.helix_bias
+        elif sum(asdict(self.structure_bias_conf).values()) > 0.0:
+            tmp_mask = (
+                torch.rand(self.features["L"]) < self.structure_bias_conf.helix_bias
+            )
             self.features["dssp_feat"][tmp_mask, 0] = 1.0
 
-            tmp_mask = torch.rand(self.features["L"]) < self.cfg.strand_bias
+            tmp_mask = (
+                torch.rand(self.features["L"]) < self.structure_bias_conf.strand_bias
+            )
             self.features["dssp_feat"][tmp_mask, 1] = 1.0
 
-            tmp_mask = torch.rand(self.features["L"]) < self.cfg.loop_bias
+            tmp_mask = (
+                torch.rand(self.features["L"]) < self.structure_bias_conf.loop_bias
+            )
             self.features["dssp_feat"][tmp_mask, 2] = 1.0
 
         # contigs get mask label
@@ -163,21 +161,21 @@ class SeqDiffSampler:
             self.dssp_dict[x.upper()] for x in "H" * self.features["cap"]
         ]
 
-        assert (self.cfg.contigs in [("0"), (0), ["0"], [0]]) ^ (
+        assert (self.contig_conf.contigs == "0") ^ (
             self.cfg.sequence in ["", None]
-        ), f"You are specifying contigs ({self.cfg.contigs}) and sequence ({self.cfg.sequence})  (or neither), please specify one or the other"
+        ), f"You are specifying contigs ({self.contig_conf.contigs}) and sequence ({self.cfg.sequence})  (or neither), please specify one or the other"
 
         # initialize trb dictionary
         self.features["trb_d"] = {}
 
         if self.cfg.pdb == None and self.cfg.sequence not in ["", None]:
-            allowable_aas = [x for x in self.conversion[:-1]]
+            allowable_aas = [x for x in restypes_with_x_dash[:-1]]
             for x in self.cfg.sequence:
                 assert (
                     x in allowable_aas
                 ), f"Amino Acid {x} is undefinded, please only use standart 20 AAs"
             self.features["seq"] = torch.tensor(
-                [self.conversion.index(x) for x in self.cfg.sequence]
+                [restypes_with_x_dash.index(x) for x in self.cfg.sequence]
             )
             self.features["xyz_t"] = torch.full(
                 (1, 1, len(self.cfg.sequence), 27, 3), np.nan
@@ -224,7 +222,7 @@ class SeqDiffSampler:
                 dim=0
             )
 
-            self.max_t = int(self.cfg.T * self.cfg.sampling_temp)
+            self.max_t = int(self.diffuser_conf.T * self.cfg.sampling_temp)
 
             self.features["pdb_idx"] = [
                 ("A", i + 1) for i in range(len(self.cfg.sequence))
@@ -251,14 +249,10 @@ class SeqDiffSampler:
 
             # generate contig map
             self.features["rm"] = ContigMap(
-                self.features["parsed_pdb"],
-                self.cfg.contigs,
-                self.cfg.inpaint_seq,
-                self.cfg.inpaint_str,
+                self.features["parsed_pdb"], **asdict(self.contig_conf)
             )
 
-            self.features["mappings"] = get_mappings(self.features["rm"])
-
+            self.features["mappings"] = self.features["rm"].get_mappings()
             self.features["pdb_idx"] = self.features["rm"].hal
 
             ### PREPARE FEATURES DEPENDING ON TYPE OF ARGUMENTS SPECIFIED ###
@@ -295,9 +289,7 @@ class SeqDiffSampler:
                 ]
 
                 # template confidence
-                conf_1d = torch.ones_like(self.features["seq"]) * float(
-                    self.cfg.tmpl_conf
-                )
+                conf_1d = torch.ones_like(self.features["seq"]) * self.cfg.tmpl_conf
                 conf_1d[
                     ~self.features["mask_str"][0]
                 ] = 0  # zero confidence for places where structure is masked
@@ -326,7 +318,7 @@ class SeqDiffSampler:
                     "msa_extra_hot"
                 ].unsqueeze(dim=0)
 
-                self.max_t = int(self.cfg.T * self.cfg.sampling_temp)
+                self.max_t = int(self.diffuser_conf.T * self.cfg.sampling_temp)
 
             # PARTIAL DIFFUSION MODE, NO INPUT TRB
             elif self.cfg.trb != None:
@@ -389,7 +381,7 @@ class SeqDiffSampler:
                     "msa_extra_hot"
                 ].unsqueeze(dim=0)
 
-                self.max_t = int(self.cfg.T * self.cfg.sampling_temp)
+                self.max_t = int(self.diffuser_conf.T * self.cfg.sampling_temp)
 
             else:
                 print(
@@ -402,7 +394,7 @@ class SeqDiffSampler:
                     self.features["parsed_pdb"]["xyz"][:, :, :]
                 )[None, None, ...]
 
-                if self.cfg.contigs in [("0"), (0), ["0"], [0]]:
+                if self.contig_conf.contigs in [("0"), (0), ["0"], [0]]:
                     print("no contigs given partially diffusing everything")
                     self.features["mask_str"] = (
                         torch.zeros(self.features["xyz_t"].shape[2])
@@ -460,7 +452,7 @@ class SeqDiffSampler:
                     "msa_extra_hot"
                 ].unsqueeze(dim=0)
 
-                self.max_t = int(self.cfg.T * self.cfg.sampling_temp)
+                self.max_t = int(self.diffuser_conf.T * self.cfg.sampling_temp)
 
         # set L
         self.features["L"] = self.features["seq"].shape[0]
@@ -470,20 +462,20 @@ class SeqDiffSampler:
         initialize potential functions being used and return list of potentails
         """
 
-        potentials = self.cfg.potentials.split(",")
-        potential_scale = [float(x) for x in self.cfg.potential_scale.split(",")]
-        assert len(potentials) == len(
-            potential_scale
-        ), f"Please make sure number of potentials matches potential scales specified"
+        potentials = self.potentials_conf.potentials
+        potential_scales = self.potentials_conf.potential_scales
 
         self.potential_list = []
-        for p, s in zip(potentials, potential_scale):
+        for potential, scale in zip(potentials, potential_scales):
+            potential_type = potential._potential_type  # type: ignore
             assert (
-                p in POTENTIALS.keys()
-            ), f"The potential specified: {p} , does not match into POTENTIALS dictionary in potentials.py"
-            print(f"Using potential: {p}")
+                potential_type in POTENTIALS.keys()
+            ), f"The potential specified: {potential_type} , does not match into POTENTIALS dictionary in potentials.py"
+
             self.potential_list.append(
-                POTENTIALS[p](self.cfg.selfeatures, s, self.device)
+                POTENTIALS[potential_type](
+                    self.cfg, self.features["L"], scale, self.device
+                )  # type: ignore
             )
 
         self.use_potentials = True
@@ -497,8 +489,10 @@ class SeqDiffSampler:
         self.feature_init()
 
         # initialize potential
-        if self.cfg.potentials not in ["", None]:
+        if self.potentials_conf.potentials is not None:
             self.potential_init()
+        else:
+            self.use_potentials = False
 
         # make hostspot features
         self.make_hotspot_features()
@@ -663,9 +657,6 @@ class SeqDiffSampler:
         """
         ensure symmetrization with one final prediction
         """
-
-        print("symmetrizing output seq.....")
-
         # take argmaxed seq and make one hot
         if self.cfg.save_best_plddt:
             sym_seq = torch.clone(self.features["best_seq"])
@@ -714,10 +705,10 @@ class SeqDiffSampler:
         """
         unmask random fraction of residues according to timestep
         """
-        print("self_conditioning on strcuture")
+        mask_str = self.features["mask_str"]
         xyz_prev_template = torch.clone(self.features["xyz"])[None]
         self_conditioning_mask = (
-            torch.rand(self.features["L"]) < self.diffuser.alphas_cumprod[t]
+            torch.rand(self.features["L"]) < self.diffuser.alphas_cumprod[self.t]
         )
         xyz_prev_template[:, :, ~self_conditioning_mask] = float("nan")
         xyz_prev_template[:, :, self.features["mask_str"][0][0]] = float("nan")
@@ -794,7 +785,7 @@ class SeqDiffSampler:
         self.features["msa_masked"][:, :, :, :, :22] = self.features["seq_diffused"]
         self.features["msa_masked"][:, :, :, :, 22:44] = self.features["seq_diffused"]
         self.features["msa_full"][:, :, :, :, :22] = self.features["seq_diffused"]
-        self.features["t1d"][:1, :, :, 22] = 1 - int(self.t) / self.cfg.T
+        self.features["t1d"][:1, :, :, 22] = 1 - int(self.t) / self.diffuser_conf.T
 
     def apply_potentials(self):
         """
@@ -816,25 +807,12 @@ class SeqDiffSampler:
         # setup example
         self.setup()
 
-        # start time
-        self.start_time = time.time()
-
-        # set up dictionary to save at each step in trajectory
-        self.trajectory = {}
-
-        # set out prefix
-        self.out_prefix = self.cfg.out + f"_{self.design_num:06}"
-
         # main sampling loop
-        for j in range(self.max_t):
+        for j in tqdm(range(self.max_t)):
             self.t = torch.tensor(self.max_t - j - 1).to(self.device)
 
             # run features through the model to get X_o prediction
             self.predict_x()
-
-            # save step
-            if self.cfg.save_all_steps:
-                self.save_step()
 
             # get seq out
             self.features["seq_out"] = torch.permute(
@@ -869,8 +847,8 @@ class SeqDiffSampler:
             if self.cfg.clamp_seqout:
                 self.features["seq_out"] = torch.clamp(
                     self.features["seq_out"],
-                    min=-((1 / self.diffuser.alphas_cumprod[t]) * 0.25 + 5),
-                    max=((1 / self.diffuser.alphas_cumprod[t]) * 0.25 + 5),
+                    min=-((1 / self.diffuser.alphas_cumprod[self.t]) * 0.25 + 5),
+                    max=((1 / self.diffuser.alphas_cumprod[self.t]) * 0.25 + 5),
                 )
 
             # apply potentials
@@ -885,49 +863,4 @@ class SeqDiffSampler:
         if self.features["sym"] > 1 and self.cfg.predict_symmetric:
             self.predict_final_symmetric()
 
-        # record time
-        self.delta_time = time.time() - self.start_time
-
-        # increment design num
-        self.design_num += 1
-
-        # self.save_outputs() would happen here
-
         return self.features
-
-    def save_outputs(self):
-        """
-        save the outputs from the model
-        """
-        # save trajectory
-        if self.cfg.save_all_steps:
-            fname = f"{self.out_prefix}_trajectory.pt"
-            torch.save(self.trajectory, fname)
-
-        # if running in symmetry mode an extra pass through the model will happen to ensure that the sequece is fully symmetrized
-
-        # get items from best plddt step
-        if self.cfg.save_best_plddt:
-            self.features["seq"] = torch.clone(self.features["best_seq"])
-            self.features["pred_lddt"] = torch.clone(self.features["best_pred_lddt"])
-            self.features["xyz"] = torch.clone(self.features["best_xyz"])
-
-        # get chain IDs
-        if (self.cfg.sampling_temp == 1.0 and self.cfg.trb == None) or (
-            self.cfg.sequence not in ["", None]
-        ):
-            chain_ids = [i[0] for i in self.features["pdb_idx"]]
-        elif self.cfg.dump_pdb:
-            chain_ids = [i[0] for i in self.features["parsed_pdb"]["pdb_idx"]]
-
-        # write output pdb
-        fname = self.out_prefix + ".pdb"
-        if len(self.features["seq"].shape) == 2:
-            self.features["seq"] = self.features["seq"].squeeze()
-        write_pdb(
-            fname,
-            self.features["seq"].type(torch.int64),
-            self.features["xyz"].squeeze(),
-            Bfacts=self.features["pred_lddt"].squeeze(),
-            chains=chain_ids,
-        )

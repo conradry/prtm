@@ -1,31 +1,21 @@
 import json
 import random
-import sys
-from itertools import groupby
+from typing import Any, Dict
 
-import Bio
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm
-
-DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-conversion = "ARNDCQEGHILKMFPSTWYVX-"
+from proteome.constants.residue_constants import restypes_with_x_dash
+from proteome.models.design.protein_generator import config
 
 
-### IF ADDING NEW POTENTIAL MAKE SURE TO ADD TO BOTTOM DICTIONARY ###
-
-
-# TEMPLATE CLASS
 class Potential:
     def get_gradients(seq):
         """
         EVERY POTENTIAL CLASS MUST RETURN GRADIENTS
         """
 
-        sys.exit("ERROR POTENTIAL HAS NOT BEEN IMPLEMENTED")
+        raise Exception("ERROR POTENTIAL HAS NOT BEEN IMPLEMENTED")
 
 
 class AACompositionalBias(Potential):
@@ -38,16 +28,22 @@ class AACompositionalBias(Potential):
 
     """
 
-    def __init__(self, args, features, potential_scale, DEVICE):
-        self.L = features["L"]
-        self.DEVICE = DEVICE
-        self.frac_seq_to_weight = args["frac_seq_to_weight"]
-        self.add_weight_every_n = args["add_weight_every_n"]
-        self.aa_weights_json = args["aa_weights_json"]
-        self.one_weight_per_position = args["one_weight_per_position"]
-        self.aa_weight = args["aa_weight"]
-        self.aa_spec = args["aa_spec"]
-        self.aa_composition = args["aa_composition"]
+    def __init__(
+        self,
+        cfg: config.AACompositionalBiasParams,
+        length: int,
+        potential_scale: str,
+        device: torch.device,
+    ):
+        self.L = length
+        self.device = device
+        self.frac_seq_to_weight = cfg.frac_seq_to_weight
+        self.add_weight_every_n = cfg.add_weight_every_n
+        self.aa_weights_json = cfg.aa_weights_json
+        self.one_weight_per_position = cfg.one_weight_per_position
+        self.aa_weight = cfg.aa_weight
+        self.aa_spec = cfg.aa_spec
+        self.aa_composition = cfg.aa_composition
         self.potential_scale = potential_scale
 
         self.aa_weights_to_add = [0 for l in range(21)]
@@ -60,14 +56,14 @@ class AACompositionalBias(Potential):
             aa_weights = {}
 
         for k, v in aa_weights.items():
-            aa_weights_to_add[conversion.index(k)] = v
+            aa_weights_to_add[restypes_with_x_dash.index(k)] = v
 
         aa_weights_to_add = [0 for l in range(21)]
 
         self.aa_weights_to_add = (
             torch.tensor(aa_weights_to_add)[None]
             .repeat(self.L, 1)
-            .to(self.DEVICE, non_blocking=True)
+            .to(self.device, non_blocking=True)
         )
 
         # BLOCK TO FIND OUT HOW YOU ARE LOOKING TO PROVIDE AA COMPOSITIONAL BIAS
@@ -76,7 +72,7 @@ class AACompositionalBias(Potential):
                 self.frac_seq_to_weight > 0
             ), "use either --add_weight_every_n or --frac_seq_to_weight but not both"
             weight_mask = torch.zeros_like(self.aa_weights_to_add)
-            if add_weight_every_n > 1:
+            if self.add_weight_every_n > 1:
                 idxs_to_unmask = torch.arange(0, self.L, self.add_weight_every_n)
             else:
                 indexs = np.arange(0, self.L).tolist()
@@ -88,7 +84,7 @@ class AACompositionalBias(Potential):
             weight_mask[idxs_to_unmask, :] = 1
             self.aa_weights_to_add *= weight_mask
 
-            if one_weight_per_position:
+            if self.one_weight_per_position:
                 for p in range(self.aa_weights_to_add.shape[0]):
                     where_ones = torch.where(self.aa_weights_to_add[p, :] > 0)[
                         0
@@ -109,9 +105,9 @@ class AACompositionalBias(Potential):
             for k, c in enumerate(self.aa_spec):
                 if c != "X":
                     assert (
-                        c in conversion
+                        c in restypes_with_x_dash
                     ), f"the letter you have chosen is not an amino acid: {c}"
-                    aa_idxs.append((k, conversion.index(c)))
+                    aa_idxs.append((k, restypes_with_x_dash.index(c)))
 
             if len(self.aa_weight) > 1:
                 assert len(aa_idxs) == len(
@@ -127,7 +123,7 @@ class AACompositionalBias(Potential):
             self.aa_weights_to_add = (
                 self.aa_weights_to_add[:repeat_len, :]
                 .repeat(self.L // repeat_len + 1, 1)[: self.L]
-                .to(self.DEVICE, non_blocking=True)
+                .to(self.device, non_blocking=True)
             )
 
         elif self.aa_composition != None:
@@ -140,7 +136,7 @@ class AACompositionalBias(Potential):
             ), f"total sequence fraction specified in aa_composition is > 1"
 
         else:
-            sys.exit(f"You are missing an argument to use the aa_bias potential")
+            raise Exception(f"You are missing an argument to use the aa_bias potential")
 
     def get_gradients(self, seq):
         """
@@ -158,16 +154,16 @@ class AACompositionalBias(Potential):
                 aa_weights_to_add_copy = self.aa_weights_to_add.clone()
 
                 soft_seq_tmp = soft_seq.clone().detach().requires_grad_(True)
-                aa_idx = conversion.index(aa)
+                aa_idx = restypes_with_x_dash.index(aa)
 
                 # get top-k probability of logit to add to
                 where_add = torch.topk(soft_seq_tmp[:, aa_idx], int(f * self.L))[1]
 
                 # set up aa_potenital
                 aa_potential = torch.zeros(21)
-                aa_potential[conversion.index(aa)] = 1.0
+                aa_potential[restypes_with_x_dash.index(aa)] = 1.0
                 aa_potential = aa_potential.repeat(self.L, 1).to(
-                    self.DEVICE, non_blocking=True
+                    self.device, non_blocking=True
                 )
 
                 # apply "loss"
@@ -208,18 +204,24 @@ class HydrophobicBias(Potential):
 
     """
 
-    def __init__(self, args, features, potential_scale, DEVICE):
-        self.target_score = args["hydrophobic_score"]
+    def __init__(
+        self,
+        cfg: config.HydrophobicBiasParams,
+        length: int,
+        potential_scale: str,
+        device: torch.device,
+    ):
+        self.target_score = cfg.hydrophobic_score
         self.potential_scale = potential_scale
-        self.loss_type = args["hydrophobic_loss_type"]
-        print(f"USING {self.loss_type} LOSS TYPE...")
+        self.loss_type = cfg.hydrophobic_loss_type
+        self.device = device
 
         # -----------------------------------------------------------------------
         # ---------------------GRAVY index data structures-----------------------
         # -----------------------------------------------------------------------
 
-        # AA conversion
-        self.alpha_1 = list("ARNDCQEGHILKMFPSTWYVX")
+        # AA restypes_with_x_dash
+        self.alpha_1 = list(restypes_with_x_dash)
 
         # Dictionary to convert amino acids to their hyropathy index
         self.gravy_dict = {
@@ -249,12 +251,6 @@ class HydrophobicBias(Potential):
 
         self.gravy_list = [self.gravy_dict[a] for a in self.alpha_1]
 
-        # -----------------------------------------------------------------------
-        # -----------------------------------------------------------------------
-
-        print(f"GUIDING SEQUENCES TO HAVE TARGET GRAVY SCORE OF: {self.target_score}")
-        return None
-
     def get_gradients(self, seq):
         """
         Calculate gradients with respect to GRAVY index of input seq.
@@ -272,42 +268,34 @@ class HydrophobicBias(Potential):
         """
         # Get GRAVY matrix based on length of seq
         gravy_matrix = (
-            torch.tensor(self.gravy_list)[None].repeat(seq.shape[0], 1).to(DEVICE)
+            torch.tensor(self.gravy_list)[None].repeat(seq.shape[0], 1).to(self.device)
         )
 
         # Get softmax of seq
         soft_seq = (
-            torch.softmax(seq, dim=-1).requires_grad_(requires_grad=True).to(DEVICE)
+            torch.softmax(seq, dim=-1)
+            .requires_grad_(requires_grad=True)
+            .to(self.device)
         )
 
         # Calculate simple MSE loss on gravy_score
         if self.loss_type == "simple":
             gravy_score = torch.mean(torch.sum(soft_seq * gravy_matrix, dim=-1), dim=0)
             loss = ((gravy_score - self.target_score) ** 2) ** 0.5
-            # print(f'LOSS: {loss}')
-            # Take backward step
             loss.backward()
 
             # Get gradients from soft_seq
             self.gradients = soft_seq.grad
-            # plt.imshow(self.gradients.cpu().detach().numpy())
-            # plt.colorbar()
-            # plt.title('gradients')
 
         # Calculate MSE loss on gravy_score
         elif self.loss_type == "complex":
             loss = torch.mean(
                 (torch.sum(soft_seq * gravy_matrix, dim=-1) - self.target_score) ** 2
             )
-            # print(f'LOSS: {loss}')
-            # Take backward step
             loss.backward()
 
             # Get gradients from soft_seq
             self.gradients = soft_seq.grad
-            # plt.imshow(self.gradients.cpu().detach().numpy())
-            # plt.colorbar()
-            # plt.title('gradients')
 
         return -self.gradients * self.potential_scale
 
@@ -324,13 +312,19 @@ class ChargeBias(Potential):
 
     """
 
-    def __init__(self, args, features, potential_scale, DEVICE):
-        self.target_charge = args["target_charge"]
-        self.pH = args["target_pH"]
-        self.loss_type = args["charge_loss_type"]
+    def __init__(
+        self,
+        cfg: config.ChargeBiasParams,
+        length: int,
+        potential_scale: str,
+        device: torch.device,
+    ):
+        self.target_charge = cfg.target_charge
+        self.pH = cfg.target_pH
+        self.loss_type = cfg.charge_loss_type
         self.potential_scale = potential_scale
-        self.L = features["L"]
-        self.DEVICE = DEVICE
+        self.L = length
+        self.device = device
 
         # -----------------------------------------------------------------------
         # ------------------------pI data structures-----------------------------
@@ -451,10 +445,10 @@ class ChargeBias(Potential):
         # Concatenate all pKs tensors with N-term and C-term pKas to get full L X 21 charge matrix
         self.pos_pKs_matrix = torch.cat(
             (torch.zeros_like(self.nterm_pKs), pos_pKs_repeat, self.nterm_pKs)
-        ).to(DEVICE)
+        ).to(self.device)
         self.neg_pKs_matrix = torch.cat(
             (self.cterm_pKs, neg_pKs_repeat, torch.zeros_like(self.cterm_pKs))
-        ).to(DEVICE)
+        ).to(self.device)
 
         # Get indices of positive, neutral, and negative residues
         self.cterm_charged_idx = torch.nonzero(self.cterm_pKs)
@@ -483,7 +477,7 @@ class ChargeBias(Potential):
 
     def sum_tensor_indices_2(self, indices, tensor):
         # Create a tensor with the appropriate dimensions
-        j = indices.clone().detach().long().to(self.DEVICE)
+        j = indices.clone().detach().long().to(self.device)
         # Select the values using advanced indexing and sum along dim=-1
         row_sums = tensor[:, j].sum(dim=-1)
 
@@ -547,7 +541,7 @@ class ChargeBias(Potential):
         soft_seq = (
             torch.softmax(seq.clone(), dim=-1)
             .requires_grad_(requires_grad=True)
-            .to(self.DEVICE)
+            .to(self.device)
         )
 
         # Sum the softmax of all the positive and negative charges along dim = -1 (21 amino acids):
@@ -566,35 +560,35 @@ class ChargeBias(Potential):
         cterm_max = max(sum_cterm_charged, sum_cterm_neutral)
         # print(f'CTERM MAX: {cterm_max}')
         if cterm_max == sum_cterm_charged:
-            cterm_class = torch.tensor([[-1]]).to(self.DEVICE)
+            cterm_class = torch.tensor([[-1]]).to(self.device)
         else:
-            cterm_class = torch.tensor([[0]]).to(self.DEVICE)
+            cterm_class = torch.tensor([[0]]).to(self.device)
         # Prep cterm dataframe
         cterm_df = torch.tensor(
             [[0, sum_cterm_neutral, sum_cterm_charged, cterm_max, cterm_class]]
-        ).to(self.DEVICE)
+        ).to(self.device)
 
         # Sum across positive, neutral, and negative pKs
         sum_pos = self.sum_tensor_indices_2(
             self.pos_pKs_idx, soft_seq[1 : L - 1, ...]
-        ).to(self.DEVICE)
+        ).to(self.device)
         # print(f'SUM POS: {sum_pos}')
         sum_neg = self.sum_tensor_indices_2(
             self.neg_pKs_idx, soft_seq[1 : L - 1, ...]
-        ).to(self.DEVICE)
+        ).to(self.device)
         # print(f'SUM NEG: {sum_neg}')
         sum_neutral = self.sum_tensor_indices_2(
             self.neutral_pKs_idx, soft_seq[1 : L - 1, ...]
-        ).to(self.DEVICE)
+        ).to(self.device)
         # print(f'SUM NEUTRAL: {sum_neutral}')
 
         # Classify non-terminal residues along dim = -1
         middle_max, _ = torch.max(
             torch.stack((sum_pos, sum_neg, sum_neutral), dim=-1), dim=-1
         )
-        middle_max = middle_max.to(self.DEVICE)
+        middle_max = middle_max.to(self.device)
         # create an L x 1 tensor to store the result
-        middle_class = torch.zeros((L - 2, 1), dtype=torch.long).to(self.DEVICE)
+        middle_class = torch.zeros((L - 2, 1), dtype=torch.long).to(self.device)
         # set the values of the result tensor based on which tensor had the maximum value
         middle_class[sum_neg == middle_max] = -1
         middle_class[sum_neutral == middle_max] = 0
@@ -626,27 +620,27 @@ class ChargeBias(Potential):
         # Sum across n-term pKs
         sum_nterm_charged = self.sum_tensor_indices(
             self.nterm_charged_idx, soft_seq
-        ).to(self.DEVICE)
+        ).to(self.device)
         # print(f'SUM OF NTERM CHARGED RESIS: {sum_nterm_charged}')
         sum_nterm_neutral = self.sum_tensor_indices(
             self.nterm_neutral_idx, soft_seq
-        ).to(self.DEVICE)
+        ).to(self.device)
         # print(f'SUM OF NTERM NEUTRAL RESIS: {sum_nterm_neutral}')
 
         # Classify n-term as negative or neutral
         nterm_max = max(sum_nterm_charged, sum_nterm_neutral)
         if nterm_max == sum_nterm_charged:
-            nterm_class = torch.tensor([[-1]]).to(self.DEVICE)
+            nterm_class = torch.tensor([[-1]]).to(self.device)
         else:
-            nterm_class = torch.tensor([[0]]).to(self.DEVICE)
+            nterm_class = torch.tensor([[0]]).to(self.device)
         nterm_df = torch.tensor(
             [[sum_nterm_charged, sum_nterm_neutral, 0, nterm_max, nterm_class]]
-        ).to(self.DEVICE)
+        ).to(self.device)
 
         # Prep data to be concatenated into output df
         middle_df_2 = (
             torch.cat((sum_pos, sum_neutral, sum_neg, middle_max, middle_class), dim=-1)
-        ).to(self.DEVICE)
+        ).to(self.device)
         # Concat cterm, middle, and nterm data into one master df with all summed probs, max, and final classification
         full_tens_np = (
             torch.cat((cterm_df, middle_df_2, nterm_df), dim=0).detach().cpu().numpy()
@@ -666,7 +660,7 @@ class ChargeBias(Potential):
         # Count number of positive, neutral, and negative charges that are stored in charge_classification as 1, 0, -1 respectively
         charge_classification = torch.cat(
             (cterm_class, middle_class, nterm_class), dim=0
-        ).to(self.DEVICE)
+        ).to(self.device)
         charges = [
             torch.sum(charge_classification == 1).item(),
             torch.sum(charge_classification == 0).item(),
@@ -800,9 +794,11 @@ class ChargeBias(Potential):
             gradients of soft_seq with respect to loss on partial_charge
         """
         # Get softmax of seq
-        # soft_seq = torch.softmax(seq.clone(),dim=-1).requires_grad_(requires_grad=True).to(DEVICE)
+        # soft_seq = torch.softmax(seq.clone(),dim=-1).requires_grad_(requires_grad=True).to(self.device)
         soft_seq = (
-            torch.softmax(seq, dim=-1).requires_grad_(requires_grad=True).to(DEVICE)
+            torch.softmax(seq, dim=-1)
+            .requires_grad_(requires_grad=True)
+            .to(self.device)
         )
 
         # Get partial positive charges only for titratable residues
@@ -886,20 +882,20 @@ class ChargeBias(Potential):
             # partial_charge = torch.sum((soft_seq*(pos_charge - neg_charge)).requires_grad_(requires_grad=True))
             print(f"CURRENT PARTIAL CHARGE: {partial_charge.sum().item()}")
 
-            # print(f'DIFFERENCE BETWEEN TARGET CHARGES AND CURRENT CHARGES: {((guided_charge_classification.to(self.DEVICE) - partial_charge.unsqueeze(1).to(self.DEVICE))**2)**0.5}')
+            # print(f'DIFFERENCE BETWEEN TARGET CHARGES AND CURRENT CHARGES: {((guided_charge_classification.to(self.device) - partial_charge.unsqueeze(1).to(self.device))**2)**0.5}')
 
             # Calculate loss on partial_charge
             loss = torch.mean(
                 (
                     (
-                        guided_charge_classification.to(self.DEVICE)
-                        - partial_charge.unsqueeze(1).to(self.DEVICE)
+                        guided_charge_classification.to(self.device)
+                        - partial_charge.unsqueeze(1).to(self.device)
                     )
                     ** 2
                 )
                 ** 0.5
             )
-            # loss = torch.mean((guided_charge_classification.to(self.DEVICE) - partial_charge.to(self.DEVICE))**2)
+            # loss = torch.mean((guided_charge_classification.to(self.device) - partial_charge.to(self.device))**2)
             # print(f'LOSS: {loss}')
             # Take backward step
             loss.backward()
@@ -918,25 +914,9 @@ class ChargeBias(Potential):
         return -self.gradients * self.potential_scale
 
 
-class PSSMbias(Potential):
-    def __init__(self, args, features, potential_scale, DEVICE):
-        self.features = features
-        self.args = args
-        self.potential_scale = potential_scale
-        self.DEVICE = DEVICE
-        self.PSSM = np.loadtxt(args["PSSM"], delimiter=",", dtype=float)
-        self.PSSM = torch.from_numpy(self.PSSM).to(self.DEVICE)
-
-    def get_gradients(self, seq):
-        print(seq.shape)
-
-        return self.PSSM * self.potential_scale
-
-
 ### ADD NEW POTENTIALS INTO LIST DOWN BELOW ###
 POTENTIALS = {
     "aa_bias": AACompositionalBias,
     "charge": ChargeBias,
     "hydrophobic": HydrophobicBias,
-    "PSSM": PSSMbias,
 }
