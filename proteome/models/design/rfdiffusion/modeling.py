@@ -215,5 +215,3 @@ class RFDiffusionForStructureDesign:
                 [protein.PDB_CHAIN_IDS.index(char) for char in sampler.chain_idx]
             ),
         )
-
-        raise NotImplementedError
