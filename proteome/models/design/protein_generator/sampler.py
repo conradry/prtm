@@ -10,9 +10,11 @@ import proteome.models.design.protein_generator.parsers_inference as parsers
 import torch
 from proteome.models.design.protein_generator import config
 from proteome.models.design.protein_generator.calc_dssp import annotate_sse
-from proteome.models.design.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
+from proteome.models.design.protein_generator.diffusion import \
+    GaussianDiffusion_SEQDIFF
 from proteome.models.design.protein_generator.inpainting_util import *
-from proteome.models.design.protein_generator.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.models.design.protein_generator.kinematics import (get_init_xyz,
+                                                                 xyz_to_t2d)
 from proteome.models.design.protein_generator.potentials import POTENTIALS
 from proteome.models.design.protein_generator.util import *
 
@@ -44,6 +46,7 @@ class SeqDiffSampler:
         self.conversion = "ARNDCQEGHILKMFPSTWYVX-"
         self.dssp_dict = {"X": 3, "H": 0, "E": 1, "L": 2}
         self.use_potentials = False
+        self.device = list(self.model.parameters())[0].device
         self.reset_design_num()
 
     def reset_design_num(self):
@@ -480,7 +483,7 @@ class SeqDiffSampler:
             ), f"The potential specified: {p} , does not match into POTENTIALS dictionary in potentials.py"
             print(f"Using potential: {p}")
             self.potential_list.append(
-                POTENTIALS[p](self.cfg.selfeatures, s, self.DEVICE)
+                POTENTIALS[p](self.cfg.selfeatures, s, self.device)
             )
 
         self.use_potentials = True
@@ -519,52 +522,50 @@ class SeqDiffSampler:
             self.features["t1d"],
             input_seq_mask=self.features["mask_seq"],
             input_str_mask=self.features["mask_str"],
-            input_t1dconf_mask=self.features["blank_mask"],
             diffuser=self.diffuser,
             t=self.max_t,
-            MODEL_PARAM=self.MODEL_PARAM,
+            d_t1d=self.cfg.d_t1d,
             hotspots=self.features["hotspot_feat"],
             dssp=self.features["dssp_feat"],
-            v2_mode=self.v2_mode,
         )
 
         # move features to device
         self.features["idx_pdb"] = (
-            self.features["idx_pdb"].long().to(self.DEVICE, non_blocking=True)
+            self.features["idx_pdb"].long().to(self.device, non_blocking=True)
         )  # (B, L)
         self.features["mask_str"] = self.features["mask_str"][None].to(
-            self.DEVICE, non_blocking=True
+            self.device, non_blocking=True
         )  # (B, L)
         self.features["xyz_t"] = self.features["xyz_t"][None].to(
-            self.DEVICE, non_blocking=True
+            self.device, non_blocking=True
         )
         self.features["t1d"] = self.features["t1d"][None].to(
-            self.DEVICE, non_blocking=True
+            self.device, non_blocking=True
         )
         self.features["seq"] = (
             self.features["seq"][None]
             .type(torch.float32)
-            .to(self.DEVICE, non_blocking=True)
+            .to(self.device, non_blocking=True)
         )
         self.features["msa"] = (
-            self.features["msa"].type(torch.float32).to(self.DEVICE, non_blocking=True)
+            self.features["msa"].type(torch.float32).to(self.device, non_blocking=True)
         )
         self.features["msa_masked"] = (
             self.features["msa_masked"][None]
             .type(torch.float32)
-            .to(self.DEVICE, non_blocking=True)
+            .to(self.device, non_blocking=True)
         )
         self.features["msa_full"] = (
             self.features["msa_full"][None]
             .type(torch.float32)
-            .to(self.DEVICE, non_blocking=True)
+            .to(self.device, non_blocking=True)
         )
-        self.ti_dev = torsion_indices.to(self.DEVICE, non_blocking=True)
-        self.ti_flip = torsion_can_flip.to(self.DEVICE, non_blocking=True)
-        self.ang_ref = reference_angles.to(self.DEVICE, non_blocking=True)
+        self.ti_dev = torsion_indices.to(self.device, non_blocking=True)
+        self.ti_flip = torsion_can_flip.to(self.device, non_blocking=True)
+        self.ang_ref = reference_angles.to(self.device, non_blocking=True)
         self.features["xyz_prev"] = torch.clone(self.features["xyz_t"][0])
         self.features["seq_diffused"] = self.features["seq_diffused"][None].to(
-            self.DEVICE, non_blocking=True
+            self.device, non_blocking=True
         )
         self.features["B"], _, self.features["N"], self.features["L"] = self.features[
             "msa"
@@ -771,7 +772,7 @@ class SeqDiffSampler:
         """
         # sample x_t-1
         self.features["post_mean"] = self.diffuser.q_sample(
-            self.features["seq_out"], self.t, DEVICE=self.DEVICE
+            self.features["seq_out"], self.t, DEVICE=self.device
         )
 
         if self.features["sym"] > 1:
@@ -826,7 +827,7 @@ class SeqDiffSampler:
 
         # main sampling loop
         for j in range(self.max_t):
-            self.t = torch.tensor(self.max_t - j - 1).to(self.DEVICE)
+            self.t = torch.tensor(self.max_t - j - 1).to(self.device)
 
             # run features through the model to get X_o prediction
             self.predict_x()
@@ -887,11 +888,12 @@ class SeqDiffSampler:
         # record time
         self.delta_time = time.time() - self.start_time
 
-        # save outputs
-        self.save_outputs()
-
         # increment design num
         self.design_num += 1
+
+        # self.save_outputs() would happen here
+
+        return self.features
 
     def save_outputs(self):
         """

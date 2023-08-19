@@ -3,12 +3,8 @@ import random
 import sys
 
 import numpy as np
-import pandas as pd
-import proteome.models.design.protein_generator.contigs as contigs
 import torch
 import torch.nn as nn
-from dateutil import parser
-from icecream import ic
 from proteome.models.design.protein_generator.kinematics import *
 from proteome.models.design.protein_generator.util import *
 from torch.utils import data

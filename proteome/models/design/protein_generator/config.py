@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional, Tuple
 
 from proteome import protein
 
@@ -33,7 +33,7 @@ class RoseTTAFoldModuleConfig:
     d_hidden: int = 32
     d_hidden_templ: int = 32
     p_drop: float = 0.15
-    d_t1d: int = 22
+    d_t1d: int = 24
     d_t2d: int = 44
     SE3_param_full: SE3Config = SE3Config()
     SE3_param_topk: SE3Config = SE3Config(
@@ -48,8 +48,6 @@ class RoseTTAFoldModuleConfig:
         l1_out_features=2,
         num_edge_features=64,
     )
-    freeze_track_motif: bool = False
-    input_seq_onehot: bool = False
 
 
 BaseConfig = RoseTTAFoldModuleConfig()
@@ -69,7 +67,7 @@ class InferenceConfig:
     cautious: bool = False
     checkpoint: str = "./SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt"
     clamp_seqout: bool = False
-    contigs: List[str] = ["0"]
+    contigs: Tuple[str] = "0"
     d_t1d: int = 24
     dssp_pdb: Optional[str] = None
     dump_all: bool = False
@@ -116,8 +114,8 @@ class InferenceConfig:
     tmpl_conf: str = "1"
     trb: Optional[str] = None
     sample_distribution: str = "normal"
-    sample_distribution_gmm_means: List[float] = [0]
-    sample_distribution_gmm_variances: List[float] = [1]
+    sample_distribution_gmm_means: Tuple[float] = (0,)
+    sample_distribution_gmm_variances: Tuple[float] = (1,)
     target_charge: int = -10
     charge_loss_type: str = "complex"
     target_pH: float = 7.4

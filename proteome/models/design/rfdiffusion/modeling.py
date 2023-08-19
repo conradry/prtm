@@ -137,10 +137,10 @@ class RFDiffusionForStructureDesign:
             **asdict(self.cfg.model),
         )
 
-        self.loaded_model_name = model_name
         self.load_weights(RFD_MODEL_URLS[model_name])
         self.model.eval()
         self.model = self.model.to(self.device)
+        self.loaded_model_name = model_name
 
     def design_structure(
         self,

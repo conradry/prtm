@@ -12,13 +12,11 @@ def mask_inputs(
     t1d,
     input_seq_mask=None,
     input_str_mask=None,
-    input_t1dconf_mask=None,
     diffuser=None,
     t=None,
-    MODEL_PARAM=None,
+    d_t1d=22,
     hotspots=None,
     dssp=None,
-    v2_mode=False,
 ):
     """
     JG - adapted slightly for the inference case
@@ -137,7 +135,7 @@ def mask_inputs(
     t1d[:, str_mask, 23] = 1.0
 
     # EXPAND t1d to match model params
-    if MODEL_PARAM["d_t1d"] == 29:
+    if d_t1d == 29:
         ## added t1d features ##
         # 24 -- dssp helix
         # 25 -- dssp sheet
@@ -158,10 +156,9 @@ def mask_inputs(
     # Structure masking
     xyz_t[:, ~str_mask, :, :] = float("nan")
 
-    if not v2_mode:
-        xyz_t = get_init_xyz(xyz_t[None])
-        xyz_t = xyz_t[0]
-        assert torch.sum(torch.isnan(xyz_t[:, :, :3, :])) == 0
+    xyz_t = get_init_xyz(xyz_t[None])
+    xyz_t = xyz_t[0]
+    assert torch.sum(torch.isnan(xyz_t[:, :, :3, :])) == 0
 
     return seq, msa_masked, msa_full, xyz_t, t1d, seq_diffused
 

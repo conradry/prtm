@@ -1,10 +1,9 @@
 import string
 
 import numpy as np
+import proteome.models.design.protein_generator.util as util
 import scipy
 import scipy.spatial
-
-import util
 
 to1letter = {
     "ALA": "A",
