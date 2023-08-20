@@ -110,6 +110,16 @@ def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Prot
     return prot_27_padded
 
 
+def crop_protein_37_to_27(prot: Protein) -> Protein:
+    prot_dict = dataclasses.asdict(prot)
+    prot_dict["atom_positions"] = prot.atom_positions[:, :27, :]
+    prot_dict["atom_mask"] = prot.atom_mask[:, :27]
+    prot_dict["b_factors"] = prot.b_factors[:, :27]
+    prot_27 = Protein(**prot_dict)
+
+    return prot_27
+
+
 def to_torch(prot: Protein) -> Protein:
     """Converts a `Protein` instance to torch tensors."""
     prot_dict = dataclasses.asdict(prot)

@@ -99,7 +99,7 @@ PotentialParamType = Union[
 
 
 @dataclass
-class PotentialsConfig:
+class PotentialsParams:
     potentials: Optional[List[PotentialParamType]] = None
     potential_scales: Optional[List[float]] = None
 
@@ -182,7 +182,7 @@ class InferenceConfig:
     sequence: Optional[str] = None
     reference_structure: Optional[protein.Protein] = None
 
-    potentials_config: PotentialsConfig = PotentialsConfig()
+    potentials_params: PotentialsParams = PotentialsParams()
     structure_bias_params: StructureBiasParams = StructureBiasParams()
     hotspot_params: HotspotParams = HotspotParams()
     diffuser_params: DiffuserParams = DiffuserParams()

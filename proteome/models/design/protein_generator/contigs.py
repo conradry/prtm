@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import torch
 import torch.nn as nn
+
 from proteome import protein
 from proteome.models.design.protein_generator.kinematics import *
 from proteome.models.design.protein_generator.util import *
@@ -194,9 +195,6 @@ def mask_inputs(
     t1d[:, :, ~seq_mask, 20] = 1  # unknown
 
     t1d[:, :, :, 21] *= input_t1dconf_mask
-
-    # JG added in here to make sure everything fits
-    print("expanding t1d to 24 dims")
 
     t1d = torch.cat(
         (t1d, torch.zeros((t1d.shape[0], t1d.shape[1], t1d.shape[2], 2)).float()), -1

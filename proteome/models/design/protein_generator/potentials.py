@@ -5,6 +5,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 import torch
+
 from proteome.constants.residue_constants import restypes_with_x_dash
 from proteome.models.design.protein_generator import config
 
@@ -147,7 +148,6 @@ class AACompositionalBias(Potential):
 
         if self.aa_max_potential != None:
             soft_seq = torch.softmax(seq, dim=1)
-            print("ADDING SOFTMAXED SEQUENCE POTENTIAL")
 
             aa_weights_to_add_list = []
             for aa, f in self.aa_comp:

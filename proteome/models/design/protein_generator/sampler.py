@@ -45,7 +45,7 @@ class SeqDiffSampler:
         self.dssp_dict = {"X": 3, "H": 0, "E": 1, "L": 2}
         self.device = list(self.model.parameters())[0].device
 
-        self.potentials_conf = cfg.potentials_config
+        self.potentials_conf = cfg.potentials_params
         self.contig_conf = cfg.contigmap_params
         self.structure_bias_conf = cfg.structure_bias_params
         self.diffuser_conf = cfg.diffuser_params
@@ -192,9 +192,7 @@ class SeqDiffSampler:
             # added check for if in partial diffusion mode will mask
             if self.cfg.sampling_temp == 1.0:
                 self.features["mask_seq"] = (
-                    torch.tensor(
-                        [0 if x == "X" else 1 for x in self.cfg.sequence]
-                    )
+                    torch.tensor([0 if x == "X" else 1 for x in self.cfg.sequence])
                     .long()[None, :]
                     .bool()
                 )
@@ -408,7 +406,7 @@ class SeqDiffSampler:
 
             self.potential_list.append(
                 POTENTIALS[potential_type](
-                    self.cfg, self.features["L"], scale, self.device
+                    potential, self.features["L"], scale, self.device
                 )  # type: ignore
             )
 
@@ -793,7 +791,7 @@ class SeqDiffSampler:
                 self.noise_x()
 
         # extra pass to ensure symmetrization
-        if self.features["sym"] > 1 and self.cfg.predict_symmetric:
+        if self.features["sym"] > 1 and self.symmetry_conf.predict_symmetric:
             self.predict_final_symmetric()
 
         return self.features
