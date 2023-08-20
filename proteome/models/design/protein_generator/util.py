@@ -5,7 +5,8 @@ import numpy as np
 import scipy.sparse
 import torch
 import torch.nn as nn
-from proteome.models.design.protein_generator.chemical import *
+
+from proteome.constants.chemical import *
 from proteome.models.design.protein_generator.scoring import *
 
 

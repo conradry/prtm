@@ -1,9 +1,9 @@
-import torch
+import math
+from typing import Callable, List, Optional
+
 import numpy as np
 import torch
-import math
 from scipy.stats import truncnorm
-from typing import Optional, Callable, List
 
 
 def _standardize(kernel):
@@ -123,7 +123,7 @@ class ResidualLayer(torch.nn.Module):
                 for i in range(nLayers)
             ]
         )
-        self.inv_sqrt_2 = 1 / (2.0 ** 0.5)
+        self.inv_sqrt_2 = 1 / (2.0**0.5)
 
     def forward(self, inputs):
         x = self.dense_mlp(inputs)
@@ -176,11 +176,13 @@ class EfficientInteractionDownProjection(torch.nn.Module):
             - rbf_W1: Tensor, shape=(nEdges, emb_size_interm, num_spherical)
             - sph: Tensor, shape=(nEdges, Kmax, num_spherical)
         """
-        rbf_env, sph = tbf  
+        rbf_env, sph = tbf
         # (num_spherical, nEdges, num_radial), (nEdges, Kmax, num_spherical) ;  Kmax = maximum number of neighbors of the edges
 
         # MatMul: mul + sum over num_radial
-        rbf_W1 = torch.matmul(rbf_env, self.weight)  # (num_spherical, nEdges , emb_size_interm)
+        rbf_W1 = torch.matmul(
+            rbf_env, self.weight
+        )  # (num_spherical, nEdges , emb_size_interm)
         rbf_W1 = rbf_W1.permute(1, 2, 0)  # (nEdges, emb_size_interm, num_spherical)
 
         sph = torch.transpose(sph, 1, 2)  # (nEdges, num_spherical, Kmax)
@@ -209,14 +211,13 @@ class ResidualLayer(torch.nn.Module):
                 for i in range(nLayers)
             ]
         )
-        self.inv_sqrt_2 = 1 / (2.0 ** 0.5)
+        self.inv_sqrt_2 = 1 / (2.0**0.5)
 
     def forward(self, inputs):
         x = self.dense_mlp(inputs)
         x = inputs + x
         x = x * self.inv_sqrt_2
         return x
-
 
 
 def permute_final_dims(tensor: torch.Tensor, inds: List[int]):
@@ -233,6 +234,7 @@ def ipa_point_weights_init_(weights):
     with torch.no_grad():
         softplus_inverse_1 = 0.541324854612918
         weights.fill_(softplus_inverse_1)
+
 
 def _prod(nums):
     out = 1
@@ -254,6 +256,7 @@ def _calculate_fan(linear_weight_shape, fan="fan_in"):
         raise ValueError("Invalid fan option")
 
     return f
+
 
 def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
     shape = weights.shape
@@ -293,6 +296,7 @@ def gating_init_(weights):
 
 def normal_init_(weights):
     torch.nn.init.kaiming_normal_(weights, nonlinearity="linear")
+
 
 class Linear(torch.nn.Linear):
     """

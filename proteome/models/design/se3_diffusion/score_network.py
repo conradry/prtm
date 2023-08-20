@@ -1,12 +1,14 @@
 """Score network module."""
-import torch
+import functools as fn
 import math
+
+import torch
+from model import ipa_pytorch
 from torch import nn
 from torch.nn import functional as F
-from data import utils as du
+
 from data import all_atom
-from model import ipa_pytorch
-import functools as fn
+from data import utils as du
 
 Tensor = torch.Tensor
 
@@ -22,13 +24,14 @@ def get_index_embedding(indices, embed_size, max_len=2056):
     Returns:
         positional embedding of shape [N, embed_size]
     """
-    K = torch.arange(embed_size//2, device=indices.device)
+    K = torch.arange(embed_size // 2, device=indices.device)
     pos_embedding_sin = torch.sin(
-        indices[..., None] * math.pi / (max_len**(2*K[None]/embed_size))).to(indices.device)
+        indices[..., None] * math.pi / (max_len ** (2 * K[None] / embed_size))
+    ).to(indices.device)
     pos_embedding_cos = torch.cos(
-        indices[..., None] * math.pi / (max_len**(2*K[None]/embed_size))).to(indices.device)
-    pos_embedding = torch.cat([
-        pos_embedding_sin, pos_embedding_cos], axis=-1)
+        indices[..., None] * math.pi / (max_len ** (2 * K[None] / embed_size))
+    ).to(indices.device)
+    pos_embedding = torch.cat([pos_embedding_sin, pos_embedding_cos], axis=-1)
     return pos_embedding
 
 
@@ -38,16 +41,18 @@ def get_timestep_embedding(timesteps, embedding_dim, max_positions=10000):
     timesteps = timesteps * max_positions
     half_dim = embedding_dim // 2
     emb = math.log(max_positions) / (half_dim - 1)
-    emb = torch.exp(torch.arange(half_dim, dtype=torch.float32, device=timesteps.device) * -emb)
+    emb = torch.exp(
+        torch.arange(half_dim, dtype=torch.float32, device=timesteps.device) * -emb
+    )
     emb = timesteps.float()[:, None] * emb[None, :]
     emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
     if embedding_dim % 2 == 1:  # zero pad
-        emb = F.pad(emb, (0, 1), mode='constant')
+        emb = F.pad(emb, (0, 1), mode="constant")
     assert emb.shape == (timesteps.shape[0], embedding_dim)
     return emb
 
-class Embedder(nn.Module):
 
+class Embedder(nn.Module):
     def __init__(self, model_conf):
         super(Embedder, self).__init__()
         self._model_conf = model_conf
@@ -86,28 +91,33 @@ class Embedder(nn.Module):
         )
 
         self.timestep_embedder = fn.partial(
-            get_timestep_embedding,
-            embedding_dim=self._embed_conf.index_embed_size
+            get_timestep_embedding, embedding_dim=self._embed_conf.index_embed_size
         )
         self.index_embedder = fn.partial(
-            get_index_embedding,
-            embed_size=self._embed_conf.index_embed_size
+            get_index_embedding, embed_size=self._embed_conf.index_embed_size
         )
 
     def _cross_concat(self, feats_1d, num_batch, num_res):
-        return torch.cat([
-            torch.tile(feats_1d[:, :, None, :], (1, 1, num_res, 1)),
-            torch.tile(feats_1d[:, None, :, :], (1, num_res, 1, 1)),
-        ], dim=-1).float().reshape([num_batch, num_res**2, -1])
+        return (
+            torch.cat(
+                [
+                    torch.tile(feats_1d[:, :, None, :], (1, 1, num_res, 1)),
+                    torch.tile(feats_1d[:, None, :, :], (1, num_res, 1, 1)),
+                ],
+                dim=-1,
+            )
+            .float()
+            .reshape([num_batch, num_res**2, -1])
+        )
 
     def forward(
-            self,
-            *,
-            seq_idx,
-            t,
-            fixed_mask,
-            self_conditioning_ca,
-        ):
+        self,
+        *,
+        seq_idx,
+        t,
+        fixed_mask,
+        self_conditioning_ca,
+    ):
         """Embeds a set of inputs
 
         Args:
@@ -127,7 +137,8 @@ class Embedder(nn.Module):
         # Set time step to epsilon=1e-5 for fixed residues.
         fixed_mask = fixed_mask[..., None]
         prot_t_embed = torch.tile(
-            self.timestep_embedder(t)[:, None, :], (1, num_res, 1))
+            self.timestep_embedder(t)[:, None, :], (1, num_res, 1)
+        )
         prot_t_embed = torch.cat([prot_t_embed, fixed_mask], dim=-1)
         node_feats = [prot_t_embed]
         pair_feats = [self._cross_concat(prot_t_embed, num_batch, num_res)]
@@ -155,7 +166,6 @@ class Embedder(nn.Module):
 
 
 class ScoreNetwork(nn.Module):
-
     def __init__(self, model_conf, diffuser):
         super(ScoreNetwork, self).__init__()
         self._model_conf = model_conf
@@ -180,16 +190,16 @@ class ScoreNetwork(nn.Module):
         """
 
         # Frames as [batch, res, 7] tensors.
-        bb_mask = input_feats['res_mask'].type(torch.float32)  # [B, N]
-        fixed_mask = input_feats['fixed_mask'].type(torch.float32)
+        bb_mask = input_feats["res_mask"].type(torch.float32)  # [B, N]
+        fixed_mask = input_feats["fixed_mask"].type(torch.float32)
         edge_mask = bb_mask[..., None] * bb_mask[..., None, :]
 
         # Initial embeddings of positonal and relative indices.
         init_node_embed, init_edge_embed = self.embedding_layer(
-            seq_idx=input_feats['seq_idx'],
-            t=input_feats['t'],
+            seq_idx=input_feats["seq_idx"],
+            t=input_feats["t"],
             fixed_mask=fixed_mask,
-            self_conditioning_ca=input_feats['sc_ca_t'],
+            self_conditioning_ca=input_feats["sc_ca_t"],
         )
         edge_embed = init_edge_embed * edge_mask[..., None]
         node_embed = init_node_embed * bb_mask[..., None]
@@ -198,18 +208,17 @@ class ScoreNetwork(nn.Module):
         model_out = self.score_model(node_embed, edge_embed, input_feats)
 
         # Psi angle prediction
-        gt_psi = input_feats['torsion_angles_sin_cos'][..., 2, :]
-        psi_pred = self._apply_mask(
-            model_out['psi'], gt_psi, 1 - fixed_mask[..., None])
+        gt_psi = input_feats["torsion_angles_sin_cos"][..., 2, :]
+        psi_pred = self._apply_mask(model_out["psi"], gt_psi, 1 - fixed_mask[..., None])
 
         pred_out = {
-            'psi': psi_pred,
-            'rot_score': model_out['rot_score'],
-            'trans_score': model_out['trans_score'],
+            "psi": psi_pred,
+            "rot_score": model_out["rot_score"],
+            "trans_score": model_out["trans_score"],
         }
-        rigids_pred = model_out['final_rigids']
-        pred_out['rigids'] = rigids_pred.to_tensor_7()
+        rigids_pred = model_out["final_rigids"]
+        pred_out["rigids"] = rigids_pred.to_tensor_7()
         bb_representations = all_atom.compute_backbone(rigids_pred, psi_pred)
-        pred_out['atom37'] = bb_representations[0].to(rigids_pred.device)
-        pred_out['atom14'] = bb_representations[-1].to(rigids_pred.device)
+        pred_out["atom37"] = bb_representations[0].to(rigids_pred.device)
+        pred_out["atom14"] = bb_representations[-1].to(rigids_pred.device)
         return pred_out

@@ -1,6 +1,6 @@
 import scipy.sparse
 
-from proteome.models.design.rfdiffusion.chemical import *
+from proteome.constants.chemical import *
 from proteome.models.design.rfdiffusion.scoring import *
 
 
