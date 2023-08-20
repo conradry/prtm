@@ -2,10 +2,11 @@ import os
 import re
 
 import numpy as np
-from openfold.utils import rigid_utils
 from scipy.spatial.transform import Rotation
 
-from data import protein, residue_constants
+from proteome.constants import residue_constants
+from proteome.models.design.se3_diffusion import protein
+from proteome.models.folding.openfold.utils import rigid_utils
 
 CA_IDX = residue_constants.atom_order["CA"]
 Rigid = rigid_utils.Rigid

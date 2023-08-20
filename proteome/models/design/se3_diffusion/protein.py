@@ -20,7 +20,7 @@ from typing import Any, Mapping, Optional
 import numpy as np
 from Bio.PDB import PDBParser
 
-from data import residue_constants
+from proteome.constants import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.

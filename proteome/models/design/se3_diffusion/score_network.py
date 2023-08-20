@@ -3,12 +3,12 @@ import functools as fn
 import math
 
 import torch
-from model import ipa_pytorch
 from torch import nn
 from torch.nn import functional as F
 
-from data import all_atom
-from data import utils as du
+from proteome.models.design.se3_diffusion import all_atom
+from proteome.models.design.se3_diffusion import data_utils as du
+from proteome.models.design.se3_diffusion import ipa_pytorch
 
 Tensor = torch.Tensor
 

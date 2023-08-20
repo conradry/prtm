@@ -3,11 +3,11 @@ import logging
 
 import numpy as np
 import torch
-from openfold.utils import rigid_utils as ru
 from scipy.spatial.transform import Rotation
 
-from data import r3_diffuser, so3_diffuser
-from data import utils as du
+from proteome.models.design.se3_diffusion import data_utils as du
+from proteome.models.design.se3_diffusion import r3_diffuser, so3_diffuser
+from proteome.models.folding.openfold.utils import rigid_utils as ru
 
 
 def _extract_trans_rots(rigid: ru.Rigid):

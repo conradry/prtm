@@ -1,10 +1,10 @@
 """Utilities for calculating all atom representations."""
 import torch
-from openfold.data import data_transforms
-from openfold.utils import feats
-from openfold.utils import rigid_utils as ru
 
-from data import residue_constants
+from proteome.constants import residue_constants
+from proteome.models.folding.openfold.data import data_transforms
+from proteome.models.folding.openfold.utils import feats
+from proteome.models.folding.openfold.utils import rigid_utils as ru
 
 Rigid = ru.Rigid
 Rotation = ru.Rotation

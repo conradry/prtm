@@ -1,7 +1,5 @@
 import numpy as np
-import scipy.linalg
 import torch
-from scipy.spatial.transform import Rotation
 
 
 # hat map from vector space R^3 to Lie algebra so(3)
