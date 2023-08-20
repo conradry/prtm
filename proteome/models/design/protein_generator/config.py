@@ -123,7 +123,7 @@ class ContigSettings:
 
 @dataclass
 class ContigMap:
-    contigs: str = "0"
+    contigs: Optional[str] = None
     inpaint_seq: Optional[str] = None
     provide_seq: Optional[str] = None
     length: Optional[int] = None
@@ -177,24 +177,11 @@ class DiffuserParams:
 
 
 @dataclass
-class SequenceParams:
-    sequence: Optional[str] = None  # "XXXXXXXXXXXXXXXXPEPSEQXXXXXXXXXXXXXXXX"
-    length: Optional[int] = None
-
-    def __post_init__(self):
-        if self.sequence is not None and self.length is not None:
-            raise ValueError("Only one of sequence or length can be specified")
-
-        if self.sequence is None and self.length is not None:
-            self.sequence = "X" * self.length
-
-
-@dataclass
 class InferenceConfig:
-    sequence_params: SequenceParams
+    contigmap_params: ContigMap
+    sequence: Optional[str] = None
     reference_structure: Optional[protein.Protein] = None
 
-    contigmap_params: ContigMap = ContigMap()
     potentials_config: PotentialsConfig = PotentialsConfig()
     structure_bias_params: StructureBiasParams = StructureBiasParams()
     hotspot_params: HotspotParams = HotspotParams()

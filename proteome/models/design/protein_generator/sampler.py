@@ -49,7 +49,6 @@ class SeqDiffSampler:
         self.contig_conf = cfg.contigmap_params
         self.structure_bias_conf = cfg.structure_bias_params
         self.diffuser_conf = cfg.diffuser_params
-        self.sequence_conf = cfg.sequence_params
         self.hotspot_conf = cfg.hotspot_params
         self.symmetry_conf = cfg.symmetry_params
         self.secondary_structure_conf = cfg.secondary_structure_params
@@ -167,48 +166,48 @@ class SeqDiffSampler:
             self.dssp_dict[x.upper()] for x in "H" * self.features["cap"]
         ]
 
-        assert (self.contig_conf.contigs == "0") ^ (
-            not any(self.sequence_conf.sequence)
-        ), f"You are specifying contigs ({self.contig_conf.contigs}) and sequence ({self.sequence_conf.sequence})  (or neither), please specify one or the other"
+        assert (self.contig_conf.contigs is None) ^ (
+            self.cfg.sequence is None
+        ), f"You are specifying contigs ({self.contig_conf.contigs}) and sequence ({self.cfg.sequence})  (or neither), please specify one or the other"
 
         # initialize trb dictionary
         self.features["trb_d"] = {}
 
-        if self.cfg.reference_structure == None and any(self.sequence_conf.sequence):
+        if self.cfg.reference_structure == None and self.cfg.sequence is not None:
             allowable_aas = [x for x in restypes_with_x_dash[:-1]]
-            for x in self.sequence_conf.sequence:
+            for x in self.cfg.sequence:
                 assert (
                     x in allowable_aas
                 ), f"Amino Acid {x} is undefinded, please only use standart 20 AAs"
             self.features["seq"] = torch.tensor(
-                [restypes_with_x_dash.index(x) for x in self.sequence_conf.sequence]
+                [restypes_with_x_dash.index(x) for x in self.cfg.sequence]
             )
             self.features["xyz_t"] = torch.full(
-                (1, 1, len(self.sequence_conf.sequence), 27, 3), np.nan
+                (1, 1, len(self.cfg.sequence), 27, 3), np.nan
             )
             self.features["mask_str"] = (
-                torch.zeros(len(self.sequence_conf.sequence)).long()[None, :].bool()
+                torch.zeros(len(self.cfg.sequence)).long()[None, :].bool()
             )
 
             # added check for if in partial diffusion mode will mask
             if self.cfg.sampling_temp == 1.0:
                 self.features["mask_seq"] = (
                     torch.tensor(
-                        [0 if x == "X" else 1 for x in self.sequence_conf.sequence]
+                        [0 if x == "X" else 1 for x in self.cfg.sequence]
                     )
                     .long()[None, :]
                     .bool()
                 )
             else:
                 self.features["mask_seq"] = (
-                    torch.zeros(len(self.sequence_conf.sequence)).long()[None, :].bool()
+                    torch.zeros(len(self.cfg.sequence)).long()[None, :].bool()
                 )
 
             self.features["blank_mask"] = torch.ones(
                 self.features["mask_str"].size()[-1]
             )[None, :].bool()
             self.features["idx_pdb"] = torch.tensor(
-                [i for i in range(len(self.sequence_conf.sequence))]
+                [i for i in range(len(self.cfg.sequence))]
             )[None, :]
             conf_1d = torch.ones_like(self.features["seq"])
             conf_1d[~self.features["mask_str"][0]] = 0
@@ -233,7 +232,7 @@ class SeqDiffSampler:
             self.max_t = int(self.diffuser_conf.T * self.cfg.sampling_temp)
 
             self.features["pdb_idx"] = [
-                ("A", i + 1) for i in range(len(self.sequence_conf.sequence))
+                ("A", i + 1) for i in range(len(self.cfg.sequence))
             ]
             self.features["trb_d"]["inpaint_str"] = self.features["mask_str"][0]
             self.features["trb_d"]["inpaint_seq"] = self.features["mask_seq"][0]
@@ -246,11 +245,11 @@ class SeqDiffSampler:
             if self.cfg.reference_structure == None:
                 reference_structure = protein.Protein(
                     atom_positions=np.zeros((1, 27, 3)),
-                    aatype=np.zeros((1,)),
+                    aatype=np.zeros((1,), dtype=np.int32),
                     atom_mask=np.zeros((1, 27)),
-                    residue_index=np.arange(1),
+                    residue_index=np.arange(1, dtype=np.int32),
                     b_factors=np.zeros((1, 27)),
-                    chain_index=np.array([0]),
+                    chain_index=np.array([0], dtype=np.int32),
                 )
             else:
                 reference_structure = self.cfg.reference_structure
@@ -278,8 +277,8 @@ class SeqDiffSampler:
                     self.features["mask_str"].size()[-1]
                 )[None, :].bool()
 
-                seq_input = torch.from_numpy(reference_structure.aatype)
-                xyz_input = torch.from_numpy(reference_structure.atom_positions)
+                seq_input = torch.from_numpy(reference_structure.aatype).long()
+                xyz_input = torch.from_numpy(reference_structure.atom_positions).float()
 
                 self.features["xyz_t"] = torch.full(
                     (1, 1, len(self.features["rm"].ref), 27, 3), np.nan
@@ -331,7 +330,7 @@ class SeqDiffSampler:
                     reference_structure.atom_positions
                 )[None, None, ...]
 
-                if self.contig_conf.contigs == "0":
+                if self.contig_conf.contigs is None:
                     self.features["mask_str"] = (
                         torch.zeros(self.features["xyz_t"].shape[2])
                         .long()[None, :]
