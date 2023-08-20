@@ -4,12 +4,13 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
+from tqdm import tqdm
+
 from proteome import protein
 from proteome.constants.residue_constants import restypes
 from proteome.models.design.protein_generator import config
 from proteome.models.design.protein_generator.rosettafold_model import RoseTTAFoldModule
 from proteome.models.design.protein_generator.sampler import SeqDiffSampler
-from tqdm import tqdm
 
 PROTGEN_MODEL_URLS = {
     "default": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt",
@@ -28,15 +29,10 @@ def _get_model_config(model_name: str) -> config.RoseTTAFoldModuleConfig:
 
 def _select_model_from_config(sampler_config: config.InferenceConfig) -> str:
     if (
-        sampler_config.hotspots != None
-        or sampler_config.secondary_structure != None
-        or (
-            sampler_config.helix_bias
-            + sampler_config.strand_bias
-            + sampler_config.loop_bias
-        )
-        > 0
-        or sampler_config.dssp_pdb != None
+        sampler_config.hotspot_params.hotspot_res != None
+        or sampler_config.secondary_structure_params.secondary_structure != None
+        or sum(asdict(sampler_config.structure_bias_params).values()) > 0
+        or sampler_config.secondary_structure_params.dssp_structure != None
     ):
         return "t1d_29"
     else:
@@ -45,15 +41,10 @@ def _select_model_from_config(sampler_config: config.InferenceConfig) -> str:
 
 def _validate_model_for_config(sampler_config: config.InferenceConfig, model_name: str):
     if (
-        sampler_config.hotspots != None
-        or sampler_config.secondary_structure != None
-        or (
-            sampler_config.helix_bias
-            + sampler_config.strand_bias
-            + sampler_config.loop_bias
-        )
-        > 0
-        or sampler_config.dssp_pdb != None
+        sampler_config.hotspot_params.hotspot_res != None
+        or sampler_config.secondary_structure_params.secondary_structure != None
+        or sum(asdict(sampler_config.structure_bias_params).values()) > 0
+        or sampler_config.secondary_structure_params.dssp_structure != None
     ):
         assert model_name == "t1d_29"
 
@@ -113,7 +104,11 @@ class ProteinGeneratorForJointDesign:
             _validate_model_for_config(inference_config, self.loaded_model_name)
 
         # Setup the sampler class
-        sampler = SeqDiffSampler(self.model, inference_config)
+        sampler = SeqDiffSampler(
+            self.model,
+            inference_config,
+            pad_t1d_to_29=(self.loaded_model_name in ["t1d_29"]),
+        )
         sampler.diffuser_init()
         features = sampler.generate_sample()
 

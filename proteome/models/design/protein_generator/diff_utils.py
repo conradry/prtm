@@ -1,4 +1,5 @@
 import torch
+
 from proteome.models.design.protein_generator.contigs import lddt_unbin
 from proteome.models.design.protein_generator.kinematics import get_init_xyz
 from proteome.models.design.protein_generator.util import *
@@ -14,7 +15,7 @@ def mask_inputs(
     input_str_mask=None,
     diffuser=None,
     t=None,
-    d_t1d=22,
+    pad_t1d_to_29=False,
     hotspots=None,
     dssp=None,
 ):
@@ -135,7 +136,7 @@ def mask_inputs(
     t1d[:, str_mask, 23] = 1.0
 
     # EXPAND t1d to match model params
-    if d_t1d == 29:
+    if pad_t1d_to_29:
         ## added t1d features ##
         # 24 -- dssp helix
         # 25 -- dssp sheet

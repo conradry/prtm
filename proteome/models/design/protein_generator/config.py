@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import torch
+
 from proteome import protein
 
 
@@ -103,7 +104,8 @@ class PotentialsConfig:
     potential_scales: Optional[List[float]] = None
 
     def __post_init__(self):
-        assert len(self.potentials) == len(self.potential_scales)
+        if self.potentials is not None:
+            assert len(self.potentials) == len(self.potential_scales)
 
 
 @dataclass
@@ -134,6 +136,34 @@ class StructureBiasParams:
     loop_bias: float = 0.0
 
 
+@dataclass
+class HotspotParams:
+    # Hotspot residues denoted by chain letter
+    # and residue number (e.g. "A12", "B3")
+    hotspot_res: Optional[List[str]] = None
+
+
+@dataclass
+class SymmetryParams:
+    symmetry: int = 1
+    symmetry_cap: int = 0
+    predict_symmetric: bool = False
+
+
+@dataclass
+class SecondaryStructureParams:
+    dssp_structure: Optional[protein.Protein] = None
+    secondary_structure: str = None
+
+    def __post_init__(self):
+        assert not (
+            (self.secondary_structure != None) and (self.dssp_structure != None)
+        ), f"You are attempting to provide both dssp_structure and/or secondary_secondary structure, please choose one or the other"
+        if self.secondary_structure is not None:
+            assert all([x in "XHEL" for x in self.secondary_structure])
+
+
+@dataclass
 class DiffuserParams:
     T: int = 25
     schedule: str = "sqrt"
@@ -152,9 +182,6 @@ class SequenceParams:
     length: Optional[int] = None
 
     def __post_init__(self):
-        if self.sequence is None and self.length is None:
-            raise ValueError("Either sequence or length must be specified")
-
         if self.sequence is not None and self.length is not None:
             raise ValueError("Only one of sequence or length can be specified")
 
@@ -164,31 +191,22 @@ class SequenceParams:
 
 @dataclass
 class InferenceConfig:
-    pdb: Optional[str] = None
-    dssp_pdb: Optional[str] = None
+    sequence_params: SequenceParams
+    reference_structure: Optional[protein.Protein] = None
+
     contigmap_params: ContigMap = ContigMap()
     potentials_config: PotentialsConfig = PotentialsConfig()
     structure_bias_params: StructureBiasParams = StructureBiasParams()
+    hotspot_params: HotspotParams = HotspotParams()
     diffuser_params: DiffuserParams = DiffuserParams()
+    symmetry_params: SymmetryParams = SymmetryParams()
+    secondary_structure_params: SecondaryStructureParams = SecondaryStructureParams()
 
-    # F: int = 1
+    # Other inference parameters
     clamp_seqout: bool = False
     softmax_seqout: bool = False
-
-    d_t1d: int = 24
-    hotspots: Optional[str] = None
-
     n_cycle: int = 4
-
     sampling_temp: float = 1.0
     scheduled_str_cond: bool = False
-    secondary_structure: Optional[str] = None
     struc_cond_sc: bool = False
-
-    symmetry: int = 1
-    symmetry_cap: int = 0
-    predict_symmetric: bool = False
-
-    tmpl_conf: str = 1
-
-    trb: Optional[str] = None
+    tmpl_conf: float = 1
