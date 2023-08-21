@@ -4,7 +4,6 @@ import os
 
 import numpy as np
 import torch
-
 from proteome.models.design.se3_diffusion import data_utils as du
 
 

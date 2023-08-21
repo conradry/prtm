@@ -6,10 +6,9 @@ from typing import Callable, List, Optional, Sequence
 import numpy as np
 import torch
 import torch.nn as nn
-from scipy.stats import truncnorm
-
 from proteome.models.design.se3_diffusion import all_atom
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid
+from proteome.models.design.se3_diffusion.rigid_utils import Rigid
+from scipy.stats import truncnorm
 
 
 def permute_final_dims(tensor: torch.Tensor, inds: List[int]):

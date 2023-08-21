@@ -3,12 +3,11 @@ import functools as fn
 import math
 
 import torch
-from torch import nn
-from torch.nn import functional as F
-
 from proteome.models.design.se3_diffusion import all_atom
 from proteome.models.design.se3_diffusion import data_utils as du
 from proteome.models.design.se3_diffusion import ipa_pytorch
+from torch import nn
+from torch.nn import functional as F
 
 Tensor = torch.Tensor
 
@@ -80,6 +79,7 @@ class Embedder(nn.Module):
 
         if self._embed_conf.embed_self_conditioning:
             edge_in += self._embed_conf.num_bins
+
         edge_embed_size = self._model_conf.edge_embed_size
         self.edge_embedder = nn.Sequential(
             nn.Linear(edge_in, edge_embed_size),
@@ -173,6 +173,7 @@ class ScoreNetwork(nn.Module):
         self.embedding_layer = Embedder(model_conf)
         self.diffuser = diffuser
         self.score_model = ipa_pytorch.IpaScore(model_conf, diffuser)
+        self.embed_self_conditioning = model_conf.embed.embed_self_conditioning
 
     def _apply_mask(self, aatype_diff, aatype_0, diff_mask):
         return diff_mask * aatype_diff + (1 - diff_mask) * aatype_0
