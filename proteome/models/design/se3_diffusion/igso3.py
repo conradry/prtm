@@ -1,12 +1,13 @@
 """Parts of this file were developed in conjunction with the DiffDock authors.
 https://github.com/gcorso/DiffDock 
 """
-from data import so3_utils
-from data import utils as du
 import os
-import torch
 
 import numpy as np
+import torch
+from proteome.models.design.se3_diffusion import data_utils as du
+from proteome.models.design.se3_diffusion import so3_utils
+
 
 def f_igso3(omega, t, L=500):
     """Truncated sum of IGSO(3) distribution.
@@ -30,8 +31,12 @@ def f_igso3(omega, t, L=500):
     """
 
     ls = torch.arange(L)  # of shape [1, L]
-    approx = ((2*ls + 1) * torch.exp(-ls*(ls+1)*t/2) *
-         torch.sin(omega.unsqueeze(-1)*(ls+1/2)) / torch.sin(omega.unsqueeze(-1)/2)).sum(dim=-1)
+    approx = (
+        (2 * ls + 1)
+        * torch.exp(-ls * (ls + 1) * t / 2)
+        * torch.sin(omega.unsqueeze(-1) * (ls + 1 / 2))
+        / torch.sin(omega.unsqueeze(-1) / 2)
+    ).sum(dim=-1)
     return approx
 
 
@@ -41,17 +46,22 @@ def d_logf_d_omega(omega, t, L=500):
     out = torch.autograd.grad(log_f.sum(), omega)[0]
     return out
 
+
 # IGSO3 density with respect to the volume form on SO(3)
 def igso3_density(Rt, t, L=500):
     return f_igso3(so3_utils.Omega(Rt), t, L)
 
+
 def igso3_density_angle(omega, t, L=500):
-    return f_igso3(torch.tensor(omega), t, L).numpy()*(1-np.cos(omega))/np.pi
+    return f_igso3(torch.tensor(omega), t, L).numpy() * (1 - np.cos(omega)) / np.pi
+
 
 # grad_R log IGSO3(R; I_3, t)
 def igso3_score(R, t, L=500):
     omega = so3_utils.Omega(R)
-    unit_vector = torch.einsum('...ij,...jk->...ik', R, so3_utils.log(R))/omega.unsqueeze(-1).unsqueeze(-2)
+    unit_vector = torch.einsum(
+        "...ij,...jk->...ik", R, so3_utils.log(R)
+    ) / omega.unsqueeze(-1).unsqueeze(-2)
     return unit_vector * d_logf_d_omega(omega, t, L).unsqueeze(-1).unsqueeze(-2)
 
 
@@ -69,7 +79,7 @@ def calculate_igso3(*, num_ts=1000, num_omegas=1000, min_t=0.01, max_t=4, L=500)
             be too low or it will create numerical instability.
     """
     # Discretize omegas for calculating CDFs. Skip omega=0.
-    discrete_omegas = np.linspace(0, np.pi, num_omegas+1)[1:]
+    discrete_omegas = np.linspace(0, np.pi, num_omegas + 1)[1:]
 
     # Exponential separation of sigmas.
     discrete_ts = 10 ** np.linspace(np.log10(min_t), np.log10(max_t), num_ts)
@@ -77,31 +87,40 @@ def calculate_igso3(*, num_ts=1000, num_omegas=1000, min_t=0.01, max_t=4, L=500)
     # Compute the pdf and cdf values for the marginal distribution of the angle
     # of rotation (which is needed for sampling)
     pdf_vals = np.asarray(
-        [igso3_density_angle(discrete_omegas, t) for t in discrete_ts])
+        [igso3_density_angle(discrete_omegas, t) for t in discrete_ts]
+    )
     pdf_vol_form_vals = np.asarray(
-        [f_igso3(torch.tensor(discrete_omegas), t).numpy() for t in discrete_ts])
-    cdf_vals = np.asarray(
-        [pdf.cumsum() / num_omegas * np.pi for pdf in pdf_vals])
+        [f_igso3(torch.tensor(discrete_omegas), t).numpy() for t in discrete_ts]
+    )
+    cdf_vals = np.asarray([pdf.cumsum() / num_omegas * np.pi for pdf in pdf_vals])
 
     # Compute the norms of the scores.  This are used to scale the rotation axis when
     # computing the score as a vector.
     d_logf_d_omega_val = np.asarray(
-        [d_logf_d_omega(discrete_omegas, t).numpy() for t in discrete_ts])
-
+        [d_logf_d_omega(discrete_omegas, t).numpy() for t in discrete_ts]
+    )
 
     return {
-        'cdf': cdf_vals, # CDF for angle of rotation -- for sampling
-        'pdf_angle': pdf_vals, # PDF for angle of rotation
-        'pdf': pdf_vol_form_vals, # PDF for w.r.t. volume form
-        'd_logf_d_omega': d_logf_d_omega_val,
-        'discrete_omegas': discrete_omegas,
-        'discrete_ts': discrete_ts,
+        "cdf": cdf_vals,  # CDF for angle of rotation -- for sampling
+        "pdf_angle": pdf_vals,  # PDF for angle of rotation
+        "pdf": pdf_vol_form_vals,  # PDF for w.r.t. volume form
+        "d_logf_d_omega": d_logf_d_omega_val,
+        "discrete_omegas": discrete_omegas,
+        "discrete_ts": discrete_ts,
     }
 
-class IGSO3:
 
-    def __init__(self, min_t=0.02, max_t=4, L=500, num_ts=500, num_omegas=1000,
-            cache_dir="./", recompute=False):
+class IGSO3:
+    def __init__(
+        self,
+        min_t=0.02,
+        max_t=4,
+        L=500,
+        num_ts=500,
+        num_omegas=1000,
+        cache_dir="./",
+        recompute=False,
+    ):
         self.min_t = min_t
         self.max_t = max_t
         self.num_ts = num_ts
@@ -109,33 +128,42 @@ class IGSO3:
 
         # Precompute and cache IGSO3 values.
         cache_dir = os.path.join(
-            cache_dir,
-            f'numT_{num_ts}_numOmega_{num_omegas}_minT_{min_t}_maxT_{max_t}'
+            cache_dir, f"numT_{num_ts}_numOmega_{num_omegas}_minT_{min_t}_maxT_{max_t}"
         )
 
         # If cache directory doesn't exist, create it
         if not os.path.isdir(cache_dir):
             os.makedirs(cache_dir)
-        cdf_cache = os.path.join(cache_dir, 'cdf_vals.npy')
-        pdf_cache = os.path.join(cache_dir, 'pdf_vals.npy')
-        pdf_angle_cache = os.path.join(cache_dir, 'pdf_angle_vals.npy')
-        d_logf_d_omega_cache = os.path.join(cache_dir, 'd_logf_d_omega_cache.npy')
-        discrete_ts_cache = os.path.join(cache_dir, 'discrete_ts.npy')
-        discrete_omegas_cache = os.path.join(cache_dir, 'discrete_omegas.npy')
-        cache_fns = [cdf_cache, pdf_cache, pdf_angle_cache, d_logf_d_omega_cache,
-                discrete_ts_cache, discrete_omegas_cache]
+        cdf_cache = os.path.join(cache_dir, "cdf_vals.npy")
+        pdf_cache = os.path.join(cache_dir, "pdf_vals.npy")
+        pdf_angle_cache = os.path.join(cache_dir, "pdf_angle_vals.npy")
+        d_logf_d_omega_cache = os.path.join(cache_dir, "d_logf_d_omega_cache.npy")
+        discrete_ts_cache = os.path.join(cache_dir, "discrete_ts.npy")
+        discrete_omegas_cache = os.path.join(cache_dir, "discrete_omegas.npy")
+        cache_fns = [
+            cdf_cache,
+            pdf_cache,
+            pdf_angle_cache,
+            d_logf_d_omega_cache,
+            discrete_ts_cache,
+            discrete_omegas_cache,
+        ]
 
         # Compute and cache if cache does not exist
-        if recompute or sum([not os.path.exists(cache_fn) for cache_fn in cache_fns]) != 0:
-            print('Computing and caching IGSO3.')
+        if (
+            recompute
+            or sum([not os.path.exists(cache_fn) for cache_fn in cache_fns]) != 0
+        ):
+            print("Computing and caching IGSO3.")
             igso3_vals = calculate_igso3(
-                num_ts=num_ts, num_omegas=num_omegas,min_t=min_t, max_t=max_t, L=L)
-            np.save(cdf_cache, igso3_vals['cdf'])
-            np.save(pdf_cache, igso3_vals['pdf'])
-            np.save(pdf_angle_cache, igso3_vals['pdf_angle'])
-            np.save(d_logf_d_omega_cache, igso3_vals['d_logf_d_omega'])
-            np.save(discrete_ts_cache, igso3_vals['discrete_ts'])
-            np.save(discrete_omegas_cache, igso3_vals['discrete_omegas'])
+                num_ts=num_ts, num_omegas=num_omegas, min_t=min_t, max_t=max_t, L=L
+            )
+            np.save(cdf_cache, igso3_vals["cdf"])
+            np.save(pdf_cache, igso3_vals["pdf"])
+            np.save(pdf_angle_cache, igso3_vals["pdf_angle"])
+            np.save(d_logf_d_omega_cache, igso3_vals["d_logf_d_omega"])
+            np.save(discrete_ts_cache, igso3_vals["discrete_ts"])
+            np.save(discrete_omegas_cache, igso3_vals["discrete_omegas"])
 
         self._cdf = np.load(cdf_cache)
         self._pdf = np.load(pdf_cache)
@@ -144,7 +172,9 @@ class IGSO3:
         self._discrete_ts = np.load(discrete_ts_cache)
         self._discrete_omegas = np.load(discrete_omegas_cache)
 
-        self._argmin_omega_for_d_logf_d_omega = self._discrete_omegas[np.argmin(self._d_logf_d_omega, axis=1)]
+        self._argmin_omega_for_d_logf_d_omega = self._discrete_omegas[
+            np.argmin(self._d_logf_d_omega, axis=1)
+        ]
 
     def t_idx(self, t: np.ndarray):
         """Calculates the index for discretized t during IGSO(3) initialization."""
@@ -157,7 +187,7 @@ class IGSO3:
         omegas = so3_utils.Omega(R)
         return np.interp(omegas, self._discrete_omegas, self._pdf[self.t_idx(t)])
 
-    def sample_angle(self, t: float, n_samples: int=1):
+    def sample_angle(self, t: float, n_samples: int = 1):
         """Uses the inverse cdf to sample an angle of rotation from IGSO(3).
 
         Args:
@@ -169,7 +199,7 @@ class IGSO3:
         x = np.random.rand(n_samples)
         return np.interp(x, self._cdf[self.t_idx(t)], self._discrete_omegas)
 
-    def sample(self, t: float, n_samples: float=1):
+    def sample(self, t: float, n_samples: float = 1):
         """Generates rotation vector(s) from IGSO(3).
 
         Args:
@@ -187,9 +217,11 @@ class IGSO3:
         return so3_utils.exp(so3_utils.hat(rot_vecs))
 
     def d_logf_d_omega(self, omega, t):
-        return np.interp(omega, self._discrete_omegas, self._d_logf_d_omega[self.t_idx(t)])
+        return np.interp(
+            omega, self._discrete_omegas, self._d_logf_d_omega[self.t_idx(t)]
+        )
 
-    def score(self, R: torch.tensor, t: torch.tensor, eps: float=1e-6):
+    def score(self, R: torch.tensor, t: torch.tensor, eps: float = 1e-6):
         """Computes the score of IGSO(3) density as a rotation vector.
 
         Same as score function but uses pytorch and performs a look-up.
@@ -205,14 +237,19 @@ class IGSO3:
         """
         omega = so3_utils.Omega(R)
         t_idx = self.t_idx(du.move_to_np(t))
-        omega_idx = torch.bucketize(omega, torch.tensor(self._discrete_omegas[:-1]).to(R.device))
+        omega_idx = torch.bucketize(
+            omega, torch.tensor(self._discrete_omegas[:-1]).to(R.device)
+        )
         if len(t.shape) == 0:
             d_logf_d_omega = self._d_logf_d_omega[t_idx, omega_idx]
         else:
             d_logf_d_omega = self._d_logf_d_omega[t_idx[:, None], omega_idx]
 
         # Unit vector in tangent space
-        direction = torch.einsum('...jk,...kl->...jl',
-                R, so3_utils.log(R)/(omega[..., None, None] + eps))
+        direction = torch.einsum(
+            "...jk,...kl->...jl", R, so3_utils.log(R) / (omega[..., None, None] + eps)
+        )
 
-        return direction * torch.tensor(d_logf_d_omega[..., None, None], dtype=direction.dtype)
+        return direction * torch.tensor(
+            d_logf_d_omega[..., None, None], dtype=direction.dtype
+        )

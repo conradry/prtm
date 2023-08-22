@@ -1,10 +1,9 @@
 """Utilities for calculating all atom representations."""
 import torch
-from data import residue_constants
-from openfold.utils import rigid_utils as ru
-from openfold.data import data_transforms
-from openfold.utils import feats
-
+from proteome.constants import residue_constants
+from proteome.models.design.se3_diffusion import rigid_utils as ru
+from proteome.models.folding.openfold.data import data_transforms
+from proteome.models.folding.openfold.utils import feats
 
 Rigid = ru.Rigid
 Rotation = ru.Rotation
@@ -19,17 +18,17 @@ GROUP_IDX = torch.tensor(residue_constants.restype_atom14_to_rigid_group)
 
 
 def torsion_angles_to_frames(
-        r: Rigid,
-        alpha: torch.Tensor,
-        aatype: torch.Tensor,
-    ):
+    r: Rigid,
+    alpha: torch.Tensor,
+    aatype: torch.Tensor,
+):
     """Conversion method of torsion angles to frames provided the backbone.
-    
+
     Args:
         r: Backbone rigid groups.
         alpha: Torsion angles.
         aatype: residue types.
-    
+
     Returns:
         All 8 frames corresponding to each torsion frame.
 
@@ -46,9 +45,7 @@ def torsion_angles_to_frames(
     bb_rot[..., 1] = 1
 
     # [*, N, 8, 2]
-    alpha = torch.cat(
-        [bb_rot.expand(*alpha.shape[:-2], -1, -1), alpha], dim=-2
-    )
+    alpha = torch.cat([bb_rot.expand(*alpha.shape[:-2], -1, -1), alpha], dim=-2)
 
     # [*, N, 8, 3, 3]
     # Produces rotation matrices of the form:
@@ -97,20 +94,20 @@ def torsion_angles_to_frames(
 def prot_to_torsion_angles(aatype, atom37, atom37_mask):
     """Calculate torsion angle features from protein features."""
     prot_feats = {
-        'aatype': aatype,
-        'all_atom_positions': atom37,
-        'all_atom_mask': atom37_mask,
+        "aatype": aatype,
+        "all_atom_positions": atom37,
+        "all_atom_mask": atom37_mask,
     }
     torsion_angles_feats = data_transforms.atom37_to_torsion_angles()(prot_feats)
-    torsion_angles = torsion_angles_feats['torsion_angles_sin_cos']
-    torsion_mask = torsion_angles_feats['torsion_angles_mask']
-    return torsion_angles, torsion_mask 
+    torsion_angles = torsion_angles_feats["torsion_angles_sin_cos"]
+    torsion_mask = torsion_angles_feats["torsion_angles_mask"]
+    return torsion_angles, torsion_mask
 
 
 def frames_to_atom14_pos(
-        r: Rigid,
-        aatype: torch.Tensor,
-    ):
+    r: Rigid,
+    aatype: torch.Tensor,
+):
     """Convert frames to their idealized all atom representation.
 
     Args:
@@ -134,9 +131,7 @@ def frames_to_atom14_pos(
     t_atoms_to_global = r[..., None, :] * group_mask
 
     # [*, N, 14]
-    t_atoms_to_global = t_atoms_to_global.map_tensor_fn(
-        lambda x: torch.sum(x, dim=-1)
-    )
+    t_atoms_to_global = t_atoms_to_global.map_tensor_fn(lambda x: torch.sum(x, dim=-1))
 
     # [*, N, 14, 1]
     frame_atom_mask = ATOM_MASK[aatype, ...].unsqueeze(-1).to(r.device)
@@ -152,23 +147,19 @@ def frames_to_atom14_pos(
 def compute_backbone(bb_rigids, psi_torsions):
     torsion_angles = torch.tile(
         psi_torsions[..., None, :],
-        tuple([1 for _ in range(len(bb_rigids.shape))]) + (7, 1)
+        tuple([1 for _ in range(len(bb_rigids.shape))]) + (7, 1),
     ).to(bb_rigids.device)
     aatype = torch.zeros(bb_rigids.shape).long()
     # aatype = torch.zeros(bb_rigids.shape).long().to(bb_rigids.device)
     all_frames = feats.torsion_angles_to_frames(
-        bb_rigids,
-        torsion_angles,
-        aatype,
-        DEFAULT_FRAMES.to(bb_rigids.device))
-    atom14_pos = frames_to_atom14_pos(
-        all_frames,
-        aatype)
+        bb_rigids, torsion_angles, aatype, DEFAULT_FRAMES.to(bb_rigids.device)
+    )
+    atom14_pos = frames_to_atom14_pos(all_frames, aatype)
     atom37_bb_pos = torch.zeros(bb_rigids.shape + (37, 3))
     # atom14 bb order = ['N', 'CA', 'C', 'O', 'CB']
     # atom37 bb order = ['N', 'CA', 'C', 'CB', 'O']
     atom37_bb_pos[..., :3, :] = atom14_pos[..., :3, :]
-    atom37_bb_pos[..., 3, :] = atom14_pos[..., 4, :] 
+    atom37_bb_pos[..., 3, :] = atom14_pos[..., 4, :]
     atom37_bb_pos[..., 4, :] = atom14_pos[..., 3, :]
     atom37_mask = torch.any(atom37_bb_pos, axis=-1)
     return atom37_bb_pos, atom37_mask, aatype, atom14_pos
@@ -194,7 +185,7 @@ def calculate_neighbor_angles(R_ac, R_ab):
     # sin(alpha) = |u x v| / (|u|*|v|)
     y = torch.cross(R_ac, R_ab).norm(dim=-1)  # shape = (N,)
     # avoid that for y == (0,0,0) the gradient wrt. y becomes NaN
-    y = torch.max(y, torch.tensor(1e-9))  
+    y = torch.max(y, torch.tensor(1e-9))
     angle = torch.atan2(y, x)
     return angle
 

@@ -1,6 +1,5 @@
 """R^3 diffusion methods."""
 import numpy as np
-from scipy.special import gamma
 import torch
 
 
@@ -25,8 +24,8 @@ class R3Diffuser:
 
     def b_t(self, t):
         if np.any(t < 0) or np.any(t > 1):
-            raise ValueError(f'Invalid t={t}')
-        return self.min_b + t*(self.max_b - self.min_b)
+            raise ValueError(f"Invalid t={t}")
+        return self.min_b + t * (self.max_b - self.min_b)
 
     def diffusion_coef(self, t):
         """Time-dependent diffusion coefficient."""
@@ -34,20 +33,20 @@ class R3Diffuser:
 
     def drift_coef(self, x, t):
         """Time-dependent drift coefficient."""
-        return -1/2 * self.b_t(t) * x
+        return -1 / 2 * self.b_t(t) * x
 
-    def sample_ref(self, n_samples: float=1):
+    def sample_ref(self, n_samples: float = 1):
         return np.random.normal(size=(n_samples, 3))
 
     def marginal_b_t(self, t):
-        return t*self.min_b + (1/2)*(t**2)*(self.max_b-self.min_b)
+        return t * self.min_b + (1 / 2) * (t**2) * (self.max_b - self.min_b)
 
     def calc_trans_0(self, score_t, x_t, t, use_torch=True):
         beta_t = self.marginal_b_t(t)
         beta_t = beta_t[..., None, None]
         exp_fn = torch.exp if use_torch else np.exp
         cond_var = 1 - exp_fn(-beta_t)
-        return (score_t * cond_var + x_t) / exp_fn(-1/2*beta_t)
+        return (score_t * cond_var + x_t) / exp_fn(-1 / 2 * beta_t)
 
     def forward(self, x_t_1: np.ndarray, t: float, num_t: int):
         """Samples marginal p(x(t) | x(t-1)).
@@ -61,7 +60,7 @@ class R3Diffuser:
             score_t: [..., n, 3] score at time t in scaled Angstroms.
         """
         if not np.isscalar(t):
-            raise ValueError(f'{t} must be a scalar.')
+            raise ValueError(f"{t} must be a scalar.")
         x_t_1 = self._scale(x_t_1)
         b_t = torch.tensor(self.marginal_b_t(t) / num_t).to(x_t_1.device)
         z_t_1 = torch.tensor(np.random.normal(size=x_t_1.shape)).to(x_t_1.device)
@@ -90,11 +89,11 @@ class R3Diffuser:
             score_t: [..., n, 3] score at time t in scaled Angstroms.
         """
         if not np.isscalar(t):
-            raise ValueError(f'{t} must be a scalar.')
+            raise ValueError(f"{t} must be a scalar.")
         x_0 = self._scale(x_0)
         x_t = np.random.normal(
-            loc=np.exp(-1/2*self.marginal_b_t(t)) * x_0,
-            scale=np.sqrt(1 - np.exp(-self.marginal_b_t(t)))
+            loc=np.exp(-1 / 2 * self.marginal_b_t(t)) * x_0,
+            scale=np.sqrt(1 - np.exp(-self.marginal_b_t(t))),
         )
         score_t = self.score(x_t, x_0, t)
         x_t = self._unscale(x_t)
@@ -104,16 +103,16 @@ class R3Diffuser:
         return 1 / np.sqrt(self.conditional_var(t))
 
     def reverse(
-            self,
-            *,
-            x_t: np.ndarray,
-            score_t: np.ndarray,
-            t: float,
-            dt: float,
-            mask: np.ndarray=None,
-            center: bool=True,
-            noise_scale: float=1.0,
-        ):
+        self,
+        *,
+        x_t: np.ndarray,
+        score_t: np.ndarray,
+        t: float,
+        dt: float,
+        mask: np.ndarray = None,
+        center: bool = True,
+        noise_scale: float = 1.0,
+    ):
         """Simulates the reverse SDE for 1 step
 
         Args:
@@ -127,7 +126,7 @@ class R3Diffuser:
             [..., 3] positions at next step t-1.
         """
         if not np.isscalar(t):
-            raise ValueError(f'{t} must be a scalar.')
+            raise ValueError(f"{t} must be a scalar.")
         x_t = self._scale(x_t)
         g_t = self.diffusion_coef(t)
         f_t = self.drift_coef(x_t, t)
@@ -163,4 +162,6 @@ class R3Diffuser:
         if scale:
             x_t = self._scale(x_t)
             x_0 = self._scale(x_0)
-        return -(x_t - exp_fn(-1/2*self.marginal_b_t(t)) * x_0) / self.conditional_var(t, use_torch=use_torch)
+        return -(
+            x_t - exp_fn(-1 / 2 * self.marginal_b_t(t)) * x_0
+        ) / self.conditional_var(t, use_torch=use_torch)
