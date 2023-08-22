@@ -51,14 +51,12 @@ class Sampler:
         self,
         model: ScoreNetwork,
         diffuser: SE3Diffuser,
-        sampler_config: config.SamplerConfig,
-        data_config: config.Data,
+        diffusion_params: config.DiffusionParams,
     ):
         """Initialize sampler"""
         self.model = model
         self.diffuser = diffuser
-        self.sampler_config = sampler_config
-        self.data_config = data_config
+        self.diffusion_params = diffusion_params
         self.device = list(model.parameters())[0].device
 
     def init_data(
@@ -134,9 +132,9 @@ class Sampler:
             )
 
         if num_t is None:
-            num_t = self.data_config.num_t
+            num_t = self.diffusion_params.num_t
         if min_t is None:
-            min_t = self.data_config.min_t
+            min_t = self.diffusion_param.min_t
 
         reverse_steps = np.linspace(min_t, 1.0, num_t)[::-1]
         dt = 1 / num_t
@@ -220,7 +218,7 @@ class Sampler:
 
         return ret
 
-    def sample(self):
+    def sample(self, sample_length):
         """Sample based on length.
 
         Args:
@@ -230,7 +228,6 @@ class Sampler:
             Sample outputs. See train_se3_diffusion.inference_fn.
         """
         # Process motif features.
-        sample_length = self.sampler_config.length
         res_mask = np.ones(sample_length)
         fixed_mask = np.zeros_like(res_mask)
 
@@ -257,9 +254,9 @@ class Sampler:
         # Run inference
         sample_out = self.inference_fn(
             init_feats,
-            num_t=self.sampler_config.diffusion_params.num_t,
-            min_t=self.sampler_config.diffusion_params.min_t,
+            num_t=self.diffusion_params.num_t,
+            min_t=self.diffusion_params.min_t,
             aux_traj=True,
-            noise_scale=self.sampler_config.diffusion_params.noise_scale,
+            noise_scale=self.diffusion_params.noise_scale,
         )
         return tree.map_structure(lambda x: x[:, 0], sample_out)
