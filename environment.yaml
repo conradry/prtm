@@ -47,6 +47,7 @@ dependencies:
   - seaborn
   - sympy
   - tqdm
+  - nglview
   - jupyterlab
   - matplotlib
   - omegaconf==2.3.0
