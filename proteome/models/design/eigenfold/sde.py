@@ -1,15 +1,14 @@
 import numpy as np
 import torch
+from proteome.models.design.eigenfold.schedule import EntropySchedule
 
 FLOAT_TYPE = np.float32
-from proteome.models.design.eigenfold.schedule import EntropySchedule
 
 
 class HarmonicSDE:
     def __init__(
         self, N=None, edges=[], antiedges=[], a=1, b=0.3, J=None, diagonalize=True
     ):
-        self.use_cuda = False
         self.l = 1
         if not diagonalize:
             return
@@ -31,16 +30,22 @@ class HarmonicSDE:
         self.D, P = np.linalg.eigh(J)
         self.N = N
         self.P = P.astype(FLOAT_TYPE)
+        self.use_cuda = False
+        self.device = "cpu"
 
-    def cuda(self):
-        self.P = torch.tensor(self.P).cuda().float()
-        self.D = torch.tensor(self.D).cuda().float()
-        self.use_cuda = True
+    def to(self, device):
+        self.P = torch.tensor(self.P).to(device).float()
+        self.D = torch.tensor(self.D).to(device).float()
+        self.device = device
+        if device != "cpu":
+            self.use_cuda = True
+
+        return self
 
     def eigens(self, t):  # eigenvalues of sigma_t
         np_ = torch if self.use_cuda else np
         D = 1 / self.D * (1 - np_.exp(-t * self.D))
-        t = torch.tensor(t, device="cuda").float() if self.use_cuda else t
+        t = torch.tensor(t, device=self.device).float() if self.use_cuda else t
         return np_.where(D != 0, D, t)
 
     def conditional(self, mask, x2):
@@ -82,7 +87,7 @@ class HarmonicSDE:
         np_ = torch if self.use_cuda else np
         if x is None:
             if self.use_cuda:
-                x = torch.zeros((self.N, 3), device="cuda").float()
+                x = torch.zeros((self.N, 3), device=self.device).float()
             else:
                 x = np.zeros((self.N, 3))
         if t == 0:
@@ -90,7 +95,7 @@ class HarmonicSDE:
         z = (
             np.random.randn(self.N, 3)
             if not self.use_cuda
-            else torch.randn(self.N, 3, device="cuda").float()
+            else torch.randn(self.N, 3, device=self.device).float()
         )
         D = self.eigens(t)
         xx = self.P.T @ x
@@ -126,7 +131,7 @@ class HarmonicSDE:
         z = (
             np.random.randn(self.N, 3)
             if not self.use_cuda
-            else torch.randn(self.N, 3, device="cuda").float()
+            else torch.randn(self.N, 3, device=self.device).float()
         )
         z[~modes] = 0
         A = self.A(t, invT=False)
@@ -176,3 +181,14 @@ class HarmonicSDE:
         self.ts = sched.ts[::-1]
         self.rmsds = list(map(self.rmsd, self.ts))
         self.hs = list(map(self.KL_H, self.ts))
+
+
+class PolymerSDE(HarmonicSDE):
+    def __init__(self, N, a, b):
+        super(PolymerSDE, self).__init__(
+            N=N,
+            edges=zip(np.arange(N - 1), np.arange(1, N)),
+            antiedges=zip(np.arange(N - 2), np.arange(2, N)),
+            a=a,
+            b=b,
+        )
