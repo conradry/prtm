@@ -127,6 +127,7 @@ class OmegaFoldForFolding:
         res = self.model(
             list_of_feature_dict,
             predict_with_confidence=True,
+            return_embeddings=False,
             fwd_cfg=self.forward_config,
         )
 

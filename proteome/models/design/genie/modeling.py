@@ -81,14 +81,18 @@ class GenieForStructureDesign:
             coords = ts[sample_idx].trans.detach().cpu().numpy()
             coords = coords[:seq_len]
 
-        coords = coords.reshape(-1, 1, 3)
+        coords_backbone = np.zeros((seq_len, 4, 3))
+        coords_backbone[:, 1] = coords
+        atom_mask = np.zeros((seq_len, 4))
+        atom_mask[:, 1] = 1
+
         n = len(coords)
         structure = protein.Protein(
             atom_positions=coords,
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=np.ones((n, 1)),
+            atom_mask=atom_mask,
             residue_index=np.arange(0, n),
-            b_factors=np.zeros((n, 1)),
+            b_factors=np.zeros((n, 4)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 

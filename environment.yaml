@@ -47,6 +47,7 @@ dependencies:
   - seaborn
   - sympy
   - tqdm
+  - nglview
   - jupyterlab
   - matplotlib
   - omegaconf==2.3.0
@@ -57,6 +58,7 @@ dependencies:
   - pyg::pyg==2.3.0
   - pyg::pytorch-sparse==0.6.17
   - pyg::pytorch-scatter==2.1.1
+  - pyg::pytorch-cluster==1.6.1
   - ray-core==2.4.0
   - transformers==4.29.2
   - tensorboard==2.11.2

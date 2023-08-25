@@ -20,6 +20,8 @@
 import typing
 
 import torch
+from torch import nn
+
 from proteome.constants import residue_constants as rc
 from proteome.models.folding.omegafold import (
     confidence,
@@ -31,7 +33,6 @@ from proteome.models.folding.omegafold import (
     omegaplm,
     utils,
 )
-from torch import nn
 
 
 class OmegaFoldCycle(modules.OFModule):
@@ -118,7 +119,8 @@ class OmegaFold(modules.OFModule):
     def forward(
         self,
         inputs: _INPUTS,
-        predict_with_confidence: typing.Optional[bool] = True,
+        predict_with_confidence: bool = True,
+        return_embeddings: bool = False,
         *,
         fwd_cfg: typing.Optional[config.ForwardConfig] = None
     ) -> typing.Dict[str, typing.Union[torch.Tensor, float]]:
@@ -138,6 +140,8 @@ class OmegaFold(modules.OFModule):
         max_confidence = 0
         prev_dict = self.create_initial_prev_dict(len(primary_sequence))
         final_result = None
+        final_edge_repr = None
+        final_node_repr = None
 
         # Start cycling
         residx_atom14_mask = torch.from_numpy(rc.restype_atom14_mask).to(
@@ -174,10 +178,20 @@ class OmegaFold(modules.OFModule):
                 if confidence_overall > max_confidence:
                     max_confidence = confidence_overall
                     final_result = result
+                    final_edge_repr = prev_dict["prev_edge"]
+                    final_node_repr = prev_dict["prev_node"]
             else:
                 final_result = result
+                final_edge_repr = prev_dict["prev_edge"]
+                final_node_repr = prev_dict["prev_node"]
 
-        return final_result
+        if return_embeddings:
+            return {
+                "node_repr": final_node_repr,
+                "edge_repr": final_edge_repr,
+            }
+        else:
+            return final_result
 
     def deep_sequence_embed(
         self,
@@ -204,7 +218,9 @@ class OmegaFold(modules.OFModule):
 
         return node_repr, edge_repr
 
-    def create_initial_prev_dict(self, num_res: int) -> typing.Dict[str, typing.Union[torch.Tensor, utils.AAFrame]]:
+    def create_initial_prev_dict(
+        self, num_res: int
+    ) -> typing.Dict[str, typing.Union[torch.Tensor, utils.AAFrame]]:
         """
         Generate 'previous' (filling with 0's) features for the model
 
