@@ -12,86 +12,94 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import pickle
 import shutil
-import unittest
 
 import numpy as np
-import tests.compare_utils as compare_utils
 import torch
-from openfold.data.data_pipeline import DataPipeline
-from openfold.data.templates import TemplateHitFeaturizer
-from openfold.model.embedders import (InputEmbedder, RecyclingEmbedder,
-                                      TemplateAngleEmbedder,
-                                      TemplatePairEmbedder)
 
-if compare_utils.alphafold_is_installed():
-    alphafold = compare_utils.import_alphafold()
+from proteome.models.folding.openfold.data.data_pipeline import DataPipeline
+from proteome.models.folding.openfold.data.templates import TemplateHitFeaturizer
+from proteome.models.folding.openfold.model.embedders import (
+    InputEmbedder,
+    RecyclingEmbedder,
+    TemplateAngleEmbedder,
+    TemplatePairEmbedder,
+)
+
+from .compare_utils import (
+    alphafold_is_installed,
+    import_alphafold,
+    skip_unless_alphafold_installed,
+)
+
+if alphafold_is_installed():
+    alphafold = import_alphafold()
     import haiku as hk
     import jax
 
 
-class TestDataPipeline(unittest.TestCase):
-    @compare_utils.skip_unless_alphafold_installed()
-    def test_fasta_compare(self):
-        # AlphaFold runs the alignments and feature processing at the same
-        # time, taking forever. As such, we precompute AlphaFold's features
-        # using scripts/generate_alphafold_feature_dict.py and the default
-        # databases.
-        with open("tests/test_data/alphafold_feature_dict.pickle", "rb") as fp:
-            alphafold_feature_dict = pickle.load(fp)
+@skip_unless_alphafold_installed()
+def test_fasta_compare():
+    # AlphaFold runs the alignments and feature processing at the same
+    # time, taking forever. As such, we precompute AlphaFold's features
+    # using scripts/generate_alphafold_feature_dict.py and the default
+    # databases.
+    with open(
+        os.path.join(
+            os.path.dirname(__file__), "test_data/alphafold_feature_dict.pickle"
+        ),
+        "rb",
+    ) as fp:
+        alphafold_feature_dict = pickle.load(fp)
 
-        template_featurizer = TemplateHitFeaturizer(
-            mmcif_dir="tests/test_data/mmcifs",
-            max_template_date="2021-12-20",
-            max_hits=20,
-            kalign_binary_path=shutil.which("kalign"),
-            _zero_center_positions=False,
-        )
+    template_featurizer = TemplateHitFeaturizer(
+        mmcif_dir=os.path.join(os.path.dirname(__file__), "test_data/mmcifs"),
+        max_template_date="2021-12-20",
+        max_hits=20,
+        kalign_binary_path=shutil.which("kalign"),
+        _zero_center_positions=False,
+    )
 
-        data_pipeline = DataPipeline(
-            template_featurizer=template_featurizer,
-        )
+    data_pipeline = DataPipeline(
+        template_featurizer=template_featurizer,
+    )
 
-        openfold_feature_dict = data_pipeline.process_fasta(
-            "tests/test_data/short.fasta", "tests/test_data/alignments"
-        )
+    openfold_feature_dict = data_pipeline.process_fasta(
+        os.path.join(os.path.dirname(__file__), "test_data/short.fasta"),
+        os.path.join(os.path.dirname(__file__), "test_data/alignments"),
+    )
 
-        openfold_feature_dict["template_all_atom_masks"] = openfold_feature_dict[
-            "template_all_atom_mask"
-        ]
+    openfold_feature_dict["template_all_atom_masks"] = openfold_feature_dict[
+        "template_all_atom_mask"
+    ]
 
-        checked = []
+    checked = []
 
-        # AlphaFold and OpenFold process their MSAs in slightly different
-        # orders, which we compensate for below.
-        m_a = alphafold_feature_dict["msa"]
-        m_o = openfold_feature_dict["msa"]
+    # AlphaFold and OpenFold process their MSAs in slightly different
+    # orders, which we compensate for below.
+    m_a = alphafold_feature_dict["msa"]
+    m_o = openfold_feature_dict["msa"]
 
-        # The first row of both MSAs should be the same, no matter what
-        self.assertTrue(np.all(m_a[0, :] == m_o[0, :]))
+    # The first row of both MSAs should be the same, no matter what
+    assert np.all(m_a[0, :] == m_o[0, :])
 
-        # Each row of each MSA should appear exactly once somewhere in its
-        # counterpart
-        matching_rows = np.all((m_a[:, None, ...] == m_o[None, :, ...]), axis=-1)
-        self.assertTrue(np.all(np.sum(matching_rows, axis=-1) == 1))
+    # Each row of each MSA should appear exactly once somewhere in its
+    # counterpart
+    matching_rows = np.all((m_a[:, None, ...] == m_o[None, :, ...]), axis=-1)
+    assert np.all(np.sum(matching_rows, axis=-1) == 1)
 
-        checked.append("msa")
+    checked.append("msa")
 
-        # The corresponding rows of the deletion matrix should also be equal
-        matching_idx = np.argmax(matching_rows, axis=-1)
-        rearranged_o_dmi = openfold_feature_dict["deletion_matrix_int"]
-        rearranged_o_dmi = rearranged_o_dmi[matching_idx, :]
-        self.assertTrue(
-            np.all(alphafold_feature_dict["deletion_matrix_int"] == rearranged_o_dmi)
-        )
+    # The corresponding rows of the deletion matrix should also be equal
+    matching_idx = np.argmax(matching_rows, axis=-1)
+    rearranged_o_dmi = openfold_feature_dict["deletion_matrix_int"]
+    rearranged_o_dmi = rearranged_o_dmi[matching_idx, :]
+    assert np.all(alphafold_feature_dict["deletion_matrix_int"] == rearranged_o_dmi)
 
-        checked.append("deletion_matrix_int")
+    checked.append("deletion_matrix_int")
 
-        # Remaining features have to be precisely equal
-        for k, v in alphafold_feature_dict.items():
-            self.assertTrue(k in checked or np.all(v == openfold_feature_dict[k]))
-
-
-if __name__ == "__main__":
-    unittest.main()
+    # Remaining features have to be precisely equal
+    for k, v in alphafold_feature_dict.items():
+        assert k in checked or np.all(v == openfold_feature_dict[k])

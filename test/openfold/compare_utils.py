@@ -2,15 +2,13 @@ import importlib
 import os
 import pkgutil
 import sys
-import unittest
 
 import numpy as np
-from proteome.models.folding.openfold.openfold.config import model_config
-from proteome.models.folding.openfold.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.openfold.utils.import_weights import (
-    import_jax_weights_,
-)
-from tests.config import consts
+import pytest
+
+from proteome.models.folding.openfold.config import model_config
+from proteome.models.folding.openfold.model.model import AlphaFold
+from proteome.models.folding.openfold.utils.import_weights import import_jax_weights_
 
 # Give JAX some GPU memory discipline
 # (by default it hogs 90% of GPU memory. This disables that behavior and also
@@ -24,7 +22,7 @@ def alphafold_is_installed():
 
 
 def skip_unless_alphafold_installed():
-    return unittest.skipUnless(alphafold_is_installed(), "Requires AlphaFold")
+    return pytest.mark.skipif(not alphafold_is_installed(), reason="Requires AlphaFold")
 
 
 def import_alphafold():
