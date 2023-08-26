@@ -247,8 +247,9 @@ class CoordBatchConverter(BatchConverter):
         coords_and_confidence, strs, tokens = super().__call__(batch)
 
         # pad beginning and end of each protein due to legacy reasons
+        wrap_to_tensor = lambda x: torch.tensor(x, dtype=torch.float32) if not isinstance(x, torch.Tensor) else x
         coords = [
-            F.pad(cd.clone().detach(), (0, 0, 0, 0, 1, 1), value=np.inf)
+            F.pad(wrap_to_tensor(cd).clone().detach(), (0, 0, 0, 0, 1, 1), value=np.inf)
             for cd, _ in coords_and_confidence
         ]
         confidence = [
