@@ -53,17 +53,17 @@ def alphafold_jackhmmer_query_pipeline(sequence: str) -> Tuple[List, List]:
     jackhmmer_dbs = {
         # Order of tuple is (chunk_count, z_value, db_url)
         "uniref90": (
-            2,  # 59,
+            59,
             135301051,
             "https://storage.googleapis.com/alphafold-colab-asia/latest/uniref90_2021_03.fasta",
         ),
         "smallbfd": (
-            2,  # 17,
+            17,
             65984053,
             "https://storage.googleapis.com/alphafold-colab-asia/latest/bfd-first_non_consensus_sequences.fasta",
         ),
         "mgnify": (
-            2,  # 71,
+            71,
             304820129,
             "https://storage.googleapis.com/alphafold-colab-asia/latest/mgy_clusters_2019_05.fasta",
         ),

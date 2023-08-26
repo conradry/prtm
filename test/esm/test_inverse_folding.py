@@ -3,17 +3,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
+from pathlib import Path
+
+import numpy as np
+import torch
+from scipy.stats import special_ortho_group
+from tqdm import tqdm
+from proteome.models.folding.esm.inverse_folding import util
+from proteome.models.folding.esm.modeling import ESMForInverseFolding
+
 
 def test_esm_if1():
-    import json
-    from pathlib import Path
-
-    import esm
-    import esm.inverse_folding
-    import numpy as np
-    import torch
-    from scipy.stats import special_ortho_group
-    from tqdm import tqdm
 
     example_file = (
         Path(__file__).absolute().parent / "inverse_folding_test_example.json"
@@ -21,9 +22,10 @@ def test_esm_if1():
     with open(example_file) as f:
         examples = json.load(f)
 
-    model, alphabet = esm.pretrained.esm_if1_gvp4_t16_142M_UR50()
-    model = model.eval()
-    batch_converter = esm.inverse_folding.util.CoordBatchConverter(alphabet)
+    inverse_folder = ESMForInverseFolding()
+    model = inverse_folder.model.cpu()
+    alphabet = inverse_folder.cfg.alphabet
+    batch_converter = util.CoordBatchConverter(alphabet)
 
     with torch.no_grad():
         print("Testing batch inference on 3 examples...")

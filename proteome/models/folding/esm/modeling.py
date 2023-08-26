@@ -1,6 +1,8 @@
+import random
 import re
 from typing import Optional, Tuple
 
+import numpy as np
 import torch
 
 from proteome import protein
@@ -148,8 +150,12 @@ class ESMForFolding:
         return predicted_protein, float(output["mean_plddt"])
 
 
-class ESMForSequenceDesign:
-    def __init__(self, model_name: str = "esm_if1_gvp4_t16_142M_UR50"):
+class ESMForInverseFolding:
+    def __init__(
+        self, 
+        model_name: str = "esm_if1_gvp4_t16_142M_UR50",
+        random_seed: Optional[int] = None,
+    ):
         self.model_name = model_name
         self.cfg = _get_esmif_model_config(model_name)
         self.model = GVPTransformerModel(cfg=self.cfg)
@@ -161,6 +167,11 @@ class ESMForSequenceDesign:
             self.device = torch.device("cpu")
 
         self.model = self.model.to(self.device)
+
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
 
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
