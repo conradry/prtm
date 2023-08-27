@@ -1,13 +1,12 @@
-from typing import Dict, List, Tuple
+import random
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 
 from proteome import protein
-from proteome.models.folding.rosettafold.config import (RoseTTAFoldConfig,
-                                                        TRFoldConfig)
+from proteome.models.folding.rosettafold.config import RoseTTAFoldConfig, TRFoldConfig
 from proteome.models.folding.rosettafold.kinematics import xyz_to_t2d
-from proteome.models.folding.rosettafold.parsers import parse_a3m
 from proteome.models.folding.rosettafold.rosettafoldmodel import RoseTTAFold
 from proteome.models.folding.rosettafold.trfold import TRFold
 from proteome.query.pipeline import QueryPipelines
@@ -27,6 +26,7 @@ class RoseTTAFoldForFolding:
         model_name: str = "rosettafold_end2end",
         msa_pipeline: str = "alphafold_jackhmmer",
         refine: bool = True,
+        random_seed: Optional[int] = None,
     ):
         self.model_name = model_name
         self.cfg = RoseTTAFoldConfig()
@@ -45,9 +45,16 @@ class RoseTTAFoldForFolding:
         self.msa_pipeline = getattr(QueryPipelines, msa_pipeline)
         self.refine = refine
 
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
+
     def load_weights(self, weights_url: str, zip_path: str):
         """Load weights from a weights url."""
-        weights = hub_utils.load_state_dict_from_tar_gz_url(weights_url, zip_path)
+        weights = hub_utils.load_state_dict_from_tar_gz_url(
+            weights_url, extract_member=zip_path
+        )
         msg = self.model.load_state_dict(weights["model_state_dict"], strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
