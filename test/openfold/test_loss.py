@@ -17,7 +17,6 @@ import os
 import ml_collections as mlc
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.data import data_transforms
 from proteome.models.folding.openfold.utils.loss import (
     backbone_loss,

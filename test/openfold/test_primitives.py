@@ -14,7 +14,6 @@
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.primitives import Attention
 
 from .config import consts

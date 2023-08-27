@@ -14,7 +14,6 @@
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.triangular_multiplicative_update import *
 from proteome.models.folding.openfold.utils.tensor_utils import tree_map
 

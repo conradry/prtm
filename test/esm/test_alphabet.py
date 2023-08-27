@@ -6,6 +6,7 @@
 import torch
 from proteome.models.folding.esm.data import Alphabet
 
+
 def _test_esm1b(alphabet: Alphabet):
     batch_converter = alphabet.get_batch_converter()
 
@@ -26,7 +27,6 @@ def _test_esm1b(alphabet: Alphabet):
 
 
 def _test_esm1b_truncation(alphabet: Alphabet):
-
     batch_converter = alphabet.get_batch_converter(truncation_seq_length=10)
 
     data = [

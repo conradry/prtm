@@ -5,7 +5,6 @@ import sys
 
 import numpy as np
 import pytest
-
 from proteome.models.folding.openfold.config import model_config
 from proteome.models.folding.openfold.model.model import AlphaFold
 from proteome.models.folding.openfold.utils.import_weights import import_jax_weights_

@@ -15,7 +15,6 @@
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.msa import (
     MSAColumnAttention,
     MSAColumnGlobalAttention,

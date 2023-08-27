@@ -15,7 +15,6 @@ import copy
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.triangular_attention import (
     TriangleAttention,
 )

@@ -14,7 +14,6 @@
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.embedders import (
     InputEmbedder,
     RecyclingEmbedder,

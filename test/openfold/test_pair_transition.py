@@ -16,7 +16,6 @@ import unittest
 
 import numpy as np
 import torch
-
 from proteome.models.folding.openfold.model.pair_transition import PairTransition
 from proteome.models.folding.openfold.utils.tensor_utils import tree_map
 

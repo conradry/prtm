@@ -14,20 +14,14 @@
 
 import os
 import pickle
-import unittest
 
 import numpy as np
 import torch
 import torch.nn as nn
-
-import proteome.models.folding.openfold.utils.feats as feats
 from proteome.models.folding.openfold.config import model_config
 from proteome.models.folding.openfold.data import data_transforms
 from proteome.models.folding.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.utils.tensor_utils import (
-    tensor_tree_map,
-    tree_map,
-)
+from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
 
 from .compare_utils import (
     alphafold_is_installed,

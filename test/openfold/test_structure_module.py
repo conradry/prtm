@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import numpy as np
-import torch
-
 import proteome.models.folding.openfold.utils.feats as feats
+import torch
 from proteome.constants.residue_constants import (
     restype_atom14_mask,
     restype_atom37_mask,

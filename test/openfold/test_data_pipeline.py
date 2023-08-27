@@ -17,16 +17,8 @@ import pickle
 import shutil
 
 import numpy as np
-import torch
-
 from proteome.models.folding.openfold.data.data_pipeline import DataPipeline
 from proteome.models.folding.openfold.data.templates import TemplateHitFeaturizer
-from proteome.models.folding.openfold.model.embedders import (
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateAngleEmbedder,
-    TemplatePairEmbedder,
-)
 
 from .compare_utils import (
     alphafold_is_installed,
