@@ -36,7 +36,7 @@ if alphafold_is_installed():
     import jax
 
 
-def test_shape(self):
+def test_shape():
     c = 31
 
     opm = OuterProductMean(consts.c_m, consts.c_z, c)
@@ -49,7 +49,7 @@ def test_shape(self):
 
 
 @skip_unless_alphafold_installed()
-def test_opm_compare(self):
+def test_opm_compare():
     def run_opm(msa_act, msa_mask):
         config = get_alphafold_config()
         c_evo = config.model.embeddings_and_evoformer.evoformer

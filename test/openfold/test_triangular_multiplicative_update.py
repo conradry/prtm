@@ -144,9 +144,11 @@ def _tri_mul_inplace(incoming=False):
     assert torch.mean(torch.abs(out_stock - out_inplace)) < consts.eps
 
 
+@skip_unless_alphafold_installed()
 def test_tri_mul_out_inference():
     _tri_mul_inplace()
 
 
+@skip_unless_alphafold_installed()
 def test_tri_mul_in_inference():
     _tri_mul_inplace(incoming=True)

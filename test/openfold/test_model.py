@@ -58,6 +58,7 @@ def test_dry_run():
     # deepspeed for this test
 
     model = AlphaFold(c)
+    model = model.eval()
 
     batch = {}
     tf = torch.randint(c.model.input_embedder.tf_dim - 1, size=(n_res,))
