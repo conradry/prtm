@@ -87,6 +87,7 @@ dependencies:
       - py3Dmol
       - pyaml
       - pyfaidx
+      - pytest
       - requests
       - subword-nmt
       - tensorflow

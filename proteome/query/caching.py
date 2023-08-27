@@ -5,10 +5,25 @@ import hashlib
 
 DB_NAME = "proteome_queries.db"
 TABLE_NAME = "queries"
+_DB_PATH = None
+
+
+def set_db_path(db_path):
+    r"""
+    Optionally set the cachin database path.
+
+    Args:
+        d (str): path to a sqlite databse file.
+    """
+    global _DB_PATH
+    _DB_PATH = os.path.expanduser(db_path)
 
 
 def _get_db_path():
     """Gets the path to the sqlite databse"""
+    if _DB_PATH is not None:
+        return _DB_PATH
+
     db_dir = os.path.join(os.path.expanduser("~"), ".proteome")
     os.makedirs(db_dir, exist_ok=True)
     

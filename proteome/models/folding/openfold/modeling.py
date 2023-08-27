@@ -1,5 +1,5 @@
-import os
-from typing import Dict, List, Tuple
+import random
+from typing import Dict, List, Optional, Tuple
 
 import ml_collections as mlc
 import numpy as np
@@ -51,7 +51,8 @@ class OpenFoldForFolding:
     def __init__(
         self, 
         model_name: str = "finetuning-3", 
-        msa_pipeline: str = "alphafold_jackhmmer"
+        msa_pipeline: str = "alphafold_jackhmmer",
+        random_seed: Optional[int] = None,
     ):
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
@@ -67,6 +68,11 @@ class OpenFoldForFolding:
 
         self.model = self.model.to(self.device)
         self.msa_pipeline = getattr(QueryPipelines, msa_pipeline)
+
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
 
     def load_weights(self, weights_url):
         """Load weights from a weights url."""
@@ -123,8 +129,15 @@ class OpenFoldForFolding:
         # Unpack to a protein and a plddt confidence metric.
         mean_plddt = float(res["plddt"].mean())
         b_factors = res["plddt"][:, None] * res["final_atom_mask"]
-        predicted_protein = protein.from_openfold_prediction(
-            feature_dict, res, b_factors=b_factors  # type: ignore
+        chain_index = np.zeros((len(sequence),), dtype=np.int32)
+
+        structure = protein.Protein(
+            atom_positions=res["final_atom_positions"].cpu().numpy(),
+            aatype=feature_dict["aatype"].cpu().numpy()[:, 0],
+            atom_mask=res["final_atom_mask"].cpu().numpy(),
+            residue_index=feature_dict["residue_index"].cpu().numpy()[:, 0] + 1,
+            b_factors=b_factors.cpu().numpy(),
+            chain_index=chain_index,
         )
 
-        return predicted_protein, mean_plddt
+        return structure, mean_plddt
