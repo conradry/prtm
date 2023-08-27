@@ -39,4 +39,7 @@ def test_openfold_for_folding(model_name):
     pred_pdb_str = protein.to_pdb(pred_structure)
     pred_structure = protein.from_pdb_string(pred_pdb_str)
 
+    # RoseTTAfold outputs are not deterministic but usually
+    # they are reasonably close to the ground truth
+    # If this test fails it may just be flaky.
     _compare_structures(pred_structure, gt_structure, atol=1.5)
