@@ -1,13 +1,13 @@
 import io
 import os
+import shutil
 import tarfile
+import zipfile
 from typing import Any, Dict, Optional
 
 import boto3
 import gdown
-import shutil
 import torch.hub
-import zipfile
 from botocore import UNSIGNED
 from botocore.client import Config
 from torch.hub import download_url_to_file
@@ -44,8 +44,8 @@ def download_s3_url_to_file(
 
 
 def download_extract_tar_gz(
-    url: str, 
-    dst: str, 
+    url: str,
+    dst: str,
     extract_member: str,
 ) -> None:
     r"""Download object at the given S3 URL to a local path.
@@ -58,7 +58,7 @@ def download_extract_tar_gz(
 
     """
     if not url.endswith(".tar.gz"):
-        raise ValueError("S3 URL must start with 's3://'.")
+        raise ValueError("tar.gz URL must end with 'tar.gz'.")
 
     tmp_file = os.path.join(dst, "temp.tar.gz")
     download_url_to_file(url, tmp_file)
@@ -148,7 +148,7 @@ def load_state_dict_from_tar_gz_url(
         state_dict (dict): a dict containing the state of the pytorch model
 
     """
-    url = url.rstrip("/")
+    url = url.removesuffix("/")
     if not url.endswith(".tar.gz"):
         raise ValueError("tar.gz URL must end with 'tar.gz'.")
 
@@ -162,7 +162,7 @@ def load_state_dict_from_tar_gz_url(
     if not os.path.exists(cached_file):
         print(f"Downloading model from {url}...")
         download_extract_tar_gz(
-            url, cached_file, extract_member=extract_member
+            url, os.path.dirname(cached_file), extract_member=extract_member
         )
         print(f"Model downloaded and cached in {cached_file}.")
 
@@ -210,11 +210,12 @@ def load_state_dict_from_gdrive_zip(
     cached_file = os.path.join(model_dir, f"{file_id}_{model_name}")
     if not os.path.exists(cached_file):
         print(f"Downloading model from {url}...")
-        outzip = gdown.cached_download(url, path=os.path.join(model_dir, f"{file_id}.zip"))
+        outzip = gdown.cached_download(
+            url, path=os.path.join(model_dir, f"{file_id}.zip")
+        )
         with zipfile.ZipFile(outzip) as zf:
             zf.extract(extract_member, path=model_dir)
-            
-        
+
         os.rename(os.path.join(model_dir, extract_member), cached_file)
         if "/" in extract_member:
             shutil.rmtree(os.path.join(model_dir, os.path.dirname(extract_member)))

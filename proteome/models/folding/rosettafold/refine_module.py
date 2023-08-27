@@ -1,16 +1,24 @@
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
+
 from proteome.models.folding.rosettafold.attention_module import (
-    LayerNorm, get_bonded_neigh)
-from proteome.models.folding.rosettafold.attention_module import \
-    make_graph as make_graph_topk
+    LayerNorm,
+    get_bonded_neigh,
+)
+from proteome.models.folding.rosettafold.attention_module import (
+    make_graph as make_graph_topk,
+)
 from proteome.models.folding.rosettafold.attention_module import rbf
-from proteome.models.folding.rosettafold.init_str_generator import (UniMPBlock,
-                                                                    get_seqsep,
-                                                                    make_graph)
+from proteome.models.folding.rosettafold.init_str_generator import (
+    UniMPBlock,
+    get_seqsep,
+    make_graph,
+)
 from proteome.models.folding.rosettafold.rosetta_transformer import (
-    _get_clones, create_custom_forward)
+    _get_clones,
+    create_custom_forward,
+)
 from proteome.models.folding.rosettafold.se3_network import SE3Transformer
 
 # Re-generate initial coordinates based on 1) final pair features 2) predicted distogram
@@ -229,7 +237,6 @@ class Refine_module(nn.Module):
             #
             lddt = self.pred_lddt(self.norm_state(state))
             lddt = torch.clamp(lddt, 0.0, 1.0)[..., 0]
-            print(f"SE(3) iteration {i_iter} {lddt.mean(-1).cpu().numpy()}")
             if lddt.mean(-1).max() <= prev_lddt + eps:
                 no_impr += 1
             else:
