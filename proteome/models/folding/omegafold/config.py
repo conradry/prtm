@@ -86,13 +86,15 @@ class OmegaFoldModelConfig:
     rough_dist_bin: ContBinConfig = ContBinConfig(x_min=3.25, x_max=20.75, x_bins=16)
     dist_bin: ContBinConfig = ContBinConfig(x_min=2, x_max=65, x_bins=64)
     pos_bin: ContBinConfig = ContBinConfig(x_min=-32, x_max=32, x_bins=64)
-    prev_pos: BinConfig = BinConfig(first_break=3.25, last_break=20.75, num_bins=16, ignore_index=0)
+    prev_pos: BinConfig = BinConfig(
+        first_break=3.25, last_break=20.75, num_bins=16, ignore_index=0
+    )
     struct: StructureConfig = StructureConfig()
     struct_embedder: bool = False
 
 
 @dataclass
-class ForwardConfig:
+class InferenceConfig:
     subbatch_size: int = 512
     num_recycle: int = 10
 

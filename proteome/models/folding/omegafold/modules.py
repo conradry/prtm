@@ -22,8 +22,9 @@ import typing
 from dataclasses import dataclass
 
 import torch
-from proteome.models.folding.omegafold import config, utils
 from torch import nn
+
+from proteome.models.folding.omegafold import config, utils
 
 
 def softmax(
@@ -394,7 +395,7 @@ class Attention(OFModule):
         kv_inputs: torch.Tensor,
         bias: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[config.ForwardConfig] = None,
+        fwd_cfg: typing.Optional[config.InferenceConfig] = None,
     ) -> typing.Union[typing.Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         """
         Perform the standard multi-headed attention with added gating with some
@@ -485,7 +486,7 @@ class AttentionWEdgeBias(OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[config.ForwardConfig] = None,
+        fwd_cfg: typing.Optional[config.InferenceConfig] = None,
     ) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor, torch.Tensor]]:
         """
 

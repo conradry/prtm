@@ -49,7 +49,7 @@ class OmegaFoldCycle(modules.OFModule):
         mask: torch.Tensor,
         node_repr: torch.Tensor,
         edge_repr: torch.Tensor,
-        fwd_cfg: typing.Optional[config.ForwardConfig],
+        fwd_cfg: typing.Optional[config.InferenceConfig],
     ) -> typing.Tuple[
         typing.Dict[str, torch.Tensor],
         typing.Dict[str, typing.Union[torch.Tensor, utils.AAFrame]],
@@ -122,7 +122,7 @@ class OmegaFold(modules.OFModule):
         predict_with_confidence: bool = True,
         return_embeddings: bool = False,
         *,
-        fwd_cfg: typing.Optional[config.ForwardConfig] = None
+        fwd_cfg: typing.Optional[config.InferenceConfig] = None
     ) -> typing.Dict[str, typing.Union[torch.Tensor, float]]:
         """
         The forward implementation of OmegaFold
@@ -197,7 +197,7 @@ class OmegaFold(modules.OFModule):
         self,
         fasta: torch.Tensor,
         mask: torch.Tensor,
-        fwd_cfg: typing.Optional[config.ForwardConfig],
+        fwd_cfg: typing.Optional[config.InferenceConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
         Run the forward method of the pretrained-language model
