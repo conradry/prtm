@@ -21,8 +21,9 @@ import math
 import typing
 
 import torch
-from proteome.models.folding.omegafold import config, embedders, modules, utils
 from torch import nn
+
+from proteome.models.folding.omegafold import config, embedders, modules, utils
 
 
 def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:
@@ -41,6 +42,7 @@ def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:
 
 class GatedAttentionUnit(modules.OFModule):
     """ """
+
     def __init__(self, cfg: config.PLMConfig):
         super(GatedAttentionUnit, self).__init__(cfg)
         self.gva_proj = nn.Sequential(
@@ -58,7 +60,7 @@ class GatedAttentionUnit(modules.OFModule):
         node: torch.Tensor,
         scaling: torch.Tensor,
         bias: torch.Tensor,
-        fwd_cfg: typing.Optional[config.ForwardConfig],
+        fwd_cfg: typing.Optional[config.InferenceConfig],
     ) -> typing.Tuple[torch.Tensor, typing.Tuple[torch.Tensor]]:
         """
         The forward method of this class
@@ -117,7 +119,7 @@ class OmegaPLMLayer(modules.OFModule):
         node: torch.Tensor,
         qk_scaling: torch.Tensor,
         bias: torch.Tensor,
-        fwd_cfg: typing.Optional[config.ForwardConfig],
+        fwd_cfg: typing.Optional[config.InferenceConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method for pre-layernorm
 
@@ -163,7 +165,7 @@ class OmegaPLM(modules.OFModule):
         self,
         tokens: torch.Tensor,
         mask: torch.Tensor,
-        fwd_cfg: typing.Optional[config.ForwardConfig],
+        fwd_cfg: typing.Optional[config.InferenceConfig],
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 

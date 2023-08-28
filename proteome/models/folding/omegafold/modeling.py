@@ -70,7 +70,6 @@ class OmegaFoldForFolding:
         num_msa_cycles: int = 1,
         num_pseudo_msa: int = 15,
         pseudo_msa_mask_rate: float = 0.12,
-        forward_config: config.ForwardConfig = config.ForwardConfig(),
     ):
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
@@ -91,7 +90,6 @@ class OmegaFoldForFolding:
             num_pseudo_msa=num_pseudo_msa,
             pseudo_msa_mask_rate=pseudo_msa_mask_rate,
         )
-        self.forward_config = forward_config
 
     def load_weights(self, weights_url):
         """Load weights from a weights url."""
@@ -117,7 +115,11 @@ class OmegaFoldForFolding:
         return list_of_feature_dict
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> Tuple[protein.Protein, float]:
+    def fold(
+        self,
+        sequence: str,
+        inference_config: config.InferenceConfig = config.InferenceConfig(),
+    ) -> Tuple[protein.Protein, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -128,7 +130,7 @@ class OmegaFoldForFolding:
             list_of_feature_dict,
             predict_with_confidence=True,
             return_embeddings=False,
-            fwd_cfg=self.forward_config,
+            fwd_cfg=inference_config,
         )
 
         predicted_protein = protein.Protein(

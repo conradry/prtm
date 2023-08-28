@@ -6,6 +6,7 @@
 from pathlib import Path
 
 import pytest
+
 from proteome import protein
 from proteome.models.folding.esm import modeling
 
@@ -20,8 +21,6 @@ def test_esmfold_models(model_name: str):
     gt_pdb_file = Path(__file__).parents[0] / f"{model_name}_folding.pdb"
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
-
-    print(model_name, str(gt_pdb_file))
 
     gt_structure = protein.from_pdb_string(gt_pdb_str)
 

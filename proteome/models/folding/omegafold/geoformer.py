@@ -19,8 +19,9 @@
 import typing
 
 import torch
-from proteome.models.folding.omegafold import config, modules, utils
 from torch import nn
+
+from proteome.models.folding.omegafold import config, modules, utils
 
 
 class GeoFormerBlock(modules.OFModule):
@@ -71,7 +72,7 @@ class GeoFormerBlock(modules.OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[config.ForwardConfig] = None
+        fwd_cfg: typing.Optional[config.InferenceConfig] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
         """
 
@@ -89,9 +90,7 @@ class GeoFormerBlock(modules.OFModule):
             node_repr, edge_repr, mask, fwd_cfg=fwd_cfg
         )
         node_repr = self._column_attention(node_repr, mask, fwd_cfg=fwd_cfg)
-        node_repr += self.node_transition(
-            node_repr, subbatch_size=subbatch_size
-        )
+        node_repr += self.node_transition(node_repr, subbatch_size=subbatch_size)
 
         edge_repr += self.out_product(node_repr, mask)
         for layer in self.geometric_attention:
@@ -127,7 +126,7 @@ class GeoFormer(modules.OFModule):
         edge_repr: torch.Tensor,
         mask: torch.Tensor,
         *,
-        fwd_cfg: typing.Optional[config.ForwardConfig] = None
+        fwd_cfg: typing.Optional[config.InferenceConfig] = None
     ) -> typing.Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
 
