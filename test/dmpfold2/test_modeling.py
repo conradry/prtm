@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 
 import pytest
+
 from proteome import protein
-from proteome.models.folding.rosettafold.modeling import (
-    ROSETTAFOLD_MODEL_URLS,
-    RoseTTAFoldForFolding,
+from proteome.models.folding.dmpfold2.modeling import (
+    DMPFOLD_MODEL_URLS,
+    DMPFoldForFolding,
 )
 from proteome.query import caching
 
@@ -16,10 +17,10 @@ caching.set_db_path(
 )
 
 
-@pytest.mark.parametrize("model_name", list(ROSETTAFOLD_MODEL_URLS.keys()))
-def test_rosettafold_for_folding(model_name):
+@pytest.mark.parametrize("model_name", list(DMPFOLD_MODEL_URLS.keys()))
+def test_dmpfold2_for_folding(model_name):
     # Instantiate OpenFoldForFolding with the given model name
-    rosettafold = RoseTTAFoldForFolding(model_name, refine=True, random_seed=0)
+    folder = DMPFoldForFolding(model_name)
 
     # Generate a random sequence of amino acids
     # MSA queries for this sequence should be in cache or this will be very slow
@@ -35,11 +36,11 @@ def test_rosettafold_for_folding(model_name):
     gt_structure = protein.from_pdb_string(gt_pdb_str)
 
     # Fold the sequence using OpenFoldForFolding
-    pred_structure, score = rosettafold.fold(sequence)
+    pred_structure, score = folder.fold(sequence)
     pred_pdb_str = protein.to_pdb(pred_structure)
     pred_structure = protein.from_pdb_string(pred_pdb_str)
 
     # RoseTTAfold outputs are not deterministic but usually
     # they are reasonably close to the ground truth
     # If this test fails it may just be flaky.
-    _compare_structures(pred_structure, gt_structure, atol=1.5)
+    _compare_structures(pred_structure, gt_structure, atol=0.1)
