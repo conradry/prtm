@@ -11,6 +11,7 @@ from proteome.models.design.eigenfold.sampling import logp, reverse_sample
 from proteome.models.design.eigenfold.score_model import ScoreModel
 from proteome.models.design.eigenfold.sde import PolymerSDE
 from proteome.models.folding.omegafold.modeling import OmegaFoldForFolding
+from proteome.models.folding.omegafold.config import InferenceConfig as OFInferenceConfig
 from torch_geometric.data import HeteroData
 
 MODEL_URLS = {
@@ -43,7 +44,7 @@ class _OmegaFoldForGraphEmbedding(OmegaFoldForFolding):
             list_of_feature_dict,
             predict_with_confidence=True,
             return_embeddings=True,
-            fwd_cfg=self.forward_config,
+            fwd_cfg=OFInferenceConfig(),
         )
 
         return (res["node_repr"], res["edge_repr"])
