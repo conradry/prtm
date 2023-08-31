@@ -1,5 +1,6 @@
 from dataclasses import asdict
 
+import pytest
 import numpy as np
 
 from proteome import protein
@@ -17,3 +18,16 @@ def _compare_structures(
             assert np.allclose(pred_structure_dict[k], gt_structure_dict[k], atol=atol)
         else:
             assert pred_structure_dict[k] == gt_structure_dict[k]
+
+
+def pyrosetta_is_installed():
+    try:
+        import pyrosetta  # noqa: F401
+    except ImportError:
+        return False
+
+    return True
+
+
+def skip_unless_pyrosetta_installed():
+    return pytest.mark.skipif(not pyrosetta_is_installed(), reason="Requires PyRosetta")
