@@ -106,7 +106,7 @@ class FoldingDiffForStructureDesign:
             atom_positions=coords,
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
             atom_mask=np.ones((n, 3)),
-            residue_index=np.arange(0, n),
+            residue_index=np.arange(0, n) + 1,
             b_factors=np.zeros((n, 3)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )

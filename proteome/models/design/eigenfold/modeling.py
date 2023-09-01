@@ -191,7 +191,7 @@ class EigenFoldForFoldSampling:
             atom_positions=coords,
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
             atom_mask=atom_mask,
-            residue_index=np.arange(0, n),
+            residue_index=np.arange(0, n) + 1,
             b_factors=np.zeros((n, 4)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
