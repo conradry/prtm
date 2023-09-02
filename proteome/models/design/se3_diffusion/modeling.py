@@ -1,5 +1,4 @@
 import random
-from dataclasses import asdict
 from typing import Optional
 
 import numpy as np
@@ -78,10 +77,15 @@ class SE3DiffusionForStructureDesign:
         atom_positions = trajectory["prot_traj"][0, :, :4]
         length, num_atoms, _ = atom_positions.shape
 
+        # Mask all but the CA atom
+        atom_mask = np.zeros((length, num_atoms))
+        atom_mask[:, 1] = 1
+
         structure = protein.Protein(
             atom_positions=atom_positions,
             aatype=np.array(length * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=np.ones((length, num_atoms)),
+            #atom_mask=np.ones((length, num_atoms)),
+            atom_mask=atom_mask,
             residue_index=np.arange(0, length),
             b_factors=np.ones((length, num_atoms)),
             chain_index=np.zeros((length,), dtype=np.int32),

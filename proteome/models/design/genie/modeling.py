@@ -9,10 +9,15 @@ from proteome.models.design.genie import config
 from proteome.models.design.genie.diffusion import Genie
 
 GENIE_MODEL_URLS = {
-    "genie_l_128": "https://github.com/aqlaboratory/genie/raw/main/weights/genie_l_128_epoch%3D49999.ckpt",  # noqa: E501
+    "genie_l_128": "https://github.com/aqlaboratory/genie/raw/main/weights/scope_l_128/epoch%3D49999.ckpt",
+    "genie_l_256": "https://github.com/aqlaboratory/genie/raw/main/weights/scope_l_256/epoch%3D29999.ckpt",
+    "genie_l_256_swissprot": "https://github.com/aqlaboratory/genie/raw/main/weights/swissprot_l_256/epoch%3D99.ckpt",
+
 }
 GENIE_MODEL_CONFIGS = {
-    "genie_l_128": config.GenieConfig(),
+    "genie_l_128": config.Genie128Config(),
+    "genie_l_256": config.Genie256Config(),
+    "genie_l_256_swissprot": config.Genie256Config(),
 }
 
 
@@ -86,12 +91,12 @@ class GenieForStructureDesign:
         atom_mask = np.zeros((seq_len, 4))
         atom_mask[:, 1] = 1
 
-        n = len(coords)
+        n = len(coords_backbone)
         structure = protein.Protein(
-            atom_positions=coords,
+            atom_positions=coords_backbone,
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
             atom_mask=atom_mask,
-            residue_index=np.arange(0, n),
+            residue_index=np.arange(0, n) + 1,
             b_factors=np.zeros((n, 4)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )

@@ -1,5 +1,4 @@
 import random
-from dataclasses import asdict
 from typing import Optional, Tuple
 
 import numpy as np
@@ -15,15 +14,16 @@ PSD_MODEL_URLS = {
     "conditional_model_1": "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt",
     "conditional_model_2": "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt",
     "conditional_model_3": "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt",
-    "baseline_model": "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt",
 }
 PSD_MODEL_CONFIGS = {
     "conditional_model_0": config.ConditionalModelConfig(),
     "conditional_model_1": config.ConditionalModelConfig(),
     "conditional_model_2": config.ConditionalModelConfig(),
     "conditional_model_3": config.ConditionalModelConfig(),
-    "baseline_model": config.BaselineModelConfig(),
 }
+
+BASELINE_MODEL_URL = "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt"
+BASELINE_MODEL_CONFIG = config.BaselineModelConfig()
 
 
 def _get_model_config(model_name: str) -> config.BaselineModelConfig:
@@ -43,10 +43,10 @@ class ProteinSeqDesForSequenceDesign:
         self.load_weights(self.model, self.model_name, PSD_MODEL_URLS[model_name])
         self.model.eval()
 
-        init_cfg = _get_model_config("baseline_model")
+        init_cfg = BASELINE_MODEL_CONFIG
         self.init_model = SeqPred(cfg=init_cfg)
         self.load_weights(
-            self.init_model, "baseline_model", PSD_MODEL_URLS["baseline_model"]
+            self.init_model, "baseline_model", BASELINE_MODEL_URL
         )
         self.init_model.eval()
 

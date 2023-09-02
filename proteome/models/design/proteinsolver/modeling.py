@@ -1,6 +1,8 @@
 import io
+import random
 from typing import Tuple
 
+import numpy as np
 import torch
 from proteome import protein
 from proteome.models.design.proteinsolver import config
@@ -29,6 +31,7 @@ class ProteinSolverForSequenceDesign:
     def __init__(
         self,
         model_name: str = "model_0",
+        random_seed: int = 0,
     ):
         self.model_name = model_name
         cfg = _get_model_config(model_name)
@@ -42,6 +45,10 @@ class ProteinSolverForSequenceDesign:
             self.device = torch.device("cpu")
 
         self.model = self.model.to(self.device)
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+            random.seed(random_seed)
+            np.random.seed(random_seed)
 
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""

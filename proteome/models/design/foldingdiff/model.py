@@ -414,7 +414,6 @@ class BertForDiffusionBase(BertPreTrainedModel):
             self.time_embed = SinusoidalPositionEmbeddings(self.bert_cfg.hidden_size)
         else:
             raise ValueError(f"Unknown time encoding: {cfg.time_encoding}")
-        pl.utilities.rank_zero_info(f"Using time embedding: {self.time_embed}")
 
         # Initialize weights and apply final processing
         self.init_weights()

@@ -36,9 +36,19 @@ class ModelConfig:
 
 @dataclass
 class GenieConfig:
+    max_seq_len: int
     model: ModelConfig = ModelConfig()
     diffusion: DiffusionConfig = DiffusionConfig()
+
+
+@dataclass
+class Genie128Config(GenieConfig):
     max_seq_len: int = 128
+
+
+@dataclass
+class Genie256Config(GenieConfig):
+    max_seq_len: int = 256
 
 
 @dataclass
