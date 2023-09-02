@@ -70,7 +70,7 @@ class ProteinGeneratorForJointDesign:
         if model_name != "auto":
             self.set_model(model_name)
 
-    def load_weights(self, weights_url: str, model_name):
+    def load_weights(self, model_name: str, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
             weights_url,
@@ -88,7 +88,7 @@ class ProteinGeneratorForJointDesign:
         self.cfg = _get_model_config(model_name)
         self.model = RoseTTAFoldModule(**asdict(self.cfg))
 
-        self.load_weights(PROTGEN_MODEL_URLS[model_name], model_name)
+        self.load_weights(model_name, PROTGEN_MODEL_URLS[model_name])
         self.model.eval()
         self.model = self.model.to(self.device)
         self.loaded_model_name = model_name

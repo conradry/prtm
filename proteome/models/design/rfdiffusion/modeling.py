@@ -79,7 +79,13 @@ def _validate_model_for_config(
     elif hasattr(sampler_config, "scaffoldguided_params"):
         assert model_name in ["complex_fold_base"]
     else:
-        assert model_name in ["base", "base_epoch8", "active_site"]
+        assert model_name in [
+            "base",
+            "base_epoch8",
+            "active_site",
+            "complex_base",
+            "complex_beta",
+        ]
 
 
 def _get_sampler_class(sampler_config: config.SamplerConfigType):
@@ -112,19 +118,19 @@ class RFDiffusionForStructureDesign:
 
         self.loaded_model_name = None
         if model_name != "auto":
-            self.set_model(model_name)
+            self._set_model(model_name)
 
-    def load_weights(self, weights_url: str):
+    def load_weights(self, model_name: str, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
             weights_url,
-            file_name=f"{self.loaded_model_name}.pt",
+            file_name=f"rfdiffusion_{model_name}.pt",
             progress=True,
             map_location="cpu",
         )["model_state_dict"]
         self.model.load_state_dict(state_dict)
 
-    def set_model(self, model_name: str):
+    def _set_model(self, model_name: str):
         if self.loaded_model_name == model_name:
             # Use the model that's already loaded
             return
@@ -137,7 +143,7 @@ class RFDiffusionForStructureDesign:
             **asdict(self.cfg.model),
         )
 
-        self.load_weights(RFD_MODEL_URLS[model_name])
+        self.load_weights(model_name, RFD_MODEL_URLS[model_name])
         self.model.eval()
         self.model = self.model.to(self.device)
         self.loaded_model_name = model_name
@@ -150,7 +156,7 @@ class RFDiffusionForStructureDesign:
     ) -> protein.Protein:
         """Design a protein structure."""
         if self.model_name == "auto":
-            self.set_model(_select_model_from_config(sampler_config))
+            self._set_model(_select_model_from_config(sampler_config))
         else:
             _validate_model_for_config(sampler_config, self.loaded_model_name)
 
@@ -179,10 +185,15 @@ class RFDiffusionForStructureDesign:
         seq_t = torch.clone(seq_init)
         # Loop over number of reverse diffusion time steps.
         for t in tqdm(
-            range(int(sampler.t_step_input), sampler.inference_params.final_step - 1, -1)
+            range(
+                int(sampler.t_step_input), sampler.inference_params.final_step - 1, -1
+            )
         ):
             px0, x_t, seq_t, plddt = sampler.sample_step(
-                t=t, x_t=x_t, seq_init=seq_t, final_step=sampler.inference_params.final_step
+                t=t,
+                x_t=x_t,
+                seq_init=seq_t,
+                final_step=sampler.inference_params.final_step,
             )
             px0_xyz_stack.append(px0)
             denoised_xyz_stack.append(x_t)
