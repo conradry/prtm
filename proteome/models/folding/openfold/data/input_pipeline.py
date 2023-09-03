@@ -17,7 +17,7 @@ from functools import partial
 from typing import Dict
 
 import torch
-from proteome.models.folding.openfold.config import DataConfig, CommonData, PredictData
+from proteome.models.folding.openfold.config import SHAPE_SCHEMA, CommonData, PredictData
 from proteome.models.folding.openfold.data import data_transforms
 
 
@@ -59,7 +59,7 @@ def nonensembled_transform_fns(common_cfg: CommonData):
 def ensembled_transform_fns(
     common_cfg: CommonData, 
     mode_cfg: PredictData, 
-    ensemble_seed,
+    ensemble_seed: int,
 ):
     """Input pipeline data transformers that can be ensembled and averaged."""
     transforms = []
@@ -101,6 +101,26 @@ def ensembled_transform_fns(
         transforms.append(data_transforms.delete_extra_msa)
 
     transforms.append(data_transforms.make_msa_feat())
+
+    transforms.append(data_transforms.select_feat(list(SHAPE_SCHEMA.keys())))
+    transforms.append(
+        data_transforms.random_crop_to_size(
+            mode_cfg.crop_size,
+            mode_cfg.max_templates,
+            SHAPE_SCHEMA,
+            mode_cfg.subsample_templates,
+            seed=ensemble_seed + 1,
+        )
+    )
+    transforms.append(
+        data_transforms.make_fixed_size(
+            SHAPE_SCHEMA,
+            pad_msa_clusters,
+            mode_cfg.max_extra_msa,
+            mode_cfg.crop_size,
+            mode_cfg.max_templates,
+        )
+    )
     transforms.append(data_transforms.crop_templates(mode_cfg.max_templates))
 
     return transforms

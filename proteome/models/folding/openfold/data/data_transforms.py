@@ -1085,7 +1085,10 @@ def random_crop_to_size(
     # No need to subsample templates if there aren't any
     subsample_templates = subsample_templates and num_templates
 
-    num_res_crop_size = min(int(seq_length), crop_size)
+    if crop_size is None:
+        num_res_crop_size = int(seq_length)
+    else:
+        num_res_crop_size = min(int(seq_length), crop_size)
 
     def _randint(lower, upper):
         return int(
@@ -1117,9 +1120,6 @@ def random_crop_to_size(
 
     num_res_crop_start = _randint(0, right_anchor)
 
-    print("Shape schema", shape_schema)
-    print("Num_res", NUM_RES)
-    print("Protein keys", protein.keys())
     for k, v in protein.items():
         if k not in shape_schema or (
             "template" not in k and NUM_RES not in shape_schema[k]

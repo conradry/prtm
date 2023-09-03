@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-from dataclasses import replace, asdict
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from dataclasses import asdict
+from typing import Dict, Mapping, Sequence
 
 import numpy as np
 import torch

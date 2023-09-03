@@ -496,9 +496,6 @@ class AlphaFold(nn.Module):
                     if torch.is_autocast_enabled():
                         torch.clear_autocast_cache()
 
-                for k,v in feats.items():
-                    print(k, v.shape)
-
                 # Run the next iteration of the model
                 outputs, m_1_prev, z_prev, x_prev = self.iteration(
                     feats, prevs, _recycle=(num_iters > 1)
