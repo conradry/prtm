@@ -1,7 +1,6 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
-import ml_collections as mlc
 import numpy as np
 import torch
 
@@ -24,6 +23,14 @@ OPENFOLD_MODEL_URLS = {
     "finetuning_no_templ_ptm-1": "s3://openfold/openfold_params/finetuning_no_templ_ptm_1.pt",
 }
 
+OPENFOLD_MODEL_CONFIGS = {
+    "finetuning-3": config.finetuning_config,
+    "finetuning-4": config.finetuning_config,
+    "finetuning-5": config.finetuning_config,
+    "finetuning_ptm-2": config.finetuning_ptm_config,
+    "finetuning_no_templ_ptm-1": config.finetuning_no_templ_ptm_config,
+}
+
 
 def _placeholder_template_feats(
     num_templates: int, num_res: int
@@ -41,10 +48,10 @@ def _placeholder_template_feats(
     }
 
 
-def _get_model_config(model_name: str) -> mlc.ConfigDict:
+def _get_model_config(model_name: str) -> config.OpenFoldConfig:
     """Get the model config for a given model name."""
     # All `finetuning` models use the same config.
-    return config.model_config(name=model_name.split("-")[0])
+    return OPENFOLD_MODEL_CONFIGS[model_name]
 
 
 class OpenFoldForFolding:

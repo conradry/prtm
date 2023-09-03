@@ -14,11 +14,12 @@
 # limitations under the License.
 
 import copy
+from dataclasses import replace
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
-import ml_collections
 import numpy as np
 import torch
+from proteome.models.folding.openfold.config import DataConfig
 from proteome.models.folding.openfold.data import input_pipeline
 
 FeatureDict = Mapping[str, np.ndarray]
@@ -45,22 +46,23 @@ def np_to_tensor_dict(
 
 
 def make_data_config(
-    config: ml_collections.ConfigDict,
+    config: DataConfig,
     mode: str,
     num_res: int,
-) -> Tuple[ml_collections.ConfigDict, List[str]]:
+) -> Tuple[DataConfig, List[str]]:
     cfg = copy.deepcopy(config)
-    mode_cfg = cfg[mode]
-    with cfg.unlocked():
-        if mode_cfg.crop_size is None:
-            mode_cfg.crop_size = num_res
+    mode_cfg = getattr(cfg, mode)
+    if mode_cfg.crop_size is None:
+        mode_cfg = replace(mode_cfg, crop_size=num_res)
+
+    cfg = replace(cfg, **{mode: mode_cfg})
 
     feature_names = cfg.common.unsupervised_features
 
     if cfg.common.use_templates:
         feature_names += cfg.common.template_features
 
-    if cfg[mode].supervised:
+    if cfg.supervised:
         feature_names += cfg.supervised.supervised_features
 
     return cfg, feature_names
@@ -68,7 +70,7 @@ def make_data_config(
 
 def np_example_to_features(
     np_example: FeatureDict,
-    config: ml_collections.ConfigDict,
+    config: DataConfig,
     mode: str,
 ):
     np_example = dict(np_example)
@@ -85,7 +87,7 @@ def np_example_to_features(
         features = input_pipeline.process_tensors_from_config(
             tensor_dict,
             cfg.common,
-            cfg[mode],
+            getattr(cfg, mode),
         )
 
     if mode == "train":
@@ -109,7 +111,7 @@ def np_example_to_features(
 class FeaturePipeline:
     def __init__(
         self,
-        config: ml_collections.ConfigDict,
+        config: DataConfig,
     ):
         self.config = config
 

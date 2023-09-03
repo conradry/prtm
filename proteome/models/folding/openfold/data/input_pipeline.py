@@ -70,7 +70,7 @@ def ensembled_transform_fns(common_cfg, mode_cfg, ensemble_seed):
     """Input pipeline data transformers that can be ensembled and averaged."""
     transforms = []
 
-    if "max_distillation_msa_clusters" in mode_cfg:
+    if hasattr(mode_cfg, "max_distillation_msa_clusters"):
         transforms.append(
             data_transforms.sample_msa_distillation(
                 mode_cfg.max_distillation_msa_clusters
@@ -97,7 +97,7 @@ def ensembled_transform_fns(common_cfg, mode_cfg, ensemble_seed):
         )
     )
 
-    if "masked_msa" in common_cfg:
+    if hasattr(mode_cfg, "masked_msa"):
         # Masked MSA should come *before* MSA clustering so that
         # the clustering and full MSA profile do not leak information about
         # the masked locations and secret corrupted locations.

@@ -19,7 +19,6 @@ import io
 import time
 from typing import Collection, Optional, Sequence
 
-import ml_collections
 import numpy as np
 from absl import logging
 
@@ -366,12 +365,10 @@ def find_violations(prot_np: protein.Protein):
     violations = loss.find_structural_violations_np(
         batch=batch,
         atom14_pred_positions=batch["atom14_gt_positions"],
-        config=ml_collections.ConfigDict(
-            {
-                "violation_tolerance_factor": 12,  # Taken from model config.
-                "clash_overlap_tolerance": 1.5,  # Taken from model config.
-            }
-        ),
+        config={
+            "violation_tolerance_factor": 12,  # Taken from model config.
+            "clash_overlap_tolerance": 1.5,  # Taken from model config.
+        },
     )
     violation_metrics = loss.compute_violation_metrics_np(
         batch=batch,
