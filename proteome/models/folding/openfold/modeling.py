@@ -104,15 +104,16 @@ class OpenFoldForFolding:
 
         feature_dict = {}
         feature_dict.update(
-            data_pipeline.make_sequence_features(sequence, "test", num_res)
+            data_pipeline.make_sequence_features(sequence, num_res)
         )
         feature_dict.update(
             data_pipeline.make_msa_features(msas, deletion_matrices=deletion_matrices)
         )
         feature_dict.update(_placeholder_template_feats(num_templates, num_res))
+        features = config.Features(**feature_dict)
 
         pipeline = feature_pipeline.FeaturePipeline(self.cfg.data)  # type: ignore
-        processed_feature_dict = pipeline.process_features(feature_dict, mode="predict")
+        processed_feature_dict = pipeline.process_features(features)
         processed_feature_dict = tensor_tree_map(
             lambda t: t.to(self.device), processed_feature_dict
         )

@@ -8,120 +8,68 @@ NUM_MSA_SEQ = "msa placeholder"
 NUM_EXTRA_SEQ = "extra msa placeholder"
 NUM_TEMPLATES = "num templates placeholder"
 
-"""
+
 @dataclass
-class CommonFeatures:
-    aatype: np.ndarray
-    all_atom_mask: np.ndarray
-    all_atom_positions: np.ndarray
-    alt_chi_angles: np.ndarray
-    atom14_alt_gt_exists: np.ndarray
-    atom14_alt_gt_positions: np.ndarray
-    atom14_atom_exists: np.ndarray
-    atom14_atom_is_ambiguous: np.ndarray
-    atom14_gt_exists: np.ndarray
-    atom14_gt_positions: np.ndarray
-    atom37_atom_exists: np.ndarray
-    backbone_rigid_mask: np.ndarray
-    backbone_rigid_tensor: np.ndarray
-    bert_mask: np.ndarray
-    chi_angles_sin_cos: np.ndarray
-    chi_mask: np.ndarray
-    extra_deletion_value: np.ndarray
-    extra_has_deletion: np.ndarray
-    extra_msa: np.ndarray
-    extra_msa_mask: np.ndarray
-    extra_msa_row_mask: np.ndarray
-    is_distillation: np.ndarray
-    msa_feat: np.ndarray
-    msa_mask: np.ndarray
-    msa_row_mask: np.ndarray
-    no_recycling_iters: np.ndarray
-    pseudo_beta: np.ndarray
-    pseudo_beta_mask: np.ndarray
-    residue_index: np.ndarray
-    residx_atom14_to_atom37: np.ndarray
-    residx_atom37_to_atom14: np.ndarray
-    resolution: np.ndarray
-    rigidgroups_alt_gt_frames: np.ndarray
-    rigidgroups_group_exists: np.ndarray
-    rigidgroups_group_is_ambiguous: np.ndarray
-    rigidgroups_gt_exists: np.ndarray
-    rigidgroups_gt_frames: np.ndarray
-    seq_length: np.ndarray
-    seq_mask: np.ndarray
-    target_feat: np.ndarray
-    template_aatype: np.ndarray
-    template_all_atom_mask: np.ndarray
-    template_all_atom_positions: np.ndarray
-    template_alt_torsion_angles_sin_cos: np.ndarray
-    template_backbone_rigid_mask: np.ndarray
-    template_backbone_rigid_tensor: np.ndarray
-    template_mask: np.ndarray
-    template_pseudo_beta: np.ndarray
-    template_pseudo_beta_mask: np.ndarray
-    template_sum_probs: np.ndarray
-    template_torsion_angles_mask: np.ndarray
-    template_torsion_angles_sin_cos: np.ndarray
-    true_msa: np.ndarray
-    use_clamped_fape: np.ndarray
-"""
-common_features = (
-    "aatype",
-    "all_atom_mask",
-    "all_atom_positions",
-    "alt_chi_angles",
-    "atom14_alt_gt_exists",
-    "atom14_alt_gt_positions",
-    "atom14_atom_exists",
-    "atom14_atom_is_ambiguous",
-    "atom14_gt_exists",
-    "atom14_gt_positions",
-    "atom37_atom_exists",
-    "backbone_rigid_mask",
-    "backbone_rigid_tensor",
-    "bert_mask",
-    "chi_angles_sin_cos",
-    "chi_mask",
-    "extra_deletion_value",
-    "extra_has_deletion",
-    "extra_msa",
-    "extra_msa_mask",
-    "extra_msa_row_mask",
-    "is_distillation",
-    "msa_feat",
-    "msa_mask",
-    "msa_row_mask",
-    "no_recycling_iters",
-    "pseudo_beta",
-    "pseudo_beta_mask",
-    "residue_index",
-    "residx_atom14_to_atom37",
-    "residx_atom37_to_atom14",
-    "resolution",
-    "rigidgroups_alt_gt_frames",
-    "rigidgroups_group_exists",
-    "rigidgroups_group_is_ambiguous",
-    "rigidgroups_gt_exists",
-    "rigidgroups_gt_frames",
-    "seq_length",
-    "seq_mask",
-    "target_feat",
-    "template_aatype",
-    "template_all_atom_mask",
-    "template_all_atom_positions",
-    "template_alt_torsion_angles_sin_cos",
-    "template_backbone_rigid_mask",
-    "template_backbone_rigid_tensor",
-    "template_mask",
-    "template_pseudo_beta",
-    "template_pseudo_beta_mask",
-    "template_sum_probs",
-    "template_torsion_angles_mask",
-    "template_torsion_angles_sin_cos",
-    "true_msa",
-    "use_clamped_fape",
-)
+class Features:
+    aatype: Optional[np.ndarray] = None
+    all_atom_mask: Optional[np.ndarray] = None
+    all_atom_positions: Optional[np.ndarray] = None
+    alt_chi_angles: Optional[np.ndarray] = None
+    atom14_alt_gt_exists: Optional[np.ndarray] = None
+    atom14_alt_gt_positions: Optional[np.ndarray] = None
+    atom14_atom_exists: Optional[np.ndarray] = None
+    atom14_atom_is_ambiguous: Optional[np.ndarray] = None
+    atom14_gt_exists: Optional[np.ndarray] = None
+    atom14_gt_positions: Optional[np.ndarray] = None
+    atom37_atom_exists: Optional[np.ndarray] = None
+    backbone_rigid_mask: Optional[np.ndarray] = None
+    backbone_rigid_tensor: Optional[np.ndarray] = None
+    between_segment_residues: Optional[np.ndarray] = None
+    bert_mask: Optional[np.ndarray] = None
+    chi_angles_sin_cos: Optional[np.ndarray] = None
+    chi_mask: Optional[np.ndarray] = None
+    deletion_matrix_int: Optional[np.ndarray] = None
+    extra_deletion_value: Optional[np.ndarray] = None
+    extra_has_deletion: Optional[np.ndarray] = None
+    extra_msa: Optional[np.ndarray] = None
+    extra_msa_mask: Optional[np.ndarray] = None
+    extra_msa_row_mask: Optional[np.ndarray] = None
+    is_distillation: Optional[np.ndarray] = None
+    msa: Optional[np.ndarray] = None
+    msa_feat: Optional[np.ndarray] = None
+    msa_mask: Optional[np.ndarray] = None
+    msa_row_mask: Optional[np.ndarray] = None
+    no_recycling_iters: Optional[np.ndarray] = None
+    num_alignments: Optional[np.ndarray] = None
+    pseudo_beta: Optional[np.ndarray] = None
+    pseudo_beta_mask: Optional[np.ndarray] = None
+    residue_index: Optional[np.ndarray] = None
+    residx_atom14_to_atom37: Optional[np.ndarray] = None
+    residx_atom37_to_atom14: Optional[np.ndarray] = None
+    resolution: Optional[np.ndarray] = None
+    rigidgroups_alt_gt_frames: Optional[np.ndarray] = None
+    rigidgroups_group_exists: Optional[np.ndarray] = None
+    rigidgroups_group_is_ambiguous: Optional[np.ndarray] = None
+    rigidgroups_gt_exists: Optional[np.ndarray] = None
+    rigidgroups_gt_frames: Optional[np.ndarray] = None
+    seq_length: Optional[np.ndarray] = None
+    seq_mask: Optional[np.ndarray] = None
+    target_feat: Optional[np.ndarray] = None
+    template_aatype: Optional[np.ndarray] = None
+    template_all_atom_mask: Optional[np.ndarray] = None
+    template_all_atom_positions: Optional[np.ndarray] = None
+    template_domain_names: Optional[np.ndarray] = None
+    template_alt_torsion_angles_sin_cos: Optional[np.ndarray] = None
+    template_backbone_rigid_mask: Optional[np.ndarray] = None
+    template_backbone_rigid_tensor: Optional[np.ndarray] = None
+    template_mask: Optional[np.ndarray] = None
+    template_pseudo_beta: Optional[np.ndarray] = None
+    template_pseudo_beta_mask: Optional[np.ndarray] = None
+    template_sum_probs: Optional[np.ndarray] = None
+    template_torsion_angles_mask: Optional[np.ndarray] = None
+    template_torsion_angles_sin_cos: Optional[np.ndarray] = None
+    true_msa: Optional[np.ndarray] = None
+    use_clamped_fape: Optional[np.ndarray] = None
 
 
 @dataclass
@@ -133,8 +81,6 @@ class MaskedMSA:
 
 @dataclass
 class CommonData:
-    # feat: CommonFeatures
-    feat: Tuple[str, ...] = common_features
     masked_msa: MaskedMSA = MaskedMSA()
     max_recycling_iters: int = 3
     msa_cluster_features: bool = True
@@ -161,65 +107,14 @@ class CommonData:
 
 
 @dataclass
-class SupervisedData:
-    clamp_prob: float = 0.9
-    supervised_features: Tuple[str, ...] = (
-        "all_atom_mask",
-        "all_atom_positions",
-        "resolution",
-        "use_clamped_fape",
-        "is_distillation",
-    )
-
-
-@dataclass
 class PredictData:
-    fixed_size: bool = True
     subsample_templates: bool = False
     masked_msa_replace_fraction: float = 0.15
     max_msa_clusters: int = 512
     max_extra_msa: int = 1024
     max_template_hits: int = 4
     max_templates: int = 4
-    crop: bool = False
-    crop_size: Tuple[int, int] = None
-    supervised: bool = False
     uniform_recycling: bool = False
-
-
-@dataclass
-class EvalData:
-    fixed_size: bool = True
-    subsample_templates: bool = False
-    masked_msa_replace_fraction: float = 0.15
-    max_msa_clusters: int = 128
-    max_extra_msa: int = 1024
-    max_template_hits: int = 4
-    max_templates: int = 4
-    crop: bool = False
-    crop_size: Tuple[int, int] = None
-    supervised: bool = True
-    uniform_recycling: bool = False
-
-
-@dataclass
-class TrainData:
-    fixed_size: bool = True
-    subsample_templates: bool = True
-    masked_msa_replace_fraction: float = 0.15
-    max_msa_clusters: int = 128
-    max_extra_msa: int = 1024
-    max_template_hits: int = 4
-    max_templates: int = 4
-    shuffle_top_k_prefiltered: int = 20
-    crop: bool = True
-    crop_size: int = 256
-    supervised: bool = True
-    clamp_prob: float = 0.9
-    max_distillation_msa_clusters: int = 1000
-    uniform_recycling: bool = True
-    distillation_prob: float = 0.75
-
 
 @dataclass
 class DataModule:
@@ -229,10 +124,7 @@ class DataModule:
 @dataclass
 class DataConfig:
     common: CommonData = CommonData()
-    supervised: SupervisedData = SupervisedData()
     predict: PredictData = PredictData()
-    eval: EvalData = EvalData()
-    train: TrainData = TrainData()
     data_module: DataModule = DataModule()
 
 
@@ -599,13 +491,6 @@ class OpenFoldConfig:
 
 
 finetuning_config = OpenFoldConfig(
-    data=DataConfig(
-        train=TrainData(
-            crop_size=384,
-            max_extra_msa=5120,
-            max_msa_clusters=512,
-        ),
-    ),
     loss=LossConfig(
         violation=ViolationLoss(
             weight=1.0,
@@ -617,13 +502,6 @@ finetuning_config = OpenFoldConfig(
 )
 
 finetuning_ptm_config = OpenFoldConfig(
-    data=DataConfig(
-        train=TrainData(
-            crop_size=384,
-            max_extra_msa=5120,
-            max_msa_clusters=512,
-        ),
-    ),
     loss=LossConfig(
         violation=ViolationLoss(
             weight=1.0,
@@ -638,13 +516,6 @@ finetuning_ptm_config = OpenFoldConfig(
 )
 
 finetuning_no_templ_config = OpenFoldConfig(
-    data=DataConfig(
-        train=TrainData(
-            crop_size=384,
-            max_extra_msa=5120,
-            max_msa_clusters=512,
-        ),
-    ),
     model=ModelConfig(
         template=TemplateConfig(
             enabled=False,
@@ -661,13 +532,6 @@ finetuning_no_templ_config = OpenFoldConfig(
 )
 
 finetuning_no_templ_ptm_config = OpenFoldConfig(
-    data=DataConfig(
-        train=TrainData(
-            crop_size=384,
-            max_extra_msa=5120,
-            max_msa_clusters=512,
-        ),
-    ),
     model=ModelConfig(
         template=TemplateConfig(
             enabled=False,

@@ -142,7 +142,7 @@ class AlphaFold(nn.Module):
                 use_unit_vector=self.config.template.use_unit_vector,
                 inf=self.config.template.inf,
                 eps=self.config.template.eps,
-                **self.config.template.distogram,
+                **asdict(self.config.template.distogram),
             ).to(z.dtype)
             t = self.template_pair_embedder(t)
 
@@ -495,6 +495,9 @@ class AlphaFold(nn.Module):
                     # Sidestep AMP bug (PyTorch issue #65766)
                     if torch.is_autocast_enabled():
                         torch.clear_autocast_cache()
+
+                for k,v in feats.items():
+                    print(k, v.shape)
 
                 # Run the next iteration of the model
                 outputs, m_1_prev, z_prev, x_prev = self.iteration(

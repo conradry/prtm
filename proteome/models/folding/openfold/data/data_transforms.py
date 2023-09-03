@@ -128,11 +128,9 @@ def squeeze_features(protein):
     """Remove singleton and repeated dimensions in protein features."""
     protein["aatype"] = torch.argmax(protein["aatype"], dim=-1)
     for k in [
-        "domain_name",
         "msa",
         "num_alignments",
         "seq_length",
-        "sequence",
         "superfamily",
         "deletion_matrix",
         "resolution",
@@ -1119,6 +1117,9 @@ def random_crop_to_size(
 
     num_res_crop_start = _randint(0, right_anchor)
 
+    print("Shape schema", shape_schema)
+    print("Num_res", NUM_RES)
+    print("Protein keys", protein.keys())
     for k, v in protein.items():
         if k not in shape_schema or (
             "template" not in k and NUM_RES not in shape_schema[k]
