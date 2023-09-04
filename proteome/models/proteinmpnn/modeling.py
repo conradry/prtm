@@ -7,9 +7,9 @@ import torch
 
 from proteome import protein
 from proteome.constants.residue_constants import proteinmppn_restypes
-from proteome.models.design.proteinmpnn import config
-from proteome.models.design.proteinmpnn.featurizer import tied_featurize, get_sequence_scores, decode_sequence
-from proteome.models.design.proteinmpnn.model import ProteinMPNN
+from proteome.models.proteinmpnn import config
+from proteome.models.proteinmpnn.featurizer import tied_featurize, get_sequence_scores, decode_sequence
+from proteome.models.proteinmpnn.model import ProteinMPNN
 
 PROTEINMPNN_MODEL_URLS = {
     "vanilla_model-2": "https://github.com/dauparas/ProteinMPNN/raw/main/vanilla_model_weights/v_48_002.pt",

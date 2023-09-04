@@ -18,10 +18,10 @@ import math
 
 import torch
 import torch.nn as nn
-from proteome.models.design.genie.modules.primitives import (
+from proteome.models.genie.modules.primitives import (
     Linear, ipa_point_weights_init_)
-from proteome.models.design.genie.utils.affine_utils import T
-from proteome.models.design.genie.utils.tensor_utils import (
+from proteome.models.genie.utils.affine_utils import T
+from proteome.models.genie.utils.tensor_utils import (
     flatten_final_dims, permute_final_dims)
 
 

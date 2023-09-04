@@ -6,11 +6,11 @@ import numpy as np
 import torch
 
 from proteome import protein
-from proteome.models.folding.esm import config
-from proteome.models.folding.esm.esmfold import ESMFold
-from proteome.models.folding.esm.inverse_folding.gvp_transformer import GVPTransformerModel
-from proteome.models.folding.esm.inverse_folding.util import score_sequence
-from proteome.models.folding.openfold.utils.feats import atom14_to_atom37
+from proteome.models.esm import config
+from proteome.models.esm.esmfold import ESMFold
+from proteome.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
+from proteome.models.esm.inverse_folding.util import score_sequence
+from proteome.models.openfold.utils.feats import atom14_to_atom37
 
 ESM_MODEL_URLS = {
     "esm2_3B": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t36_3B_UR50D.pt",

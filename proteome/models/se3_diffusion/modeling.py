@@ -5,10 +5,10 @@ import numpy as np
 import torch
 from proteome import protein
 from proteome.constants import residue_constants
-from proteome.models.design.se3_diffusion import config
-from proteome.models.design.se3_diffusion.sampler import Sampler
-from proteome.models.design.se3_diffusion.score_network import ScoreNetwork
-from proteome.models.design.se3_diffusion.se3_diffuser import SE3Diffuser
+from proteome.models.se3_diffusion import config
+from proteome.models.se3_diffusion.sampler import Sampler
+from proteome.models.se3_diffusion.score_network import ScoreNetwork
+from proteome.models.se3_diffusion.se3_diffuser import SE3Diffuser
 
 SE3_MODEL_URLS = {
     "best": "https://github.com/jasonkyuyim/se3_diffusion/raw/master/weights/best_weights.pth",

@@ -18,8 +18,8 @@ from functools import partialmethod
 
 import torch
 import torch.nn as nn
-from proteome.models.design.genie.modules.primitives import Attention, Linear
-from proteome.models.design.genie.utils.tensor_utils import (
+from proteome.models.genie.modules.primitives import Attention, Linear
+from proteome.models.genie.utils.tensor_utils import (
     chunk_layer, flatten_final_dims, permute_final_dims)
 
 

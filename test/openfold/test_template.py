@@ -15,11 +15,11 @@
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.model.template import (
+from proteome.models.openfold.model.template import (
     TemplatePairStack,
     TemplatePointwiseAttention,
 )
-from proteome.models.folding.openfold.utils.tensor_utils import tree_map
+from proteome.models.openfold.utils.tensor_utils import tree_map
 
 from .compare_utils import (
     alphafold_is_installed,

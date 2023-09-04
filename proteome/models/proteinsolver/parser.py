@@ -11,7 +11,7 @@ from typing import Dict, NamedTuple, Tuple, Union
 import numpy as np
 from Bio import File
 from Bio.File import as_handle
-from proteome.models.design.proteinsolver.type_definitions import StructureBuilder
+from proteome.models.proteinsolver.type_definitions import StructureBuilder
 
 logger = logging.getLogger(__name__)
 

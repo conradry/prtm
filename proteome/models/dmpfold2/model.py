@@ -6,7 +6,7 @@ from typing import Dict, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.folding.dmpfold2 import config
+from proteome.models.dmpfold2 import config
 from torch.utils.checkpoint import checkpoint_sequential
 
 NUM_CHANNELS = 442

@@ -6,12 +6,12 @@ import numpy as np
 import torch
 import tree
 from proteome.constants import residue_constants
-from proteome.models.design.se3_diffusion import all_atom, config
-from proteome.models.design.se3_diffusion import data_utils as du
-from proteome.models.design.se3_diffusion import rigid_utils as ru
-from proteome.models.design.se3_diffusion.score_network import ScoreNetwork
-from proteome.models.design.se3_diffusion.se3_diffuser import SE3Diffuser
-from proteome.models.folding.openfold.data import data_transforms
+from proteome.models.se3_diffusion import all_atom, config
+from proteome.models.se3_diffusion import data_utils as du
+from proteome.models.se3_diffusion import rigid_utils as ru
+from proteome.models.se3_diffusion.score_network import ScoreNetwork
+from proteome.models.se3_diffusion.se3_diffuser import SE3Diffuser
+from proteome.models.openfold.data import data_transforms
 
 CA_IDX = residue_constants.atom_order["CA"]
 

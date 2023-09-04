@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from proteome.models.design.proteinmpnn import config
+from proteome.models.proteinmpnn import config
 from proteome.constants.residue_constants import proteinmppn_restypes
 
 # A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design

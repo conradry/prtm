@@ -6,12 +6,12 @@ import numpy as np
 import torch
 from proteome import protein
 from proteome.constants import residue_constants
-from proteome.models.design.eigenfold import config, schedule
-from proteome.models.design.eigenfold.sampling import logp, reverse_sample
-from proteome.models.design.eigenfold.score_model import ScoreModel
-from proteome.models.design.eigenfold.sde import PolymerSDE
-from proteome.models.folding.omegafold.modeling import OmegaFoldForFolding
-from proteome.models.folding.omegafold.config import InferenceConfig as OFInferenceConfig
+from proteome.models.eigenfold import config, schedule
+from proteome.models.eigenfold.sampling import logp, reverse_sample
+from proteome.models.eigenfold.score_model import ScoreModel
+from proteome.models.eigenfold.sde import PolymerSDE
+from proteome.models.omegafold.modeling import OmegaFoldForFolding
+from proteome.models.omegafold.config import InferenceConfig as OFInferenceConfig
 from torch_geometric.data import HeteroData
 
 MODEL_URLS = {

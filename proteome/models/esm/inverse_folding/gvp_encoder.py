@@ -9,10 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from proteome.models.folding.esm.inverse_folding.features import GVPGraphEmbedding
-from proteome.models.folding.esm.inverse_folding.gvp_modules import GVPConvLayer, LayerNorm 
-from proteome.models.folding.esm.inverse_folding.gvp_utils import unflatten_graph
-from proteome.models.folding.esm import config
+from proteome.models.esm.inverse_folding.features import GVPGraphEmbedding
+from proteome.models.esm.inverse_folding.gvp_modules import GVPConvLayer, LayerNorm 
+from proteome.models.esm.inverse_folding.gvp_utils import unflatten_graph
+from proteome.models.esm import config
 
 
 

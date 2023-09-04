@@ -15,12 +15,12 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from proteome.models.folding.esm.modules import SinusoidalPositionalEmbedding
-from proteome.models.folding.esm.inverse_folding.features import GVPInputFeaturizer, DihedralFeatures
-from proteome.models.folding.esm.inverse_folding.gvp_encoder import GVPEncoder
-from proteome.models.folding.esm.inverse_folding.transformer_layer import TransformerEncoderLayer
-from proteome.models.folding.esm.inverse_folding.util import nan_to_num, get_rotation_frames, rotate, rbf
-from proteome.models.folding.esm import config
+from proteome.models.esm.modules import SinusoidalPositionalEmbedding
+from proteome.models.esm.inverse_folding.features import GVPInputFeaturizer, DihedralFeatures
+from proteome.models.esm.inverse_folding.gvp_encoder import GVPEncoder
+from proteome.models.esm.inverse_folding.transformer_layer import TransformerEncoderLayer
+from proteome.models.esm.inverse_folding.util import nan_to_num, get_rotation_frames, rotate, rbf
+from proteome.models.esm import config
 
 
 class GVPTransformerEncoder(nn.Module):

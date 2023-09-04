@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from proteome.models.design.protein_generator.attention_module import (
+from proteome.models.protein_generator.attention_module import (
     Attention,
     AttentionWithBias,
     FeedForwardLayer,
 )
-from proteome.models.design.protein_generator.track_module import PairStr2Pair
-from proteome.models.design.protein_generator.util import (
+from proteome.models.protein_generator.track_module import PairStr2Pair
+from proteome.models.protein_generator.util import (
     create_custom_forward,
     init_lecun_normal,
     rbf,

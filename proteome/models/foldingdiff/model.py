@@ -16,8 +16,8 @@ from typing import *
 
 import pytorch_lightning as pl
 import torch
-from proteome.models.design.foldingdiff import config, nerf, utils
-from proteome.models.design.foldingdiff.datasets import \
+from proteome.models.foldingdiff import config, nerf, utils
+from proteome.models.foldingdiff.datasets import \
     FEATURE_SET_NAMES_TO_ANGULARITY
 from torch import nn
 from torch.nn import functional as F

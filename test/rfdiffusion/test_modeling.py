@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.rfdiffusion import config
-from proteome.models.design.rfdiffusion.modeling import (
+from proteome.models.rfdiffusion import config
+from proteome.models.rfdiffusion.modeling import (
     RFDiffusionForStructureDesign,
 )
 

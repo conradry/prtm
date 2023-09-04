@@ -6,8 +6,8 @@ from typing import Callable, List, Optional, Sequence
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.design.se3_diffusion import all_atom
-from proteome.models.design.se3_diffusion.rigid_utils import Rigid
+from proteome.models.se3_diffusion import all_atom
+from proteome.models.se3_diffusion.rigid_utils import Rigid
 from scipy.stats import truncnorm
 
 

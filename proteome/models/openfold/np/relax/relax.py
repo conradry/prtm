@@ -19,7 +19,7 @@ from typing import Any, Dict, Sequence, Tuple
 import numpy as np
 
 from proteome import protein
-from proteome.models.folding.openfold.np.relax import amber_minimize, utils
+from proteome.models.openfold.np.relax import amber_minimize, utils
 
 
 class AmberRelaxation(object):

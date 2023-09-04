@@ -9,9 +9,9 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from proteome.models.folding.esm import config
-from proteome.models.folding.esm import data as esm_data
-from proteome.models.folding.esm.modules import (ContactPredictionHead,
+from proteome.models.esm import config
+from proteome.models.esm import data as esm_data
+from proteome.models.esm.modules import (ContactPredictionHead,
                                                  ESM1bLayerNorm, RobertaLMHead,
                                                  TransformerLayer)
 

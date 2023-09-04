@@ -24,7 +24,7 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 
-from proteome.models.folding.omegafold import config, utils
+from proteome.models.omegafold import config, utils
 
 
 def softmax(

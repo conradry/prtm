@@ -4,8 +4,8 @@ import string
 import numpy as np
 import torch
 
-import proteome.models.folding.rosettafold.util as util
-from proteome.models.folding.rosettafold.ffindex import *
+import proteome.models.rosettafold.util as util
+from proteome.models.rosettafold.ffindex import *
 
 to1letter = {
     "ALA": "A",

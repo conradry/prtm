@@ -10,10 +10,10 @@ from torch import Tensor
 import torch.nn.functional as F
 
 
-from proteome.models.folding.esm.inverse_folding.gvp_transformer_encoder import GVPTransformerEncoder
-from proteome.models.folding.esm.inverse_folding.transformer_decoder import TransformerDecoder
-from proteome.models.folding.esm.inverse_folding.util import rotate, CoordBatchConverter
-from proteome.models.folding.esm import config
+from proteome.models.esm.inverse_folding.gvp_transformer_encoder import GVPTransformerEncoder
+from proteome.models.esm.inverse_folding.transformer_decoder import TransformerDecoder
+from proteome.models.esm.inverse_folding.util import rotate, CoordBatchConverter
+from proteome.models.esm import config
 
 
 class GVPTransformerModel(nn.Module):

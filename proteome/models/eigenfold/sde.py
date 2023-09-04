@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from proteome.models.design.eigenfold.schedule import EntropySchedule
+from proteome.models.eigenfold.schedule import EntropySchedule
 
 FLOAT_TYPE = np.float32
 

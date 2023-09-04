@@ -4,7 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.folding.rosettafold.performer_pytorch import SelfAttention
+from proteome.models.rosettafold.performer_pytorch import SelfAttention
 
 
 def _get_clones(module, N):

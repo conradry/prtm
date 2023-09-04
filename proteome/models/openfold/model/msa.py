@@ -18,18 +18,18 @@ from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.model.primitives import (
+from proteome.models.openfold.model.primitives import (
     Attention,
     GlobalAttention,
     LayerNorm,
     Linear,
     _attention_chunked_trainable,
 )
-from proteome.models.folding.openfold.utils.checkpointing import (
+from proteome.models.openfold.utils.checkpointing import (
     get_checkpoint_fn,
 )
-from proteome.models.folding.openfold.utils.chunk_utils import chunk_layer
-from proteome.models.folding.openfold.utils.tensor_utils import (
+from proteome.models.openfold.utils.chunk_utils import chunk_layer
+from proteome.models.openfold.utils.tensor_utils import (
     flatten_final_dims,
     permute_final_dims,
 )

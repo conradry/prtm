@@ -1,5 +1,5 @@
 import torch
-from proteome.models.design.genie.utils.geo_utils import distance
+from proteome.models.genie.utils.geo_utils import distance
 
 
 def get_template_fn(template):

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from proteome import protein
-from proteome.models.folding.dmpfold2 import config, model, utils
+from proteome.models.dmpfold2 import config, model, utils
 from proteome.query.pipeline import QueryPipelines
 
 DMPFOLD_MODEL_URLS = {

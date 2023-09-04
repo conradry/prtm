@@ -69,10 +69,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from proteome.models.folding.esm.inverse_folding.gvp_utils import flatten_graph
-from proteome.models.folding.esm.inverse_folding.gvp_modules import GVP, LayerNorm
-from proteome.models.folding.esm.inverse_folding.util import normalize, norm, nan_to_num, rbf
-from proteome.models.folding.esm import config
+from proteome.models.esm.inverse_folding.gvp_utils import flatten_graph
+from proteome.models.esm.inverse_folding.gvp_modules import GVP, LayerNorm
+from proteome.models.esm.inverse_folding.util import normalize, norm, nan_to_num, rbf
+from proteome.models.esm import config
 
 
 class GVPInputFeaturizer(nn.Module):

@@ -4,7 +4,7 @@ from typing import Dict, List
 import numpy as np
 import torch
 from proteome.constants.residue_constants import proteinmppn_restypes
-from proteome.models.design.proteinmpnn.config import TiedFeaturizeOutput, DesignableProtein
+from proteome.models.proteinmpnn.config import TiedFeaturizeOutput, DesignableProtein
 
 
 def get_sequence_scores(S, log_probs, mask):

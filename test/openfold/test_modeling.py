@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.folding.openfold.modeling import (
+from proteome.models.openfold.modeling import (
     OPENFOLD_MODEL_URLS,
     OpenFoldForFolding,
 )

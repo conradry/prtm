@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 import torch
-from proteome.models.design.se3_diffusion import data_utils as du
+from proteome.models.se3_diffusion import data_utils as du
 
 
 def igso3_expansion(omega, eps, L=1000, use_torch=False):

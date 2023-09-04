@@ -23,7 +23,7 @@ import torch
 from torch import nn
 
 from proteome.constants import residue_constants as rc
-from proteome.models.folding.omegafold import (
+from proteome.models.omegafold import (
     confidence,
     config,
     decode,

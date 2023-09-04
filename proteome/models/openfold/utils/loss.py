@@ -23,10 +23,10 @@ import torch.nn as nn
 from torch.distributions.bernoulli import Bernoulli
 
 from proteome.constants import residue_constants
-from proteome.models.folding.openfold.config import FAPELoss
-from proteome.models.folding.openfold.utils import feats
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.utils.tensor_utils import (
+from proteome.models.openfold.config import FAPELoss
+from proteome.models.openfold.utils import feats
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.openfold.utils.tensor_utils import (
     batched_gather, masked_mean, permute_final_dims, tensor_tree_map, tree_map)
 
 

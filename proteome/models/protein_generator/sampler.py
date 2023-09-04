@@ -4,17 +4,17 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-import proteome.models.design.protein_generator.diff_utils as diff_utils
-import proteome.models.design.protein_generator.parsers_inference as parsers
+import proteome.models.protein_generator.diff_utils as diff_utils
+import proteome.models.protein_generator.parsers_inference as parsers
 from proteome import protein
 from proteome.constants.residue_constants import restypes_with_x_dash
-from proteome.models.design.protein_generator import config
-from proteome.models.design.protein_generator.calc_dssp import annotate_sse
-from proteome.models.design.protein_generator.contigs import *
-from proteome.models.design.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
-from proteome.models.design.protein_generator.kinematics import get_init_xyz, xyz_to_t2d
-from proteome.models.design.protein_generator.potentials import POTENTIALS
-from proteome.models.design.protein_generator.util import *
+from proteome.models.protein_generator import config
+from proteome.models.protein_generator.calc_dssp import annotate_sse
+from proteome.models.protein_generator.contigs import *
+from proteome.models.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
+from proteome.models.protein_generator.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.models.protein_generator.potentials import POTENTIALS
+from proteome.models.protein_generator.util import *
 
 
 class SeqDiffSampler:

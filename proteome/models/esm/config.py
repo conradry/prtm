@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 import numpy as np
 
 from proteome import protein
-from proteome.models.folding.esm.data import Alphabet
+from proteome.models.esm.data import Alphabet
 
 
 @dataclass

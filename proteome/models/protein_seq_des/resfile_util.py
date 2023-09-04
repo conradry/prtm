@@ -2,7 +2,7 @@
 
 import re
 
-from proteome.models.design.protein_seq_des import atoms
+from proteome.models.protein_seq_des import atoms
 
 
 def read_resfile(filename):

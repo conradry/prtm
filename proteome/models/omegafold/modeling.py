@@ -6,7 +6,7 @@ import torch
 
 from proteome import protein
 from proteome.constants import residue_constants
-from proteome.models.folding.omegafold import config, model, utils
+from proteome.models.omegafold import config, model, utils
 
 OMEGAFOLD_MODEL_URLS = {
     "model-1": "https://helixon.s3.amazonaws.com/release1.pt",

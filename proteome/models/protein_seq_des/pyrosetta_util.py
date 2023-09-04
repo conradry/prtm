@@ -1,4 +1,4 @@
-from proteome.models.design.protein_seq_des import atoms
+from proteome.models.protein_seq_des import atoms
 from pyrosetta import *
 from pyrosetta.rosetta import *
 

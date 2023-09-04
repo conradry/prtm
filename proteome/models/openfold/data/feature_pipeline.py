@@ -18,8 +18,8 @@ from typing import Dict, Mapping, Sequence
 
 import numpy as np
 import torch
-from proteome.models.folding.openfold.config import DataConfig, Features
-from proteome.models.folding.openfold.data import input_pipeline
+from proteome.models.openfold.config import DataConfig, Features
+from proteome.models.openfold.data import input_pipeline
 
 FeatureDict = Mapping[str, np.ndarray]
 TensorDict = Dict[str, torch.Tensor]

@@ -6,9 +6,9 @@ from typing import *
 
 import numpy as np
 import torch
-from proteome.models.design.foldingdiff import beta_schedules
-from proteome.models.design.foldingdiff import datasets as dsets
-from proteome.models.design.foldingdiff import utils
+from proteome.models.foldingdiff import beta_schedules
+from proteome.models.foldingdiff import datasets as dsets
+from proteome.models.foldingdiff import utils
 from torch import nn
 from tqdm.auto import tqdm
 

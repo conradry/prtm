@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 from proteome.constants.chemical import *
-from proteome.models.design.protein_generator.scoring import *
+from proteome.models.protein_generator.scoring import *
 
 
 def th_ang_v(ab, bc, eps: float = 1e-8):

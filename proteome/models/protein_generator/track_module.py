@@ -4,9 +4,9 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from icecream import ic
 from opt_einsum import contract as einsum
-from proteome.models.design.protein_generator.attention_module import *
-from proteome.models.design.protein_generator.se3_network import SE3TransformerWrapper
-from proteome.models.design.protein_generator.util import *
+from proteome.models.protein_generator.attention_module import *
+from proteome.models.protein_generator.se3_network import SE3TransformerWrapper
+from proteome.models.protein_generator.util import *
 
 # Components for three-track blocks
 # 1. MSA -> MSA update (biased attention. bias from pair & structure)

@@ -3,7 +3,7 @@ import re
 import string
 
 import numpy as np
-import proteome.models.design.protein_generator.util as util
+import proteome.models.protein_generator.util as util
 import scipy
 import scipy.spatial
 

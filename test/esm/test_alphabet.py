@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-from proteome.models.folding.esm.data import Alphabet
+from proteome.models.esm.data import Alphabet
 
 
 def _test_esm1b(alphabet: Alphabet):

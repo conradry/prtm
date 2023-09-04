@@ -21,7 +21,7 @@ import typing
 
 import torch
 from proteome.constants import residue_constants as rc
-from proteome.models.folding.omegafold import config, modules, utils
+from proteome.models.omegafold import config, modules, utils
 from torch import nn
 
 

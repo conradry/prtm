@@ -9,8 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dgl.nn.pytorch.glob import AvgPooling, MaxPooling
 from dgl.nn.pytorch.softmax import edge_softmax
-from proteome.models.folding.rosettafold.equivariant_attention.fibers import Fiber, fiber2head
-from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn import utils_steerable
+from proteome.models.rosettafold.equivariant_attention.fibers import Fiber, fiber2head
+from proteome.models.rosettafold.equivariant_attention.from_se3cnn import utils_steerable
 from packaging import version
 
 

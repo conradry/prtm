@@ -2,13 +2,13 @@ import math
 from typing import List
 
 import numpy as np
-import proteome.models.design.protein_seq_des.data as data
-import proteome.models.design.protein_seq_des.pyrosetta_util as putil
-import proteome.models.design.protein_seq_des.resfile_util as resfile_util
-import proteome.models.design.protein_seq_des.sampler_util as sampler_util
+import proteome.models.protein_seq_des.data as data
+import proteome.models.protein_seq_des.pyrosetta_util as putil
+import proteome.models.protein_seq_des.resfile_util as resfile_util
+import proteome.models.protein_seq_des.sampler_util as sampler_util
 import torch
 from proteome import protein
-from proteome.models.design.protein_seq_des import atoms, config
+from proteome.models.protein_seq_des import atoms, config
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
 from pyrosetta.rosetta.protocols.denovo_design.filters import \
     ExposedHydrophobicsFilterCreator

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.se3_diffusion import modeling, config
+from proteome.models.se3_diffusion import modeling, config
 
 from ..test_utils import _compare_structures
 

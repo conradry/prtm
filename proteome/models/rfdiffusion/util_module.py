@@ -4,7 +4,7 @@ import dgl
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.design.rfdiffusion.util import (
+from proteome.models.rfdiffusion.util import (
     RTs_by_torsion,
     base_indices,
     rigid_from_3_points,

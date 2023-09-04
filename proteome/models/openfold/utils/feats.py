@@ -22,8 +22,8 @@ import torch.nn as nn
 
 from proteome import protein
 from proteome.constants import residue_constants as rc
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.utils.tensor_utils import (
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.openfold.utils.tensor_utils import (
     batched_gather, one_hot, tensor_tree_map, tree_map)
 
 

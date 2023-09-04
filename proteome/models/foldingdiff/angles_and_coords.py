@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from biotite.sequence import ProteinSequence
 from biotite.structure.io.pdb import PDBFile
-from proteome.models.design.foldingdiff import nerf
+from proteome.models.foldingdiff import nerf
 
 EXHAUSTIVE_ANGLES = ["phi", "psi", "omega", "tau", "CA:C:1N", "C:1N:1CA"]
 EXHAUSTIVE_DISTS = ["0C:1N", "N:CA", "CA:C"]

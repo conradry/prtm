@@ -2,24 +2,24 @@ import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 
-from proteome.models.folding.rosettafold.attention_module import (
+from proteome.models.rosettafold.attention_module import (
     LayerNorm,
     get_bonded_neigh,
 )
-from proteome.models.folding.rosettafold.attention_module import (
+from proteome.models.rosettafold.attention_module import (
     make_graph as make_graph_topk,
 )
-from proteome.models.folding.rosettafold.attention_module import rbf
-from proteome.models.folding.rosettafold.init_str_generator import (
+from proteome.models.rosettafold.attention_module import rbf
+from proteome.models.rosettafold.init_str_generator import (
     UniMPBlock,
     get_seqsep,
     make_graph,
 )
-from proteome.models.folding.rosettafold.rosetta_transformer import (
+from proteome.models.rosettafold.rosetta_transformer import (
     _get_clones,
     create_custom_forward,
 )
-from proteome.models.folding.rosettafold.se3_network import SE3Transformer
+from proteome.models.rosettafold.se3_network import SE3Transformer
 
 # Re-generate initial coordinates based on 1) final pair features 2) predicted distogram
 # Then, refine it through multiple SE3 transformer block

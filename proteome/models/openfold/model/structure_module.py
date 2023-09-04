@@ -25,14 +25,14 @@ import torch.nn as nn
 from proteome.constants.residue_constants import (
     restype_atom14_mask, restype_atom14_rigid_group_positions,
     restype_atom14_to_rigid_group, restype_rigid_group_default_frame)
-from proteome.models.folding.openfold.model.primitives import (
+from proteome.models.openfold.model.primitives import (
     LayerNorm, Linear, ipa_point_weights_init_)
-from proteome.models.folding.openfold.utils.feats import (
+from proteome.models.openfold.utils.feats import (
     frames_and_literature_positions_to_atom14_pos, torsion_angles_to_frames)
-from proteome.models.folding.openfold.utils.precision_utils import \
+from proteome.models.openfold.utils.precision_utils import \
     is_fp16_enabled
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.utils.tensor_utils import (
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.openfold.utils.tensor_utils import (
     dict_multimap, flatten_final_dims, permute_final_dims)
 
 

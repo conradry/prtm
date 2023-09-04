@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 from torch.nn import LayerNorm
 import torch.nn.functional as F
-from proteome.models.folding.esm.multihead_attention import MultiheadAttention
+from proteome.models.esm.multihead_attention import MultiheadAttention
 from torch import Tensor
-from proteome.models.folding.esm import config
+from proteome.models.esm import config
 
 
 class TransformerEncoderLayer(nn.Module):

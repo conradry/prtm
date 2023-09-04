@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from proteome.models.folding.rosettafold.config import TRFoldConfig
+from proteome.models.rosettafold.config import TRFoldConfig
 
 
 def perturb_init(xyz, batch, noise=0.5):

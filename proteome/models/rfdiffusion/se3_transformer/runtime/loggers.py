@@ -30,7 +30,7 @@ import dllogger
 import torch.distributed as dist
 import wandb
 from dllogger import Verbosity
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import rank_zero_only
+from proteome.models.rfdiffusion.se3_transformer.runtime.utils import rank_zero_only
 
 
 class Logger(ABC):

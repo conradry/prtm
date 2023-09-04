@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-from proteome.models.design.protein_generator.se3_transformer.model import (
+from proteome.models.protein_generator.se3_transformer.model import (
     SE3Transformer,
 )
-from proteome.models.design.protein_generator.se3_transformer.model.fiber import Fiber
-from proteome.models.design.protein_generator.util import init_lecun_normal_param
+from proteome.models.protein_generator.se3_transformer.model.fiber import Fiber
+from proteome.models.protein_generator.util import init_lecun_normal_param
 
 
 class SE3TransformerWrapper(nn.Module):

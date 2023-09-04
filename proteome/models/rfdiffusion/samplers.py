@@ -6,15 +6,15 @@ import torch
 import torch.nn.functional as nn
 
 from proteome import protein
-from proteome.models.design.rfdiffusion import config
-from proteome.models.design.rfdiffusion import inference_utils as iu
-from proteome.models.design.rfdiffusion import symmetry, util
-from proteome.models.design.rfdiffusion.contigs import ContigMap
-from proteome.models.design.rfdiffusion.diffusion import Diffuser
-from proteome.models.design.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
-from proteome.models.design.rfdiffusion.potentials_manager import PotentialManager
-from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
-from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.rfdiffusion import config
+from proteome.models.rfdiffusion import inference_utils as iu
+from proteome.models.rfdiffusion import symmetry, util
+from proteome.models.rfdiffusion.contigs import ContigMap
+from proteome.models.rfdiffusion.diffusion import Diffuser
+from proteome.models.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.models.rfdiffusion.potentials_manager import PotentialManager
+from proteome.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
+from proteome.models.rfdiffusion.util_module import ComputeAllAtomCoords
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 

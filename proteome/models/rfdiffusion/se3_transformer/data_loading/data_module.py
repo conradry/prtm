@@ -24,7 +24,7 @@
 from abc import ABC
 
 import torch.distributed as dist
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import get_local_rank
+from proteome.models.rfdiffusion.se3_transformer.runtime.utils import get_local_rank
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
 

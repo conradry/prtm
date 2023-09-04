@@ -16,8 +16,8 @@
 
 import torch
 import torch.nn as nn
-from proteome.models.design.genie.modules.primitives import Linear
-from proteome.models.design.genie.utils.tensor_utils import chunk_layer
+from proteome.models.genie.modules.primitives import Linear
+from proteome.models.genie.utils.tensor_utils import chunk_layer
 
 
 class PairTransition(nn.Module):

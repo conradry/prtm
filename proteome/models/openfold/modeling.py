@@ -5,10 +5,10 @@ import numpy as np
 import torch
 
 from proteome import protein
-from proteome.models.folding.openfold import config
-from proteome.models.folding.openfold.data import data_pipeline, feature_pipeline
-from proteome.models.folding.openfold.model import model
-from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
+from proteome.models.openfold import config
+from proteome.models.openfold.data import data_pipeline, feature_pipeline
+from proteome.models.openfold.model import model
+from proteome.models.openfold.utils.tensor_utils import tensor_tree_map
 from proteome.query.pipeline import QueryPipelines
 from proteome.utils import hub_utils
 

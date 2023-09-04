@@ -27,9 +27,9 @@ import numpy as np
 
 from proteome import parsers
 from proteome.constants import residue_constants
-from proteome.models.folding.openfold.data import mmcif_parsing
-from proteome.models.folding.openfold.data.errors import Error
-from proteome.models.folding.openfold.data.utils import to_date
+from proteome.models.openfold.data import mmcif_parsing
+from proteome.models.openfold.data.errors import Error
+from proteome.models.openfold.data.utils import to_date
 from proteome.query import kalign
 
 

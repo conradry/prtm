@@ -27,7 +27,7 @@ from typing import Dict
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.design.rfdiffusion.se3_transformer.model.fiber import Fiber
+from proteome.models.rfdiffusion.se3_transformer.model.fiber import Fiber
 from torch import Tensor
 
 

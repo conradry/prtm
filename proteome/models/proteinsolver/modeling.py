@@ -5,14 +5,14 @@ from typing import Tuple
 import numpy as np
 import torch
 from proteome import protein
-from proteome.models.design.proteinsolver import config
-from proteome.models.design.proteinsolver.proteinnet import ProteinNet
-from proteome.models.design.proteinsolver.protein_structure import (
+from proteome.models.proteinsolver import config
+from proteome.models.proteinsolver.proteinnet import ProteinNet
+from proteome.models.proteinsolver.protein_structure import (
     AMINO_ACIDS, extract_seq_and_adj, row_to_data, transform_edge_attr
 )
-from proteome.models.design.proteinsolver import protein_design
-from proteome.models.folding.openfold.np.relax import cleanup
-from proteome.models.design.proteinsolver.parser import Parser
+from proteome.models.proteinsolver import protein_design
+from proteome.models.openfold.np.relax import cleanup
+from proteome.models.proteinsolver.parser import Parser
 
 PS_MODEL_URLS = {
     "model_0": "https://models.proteinsolver.org/v0.1/notebooks/protein_4xEdgeConv_bs4/e12-s1652709-d6610836.state",  # noqa: E501

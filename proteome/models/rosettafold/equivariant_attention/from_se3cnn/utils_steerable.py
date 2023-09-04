@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 import torch
-from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.cache_file import cached_dirpklgz
-from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.representations import SphericalHarmonics
-from proteome.models.folding.rosettafold.equivariant_attention.from_se3cnn.so3 import irr_repr, torch_default_dtype
+from proteome.models.rosettafold.equivariant_attention.from_se3cnn.cache_file import cached_dirpklgz
+from proteome.models.rosettafold.equivariant_attention.from_se3cnn.representations import SphericalHarmonics
+from proteome.models.rosettafold.equivariant_attention.from_se3cnn.so3 import irr_repr, torch_default_dtype
 
 ################################################################################
 # Solving the constraint coming from the stabilizer of 0 and e

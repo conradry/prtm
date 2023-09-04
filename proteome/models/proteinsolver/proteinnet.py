@@ -2,11 +2,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.utils import remove_self_loops
 
-from proteome.models.design.proteinsolver.edge_conv_mod import (
+from proteome.models.proteinsolver.edge_conv_mod import (
     EdgeConvBatch,
     EdgeConvMod,
 )
-from proteome.models.design.proteinsolver import config 
+from proteome.models.proteinsolver import config 
 
 
 def get_graph_conv_layer(input_size, hidden_size, output_size):

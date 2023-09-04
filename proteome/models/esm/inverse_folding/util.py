@@ -21,7 +21,7 @@ import torch.nn.functional as F
 import torch.utils.data as data
 from typing import Sequence, Tuple, List
 
-from proteome.models.folding.esm.data import BatchConverter
+from proteome.models.esm.data import BatchConverter
 
 
 def load_structure(fpath, chain=None):

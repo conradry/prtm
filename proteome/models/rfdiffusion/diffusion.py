@@ -7,9 +7,9 @@ import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as scipy_R
 
-from proteome.models.design.rfdiffusion import igso3
-from proteome.models.design.rfdiffusion.util import rigid_from_3_points
-from proteome.models.design.rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.rfdiffusion import igso3
+from proteome.models.rfdiffusion.util import rigid_from_3_points
+from proteome.models.rfdiffusion.util_module import ComputeAllAtomCoords
 
 torch.set_printoptions(sci_mode=False)
 

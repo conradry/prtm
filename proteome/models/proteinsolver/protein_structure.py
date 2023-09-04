@@ -8,7 +8,7 @@ import torch
 from numba import njit
 from scipy.spatial import cKDTree
 from torch_geometric.data import Data
-from proteome.models.design.proteinsolver.type_definitions import (
+from proteome.models.proteinsolver.type_definitions import (
     Chain,
     Model,
     Structure,

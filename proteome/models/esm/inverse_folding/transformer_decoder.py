@@ -12,9 +12,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from proteome.models.folding.esm.modules import SinusoidalPositionalEmbedding
-from proteome.models.folding.esm.inverse_folding.transformer_layer import TransformerDecoderLayer
-from proteome.models.folding.esm import config
+from proteome.models.esm.modules import SinusoidalPositionalEmbedding
+from proteome.models.esm.inverse_folding.transformer_layer import TransformerDecoderLayer
+from proteome.models.esm import config
 
 
 def fill_with_neg_inf(t):

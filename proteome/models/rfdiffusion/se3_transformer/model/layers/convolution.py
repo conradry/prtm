@@ -30,8 +30,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from dgl import DGLGraph
-from proteome.models.design.rfdiffusion.se3_transformer.model.fiber import Fiber
-from proteome.models.design.rfdiffusion.se3_transformer.runtime.utils import degree_to_dim, unfuse_features
+from proteome.models.rfdiffusion.se3_transformer.model.fiber import Fiber
+from proteome.models.rfdiffusion.se3_transformer.runtime.utils import degree_to_dim, unfuse_features
 from torch import Tensor
 from torch.cuda.nvtx import range as nvtx_range
 

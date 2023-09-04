@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from proteome.models.design.proteinsolver.functional import (
+from proteome.models.proteinsolver.functional import (
     sparse_multi_head_attention_forward,
 )
 from torch.nn.init import constant_, xavier_normal_, xavier_uniform_

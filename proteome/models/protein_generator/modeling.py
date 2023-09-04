@@ -8,9 +8,9 @@ from tqdm import tqdm
 
 from proteome import protein
 from proteome.constants.residue_constants import restypes
-from proteome.models.design.protein_generator import config
-from proteome.models.design.protein_generator.rosettafold_model import RoseTTAFoldModule
-from proteome.models.design.protein_generator.sampler import SeqDiffSampler
+from proteome.models.protein_generator import config
+from proteome.models.protein_generator.rosettafold_model import RoseTTAFoldModule
+from proteome.models.protein_generator.sampler import SeqDiffSampler
 
 PROTGEN_MODEL_URLS = {
     "default": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt",

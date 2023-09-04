@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 
 from proteome import protein
-from proteome.models.design.protein_generator.kinematics import *
-from proteome.models.design.protein_generator.util import *
+from proteome.models.protein_generator.kinematics import *
+from proteome.models.protein_generator.util import *
 
 
 def TemplFeaturizeFixbb(seq, conf_1d=None):

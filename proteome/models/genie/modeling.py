@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from proteome import protein
 from proteome.constants import residue_constants
-from proteome.models.design.genie import config
-from proteome.models.design.genie.diffusion import Genie
+from proteome.models.genie import config
+from proteome.models.genie.diffusion import Genie
 
 GENIE_MODEL_URLS = {
     "genie_l_128": "https://github.com/aqlaboratory/genie/raw/main/weights/scope_l_128/epoch%3D49999.ckpt",

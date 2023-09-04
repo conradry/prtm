@@ -5,10 +5,10 @@ import numpy as np
 import torch
 
 from proteome import protein
-from proteome.models.folding.rosettafold.config import RoseTTAFoldConfig, TRFoldConfig
-from proteome.models.folding.rosettafold.kinematics import xyz_to_t2d
-from proteome.models.folding.rosettafold.rosettafoldmodel import RoseTTAFold
-from proteome.models.folding.rosettafold.trfold import TRFold
+from proteome.models.rosettafold.config import RoseTTAFoldConfig, TRFoldConfig
+from proteome.models.rosettafold.kinematics import xyz_to_t2d
+from proteome.models.rosettafold.rosettafoldmodel import RoseTTAFold
+from proteome.models.rosettafold.trfold import TRFold
 from proteome.query.pipeline import QueryPipelines
 from proteome.utils import hub_utils
 

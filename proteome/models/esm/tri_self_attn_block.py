@@ -5,12 +5,12 @@
 import torch
 from torch import nn
 
-from proteome.models.folding.esm.misc import (Attention, Dropout,
+from proteome.models.esm.misc import (Attention, Dropout,
                                               PairToSequence, ResidueMLP,
                                               SequenceToPair)
-from proteome.models.folding.openfold.model.triangular_attention import (
+from proteome.models.openfold.model.triangular_attention import (
     TriangleAttentionEndingNode, TriangleAttentionStartingNode)
-from proteome.models.folding.openfold.model.triangular_multiplicative_update import (
+from proteome.models.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 
 

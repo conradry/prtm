@@ -4,16 +4,16 @@ from typing import Dict, List, Tuple, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.folding.rosettafold.attention_module import \
+from proteome.models.rosettafold.attention_module import \
     IterativeFeatureExtractor
-from proteome.models.folding.rosettafold.distance_predictor import \
+from proteome.models.rosettafold.distance_predictor import \
     DistanceNetwork
-from proteome.models.folding.rosettafold.embeddings import (MSA_emb,
+from proteome.models.rosettafold.embeddings import (MSA_emb,
                                                             Pair_emb_w_templ,
                                                             Pair_emb_wo_templ,
                                                             Templ_emb)
-from proteome.models.folding.rosettafold.refine_module import Refine_module
-from proteome.models.folding.rosettafold.config import RoseTTAFoldConfig
+from proteome.models.rosettafold.refine_module import Refine_module
+from proteome.models.rosettafold.config import RoseTTAFoldConfig
 
 
 class RoseTTAFold(nn.Module):

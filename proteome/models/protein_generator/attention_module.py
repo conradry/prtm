@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from opt_einsum import contract as einsum
-from proteome.models.design.protein_generator.util import init_lecun_normal
+from proteome.models.protein_generator.util import init_lecun_normal
 
 
 class FeedForwardLayer(nn.Module):

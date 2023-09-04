@@ -7,9 +7,9 @@ import torch
 from tqdm import tqdm
 
 from proteome import protein
-from proteome.models.design.rfdiffusion import config
-from proteome.models.design.rfdiffusion.rosettafold_model import RoseTTAFoldModule
-from proteome.models.design.rfdiffusion.samplers import (
+from proteome.models.rfdiffusion import config
+from proteome.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
+from proteome.models.rfdiffusion.samplers import (
     ScaffoldedSampler,
     SelfConditioningSampler,
     UnconditionalSampler,

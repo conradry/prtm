@@ -27,7 +27,7 @@ from Bio import PDB
 from Bio.Data import SCOPData
 
 from proteome.constants import residue_constants
-from proteome.models.folding.openfold.data.errors import MultipleChainsError
+from proteome.models.openfold.data.errors import MultipleChainsError
 
 # Type aliases:
 ChainId = str

@@ -6,12 +6,12 @@ import pandas as pd
 import torch
 from proteome import protein
 from proteome.constants import residue_constants
-from proteome.models.design.foldingdiff import config, sampling
-from proteome.models.design.foldingdiff.angles_and_coords import \
+from proteome.models.foldingdiff import config, sampling
+from proteome.models.foldingdiff.angles_and_coords import \
     create_new_chain_nerf
-from proteome.models.design.foldingdiff.datasets import (AnglesEmptyDataset,
+from proteome.models.foldingdiff.datasets import (AnglesEmptyDataset,
                                                          NoisedAnglesDataset)
-from proteome.models.design.foldingdiff.model import BertForDiffusionBase
+from proteome.models.foldingdiff.model import BertForDiffusionBase
 
 FOLDINGDIFF_MODEL_URLS = {
     "foldingdiff_cath": "https://huggingface.co/wukevin/foldingdiff_cath/resolve/main/models/best_by_valid/epoch%3D1488-step%3D565820.ckpt",  # noqa: E501

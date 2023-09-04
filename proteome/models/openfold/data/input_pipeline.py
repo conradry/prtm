@@ -17,8 +17,8 @@ from functools import partial
 from typing import Dict
 
 import torch
-from proteome.models.folding.openfold.config import SHAPE_SCHEMA, CommonData, PredictData
-from proteome.models.folding.openfold.data import data_transforms
+from proteome.models.openfold.config import SHAPE_SCHEMA, CommonData, PredictData
+from proteome.models.openfold.data import data_transforms
 
 
 def nonensembled_transform_fns(common_cfg: CommonData):

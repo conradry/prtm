@@ -2,10 +2,10 @@ import math
 from abc import ABC, abstractmethod
 
 import torch
-from proteome.models.design.genie import config
-from proteome.models.design.genie.model import Denoiser
-from proteome.models.design.genie.utils.affine_utils import T
-from proteome.models.design.genie.utils.geo_utils import compute_frenet_frames
+from proteome.models.genie import config
+from proteome.models.genie.model import Denoiser
+from proteome.models.genie.utils.affine_utils import T
+from proteome.models.genie.utils.geo_utils import compute_frenet_frames
 from tqdm import tqdm
 
 

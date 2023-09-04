@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 
 from proteome.constants.residue_constants import restypes_with_x_dash
-from proteome.models.design.protein_generator import config
+from proteome.models.protein_generator import config
 
 
 class Potential:

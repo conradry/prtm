@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.folding.dmpfold2.modeling import (
+from proteome.models.dmpfold2.modeling import (
     DMPFOLD_MODEL_URLS,
     DMPFoldForFolding,
 )

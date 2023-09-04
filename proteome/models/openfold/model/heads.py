@@ -16,14 +16,14 @@ from dataclasses import asdict
 
 import torch
 import torch.nn as nn
-from proteome.models.folding.openfold.config import HeadsConfig
-from proteome.models.folding.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.folding.openfold.utils.loss import (
+from proteome.models.openfold.config import HeadsConfig
+from proteome.models.openfold.model.primitives import LayerNorm, Linear
+from proteome.models.openfold.utils.loss import (
     compute_plddt,
     compute_predicted_aligned_error,
     compute_tm,
 )
-from proteome.models.folding.openfold.utils.precision_utils import (
+from proteome.models.openfold.utils.precision_utils import (
     is_fp16_enabled,
 )
 

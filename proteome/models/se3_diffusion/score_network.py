@@ -3,9 +3,9 @@ import functools as fn
 import math
 
 import torch
-from proteome.models.design.se3_diffusion import all_atom
-from proteome.models.design.se3_diffusion import data_utils as du
-from proteome.models.design.se3_diffusion import ipa_pytorch
+from proteome.models.se3_diffusion import all_atom
+from proteome.models.se3_diffusion import data_utils as du
+from proteome.models.se3_diffusion import ipa_pytorch
 from torch import nn
 from torch.nn import functional as F
 
