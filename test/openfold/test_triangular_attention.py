@@ -16,17 +16,13 @@ import copy
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.model.triangular_attention import (
-    TriangleAttention,
-)
-from proteome.models.folding.openfold.utils.tensor_utils import tree_map
+from proteome.models.openfold.model.triangular_attention import \
+    TriangleAttention
+from proteome.models.openfold.utils.tensor_utils import tree_map
 
-from .compare_utils import (
-    alphafold_is_installed,
-    fetch_alphafold_module_weights,
-    import_alphafold,
-    skip_unless_alphafold_installed,
-)
+from .compare_utils import (alphafold_is_installed,
+                            fetch_alphafold_module_weights, import_alphafold,
+                            skip_unless_alphafold_installed)
 from .config import consts
 
 if alphafold_is_installed():

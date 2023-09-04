@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.proteinsolver import modeling
-
+from proteome.models.proteinsolver import modeling
 
 EXPECTED_SEQUENCES = {
     "model_0": "MLPEVEEAAREFLEALESGSPELLRELLEPEVTIKAKGFELTGEEVVAFVEEVTELGTRWRLTSFEKKEGTWTFSLTVTVDGKTLTFKVTLDVKEGRISRVQLELE",

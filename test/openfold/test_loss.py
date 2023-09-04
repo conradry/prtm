@@ -18,39 +18,29 @@ import ml_collections as mlc
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.data import data_transforms
-from proteome.models.folding.openfold.utils.loss import (
-    backbone_loss,
-    between_residue_bond_loss,
-    between_residue_clash_loss,
-    compute_fape,
-    compute_plddt,
-    compute_renamed_ground_truth,
-    distogram_loss,
-    experimentally_resolved_loss,
-    fape_loss,
-    find_structural_violations,
-    lddt_loss,
-    masked_msa_loss,
-    sidechain_loss,
-    supervised_chi_loss,
-    tm_loss,
-    torsion_angle_loss,
-    violation_loss,
-)
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.utils.tensor_utils import (
-    dict_multimap,
-    tensor_tree_map,
-    tree_map,
-)
+from proteome.models.openfold.data import data_transforms
+from proteome.models.openfold.utils.loss import (backbone_loss,
+                                                 between_residue_bond_loss,
+                                                 between_residue_clash_loss,
+                                                 compute_fape, compute_plddt,
+                                                 compute_renamed_ground_truth,
+                                                 distogram_loss,
+                                                 experimentally_resolved_loss,
+                                                 fape_loss,
+                                                 find_structural_violations,
+                                                 lddt_loss, masked_msa_loss,
+                                                 sidechain_loss,
+                                                 supervised_chi_loss, tm_loss,
+                                                 torsion_angle_loss,
+                                                 violation_loss)
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.openfold.utils.tensor_utils import (dict_multimap,
+                                                         tensor_tree_map,
+                                                         tree_map)
 
-from .compare_utils import (
-    alphafold_is_installed,
-    fetch_alphafold_module_weights,
-    import_alphafold,
-    skip_unless_alphafold_installed,
-)
+from .compare_utils import (alphafold_is_installed,
+                            fetch_alphafold_module_weights, import_alphafold,
+                            skip_unless_alphafold_installed)
 from .config import consts
 from .data_utils import random_affines_4x4, random_affines_vector
 

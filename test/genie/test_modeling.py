@@ -3,11 +3,9 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.genie import config
-from proteome.models.design.genie.modeling import (
-    GenieForStructureDesign, 
-    GENIE_MODEL_URLS,
-)
+from proteome.models.genie import config
+from proteome.models.genie.modeling import (GENIE_MODEL_URLS,
+                                            GenieForStructureDesign)
 
 from ..test_utils import _compare_structures
 

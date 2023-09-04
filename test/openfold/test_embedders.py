@@ -14,12 +14,11 @@
 
 import numpy as np
 import torch
-from proteome.models.folding.openfold.model.embedders import (
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateAngleEmbedder,
-    TemplatePairEmbedder,
-)
+
+from proteome.models.openfold.model.embedders import (InputEmbedder,
+                                                      RecyclingEmbedder,
+                                                      TemplateAngleEmbedder,
+                                                      TemplatePairEmbedder)
 
 
 def test_shape():

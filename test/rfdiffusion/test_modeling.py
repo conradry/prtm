@@ -3,10 +3,8 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.rfdiffusion import config
-from proteome.models.design.rfdiffusion.modeling import (
-    RFDiffusionForStructureDesign,
-)
+from proteome.models.rfdiffusion import config
+from proteome.models.rfdiffusion.modeling import RFDiffusionForStructureDesign
 
 from ..test_utils import _compare_structures, skip_unless_pyrosetta_installed
 

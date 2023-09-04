@@ -15,27 +15,18 @@
 import numpy as np
 import torch
 
-import proteome.models.folding.openfold.utils.feats as feats
-from proteome.constants.residue_constants import (
-    restype_atom14_mask,
-    restype_atom37_mask,
-)
-from proteome.models.folding.openfold.data.data_transforms import make_atom14_masks_np
-from proteome.models.folding.openfold.model.structure_module import (
-    AngleResnet,
-    BackboneUpdate,
-    InvariantPointAttention,
-    StructureModule,
-    StructureModuleTransition,
-)
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
+import proteome.models.openfold.utils.feats as feats
+from proteome.constants.residue_constants import (restype_atom14_mask,
+                                                  restype_atom37_mask)
+from proteome.models.openfold.data.data_transforms import make_atom14_masks_np
+from proteome.models.openfold.model.structure_module import (
+    AngleResnet, BackboneUpdate, InvariantPointAttention, StructureModule,
+    StructureModuleTransition)
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
 
-from .compare_utils import (
-    alphafold_is_installed,
-    fetch_alphafold_module_weights,
-    import_alphafold,
-    skip_unless_alphafold_installed,
-)
+from .compare_utils import (alphafold_is_installed,
+                            fetch_alphafold_module_weights, import_alphafold,
+                            skip_unless_alphafold_installed)
 from .config import consts
 from .data_utils import random_affines_4x4
 

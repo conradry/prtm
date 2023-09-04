@@ -2,11 +2,10 @@ import os
 from pathlib import Path
 
 import pytest
+
 from proteome import protein
-from proteome.models.folding.rosettafold.modeling import (
-    ROSETTAFOLD_MODEL_URLS,
-    RoseTTAFoldForFolding,
-)
+from proteome.models.rosettafold.modeling import (ROSETTAFOLD_MODEL_URLS,
+                                                  RoseTTAFoldForFolding)
 from proteome.query import caching
 
 from ..test_utils import _compare_structures

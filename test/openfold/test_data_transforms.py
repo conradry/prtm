@@ -5,26 +5,13 @@ import pickle
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.data.data_transforms import (
-    MSA_FEATURE_NAMES,
-    add_distillation_flag,
-    correct_msa_restypes,
-    crop_extra_msa,
-    crop_templates,
-    delete_extra_msa,
-    fix_templates_aatype,
-    make_all_atom_aatype,
-    make_atom14_masks,
-    make_hhblits_profile,
-    make_masked_msa,
-    make_msa_feat,
-    make_msa_mask,
-    make_seq_mask,
-    nearest_neighbor_clusters,
-    randomly_replace_msa_with_unknown,
-    sample_msa,
-    squeeze_features,
-)
+from proteome.models.openfold.data.data_transforms import (
+    MSA_FEATURE_NAMES, add_distillation_flag, correct_msa_restypes,
+    crop_extra_msa, crop_templates, delete_extra_msa, fix_templates_aatype,
+    make_all_atom_aatype, make_atom14_masks, make_hhblits_profile,
+    make_masked_msa, make_msa_feat, make_msa_mask, make_seq_mask,
+    nearest_neighbor_clusters, randomly_replace_msa_with_unknown, sample_msa,
+    squeeze_features)
 
 from .config import config
 

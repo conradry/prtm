@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.protein_seq_des import modeling
+from proteome.models.protein_seq_des import modeling
 
 from ..test_utils import skip_unless_pyrosetta_installed
 

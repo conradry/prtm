@@ -4,10 +4,8 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.folding.openfold.modeling import (
-    OPENFOLD_MODEL_URLS,
-    OpenFoldForFolding,
-)
+from proteome.models.openfold.modeling import (OPENFOLD_MODEL_URLS,
+                                               OpenFoldForFolding)
 from proteome.query import caching
 
 from ..test_utils import _compare_structures

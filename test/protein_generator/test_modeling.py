@@ -3,10 +3,9 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.protein_generator import config
-from proteome.models.design.protein_generator.modeling import (
-    ProteinGeneratorForJointDesign,
-)
+from proteome.models.protein_generator import config
+from proteome.models.protein_generator.modeling import \
+    ProteinGeneratorForJointDesign
 
 from ..test_utils import _compare_structures
 

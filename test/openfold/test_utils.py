@@ -17,18 +17,13 @@ import unittest
 
 import numpy as np
 import torch
-from proteome.models.folding.openfold.utils.rigid_utils import (
-    Rigid,
-    Rotation,
-    quat_to_rot,
-    rot_to_quat,
-)
 
-from .compare_utils import (
-    alphafold_is_installed,
-    import_alphafold,
-    skip_unless_alphafold_installed,
-)
+from proteome.models.openfold.utils.rigid_utils import (Rigid, Rotation,
+                                                        quat_to_rot,
+                                                        rot_to_quat)
+
+from .compare_utils import (alphafold_is_installed, import_alphafold,
+                            skip_unless_alphafold_installed)
 from .config import consts
 
 if alphafold_is_installed():

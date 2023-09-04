@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.folding.esm import modeling
+from proteome.models.esm import modeling
 
 from ..test_utils import _compare_structures
 
