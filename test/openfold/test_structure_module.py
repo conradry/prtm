@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import numpy as np
-import proteome.models.folding.openfold.utils.feats as feats
 import torch
+
+import proteome.models.folding.openfold.utils.feats as feats
 from proteome.constants.residue_constants import (
     restype_atom14_mask,
     restype_atom37_mask,
@@ -32,8 +33,6 @@ from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
 from .compare_utils import (
     alphafold_is_installed,
     fetch_alphafold_module_weights,
-    get_alphafold_config,
-    get_global_pretrained_openfold,
     import_alphafold,
     skip_unless_alphafold_installed,
 )

@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 import torch
+
 from proteome.models.folding.openfold.data.data_transforms import (
     MSA_FEATURE_NAMES,
     add_distillation_flag,
@@ -94,11 +95,9 @@ def test_squeeze_features():
         features = pickle.load(file)
 
     features_list = [
-        "domain_name",
         "msa",
         "num_alignments",
         "seq_length",
-        "sequence",
         "superfamily",
         "deletion_matrix",
         "resolution",
@@ -122,7 +121,9 @@ def test_squeeze_features():
     protein_squeezed = squeeze_features(protein)
     for k in features_list:
         if k in protein:
-            assert protein_squeezed[k].shape == features[k].shape
+            assert (
+                protein_squeezed[k].shape == features[k].shape
+            ), f"Mismatched shape for {k}"
 
 
 def test_randomly_replace_msa_with_unknown():

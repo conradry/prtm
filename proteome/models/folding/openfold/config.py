@@ -199,6 +199,7 @@ class PredictData:
     crop_size: Optional[int] = None
     uniform_recycling: bool = False
 
+
 @dataclass
 class DataModule:
     use_small_bfd: bool = False
@@ -240,8 +241,8 @@ class RecyclingEmbedderConfig:
     c_z: int = 128
     c_m: int = 256
     min_bin: float = 3.25
-    max_bin: float =  20.75
-    no_bins: int =  15
+    max_bin: float = 20.75
+    no_bins: int = 15
     inf: float = 1e8
 
 
@@ -573,26 +574,28 @@ class OpenFoldConfig:
             return False
 
 
-finetuning_config = OpenFoldConfig(
-    loss=LossConfig(
+@dataclass
+class FinetuningConfig(OpenFoldConfig):
+    loss: LossConfig = LossConfig(
         violation=ViolationLoss(
             weight=1.0,
         ),
         experimentally_resolved=ExperimentallyResolvedLoss(
             weight=0.01,
         ),
-    ),
-)
+    )
 
-finetuning_ptm_config = OpenFoldConfig(
-    model=ModelConfig(
+
+@dataclass
+class FinetuningPTMConfig(OpenFoldConfig):
+    model: ModelConfig = ModelConfig(
         heads=HeadsConfig(
             tm=HeadsTm(
                 enabled=True,
             ),
         ),
-    ),
-    loss=LossConfig(
+    )
+    loss: LossConfig = LossConfig(
         violation=ViolationLoss(
             weight=1.0,
         ),
@@ -602,37 +605,17 @@ finetuning_ptm_config = OpenFoldConfig(
         tm=TMLoss(
             weight=0.1,
         ),
-    ),
-)
+    )
 
-finetuning_no_templ_config = OpenFoldConfig(
-    model=ModelConfig(
+
+@dataclass
+class FinetuningNoTemplateConfig(OpenFoldConfig):
+    model: ModelConfig = ModelConfig(
         template=TemplateConfig(
             enabled=False,
         ),
-    ),
-    loss=LossConfig(
-        violation=ViolationLoss(
-            weight=1.0,
-        ),
-        experimentally_resolved=ExperimentallyResolvedLoss(
-            weight=0.01,
-        ),
-    ),
-)
-
-finetuning_no_templ_ptm_config = OpenFoldConfig(
-    model=ModelConfig(
-        template=TemplateConfig(
-            enabled=False,
-        ),
-        heads=HeadsConfig(
-            tm=HeadsTm(
-                enabled=True,
-            ),
-        ),
-    ),
-    loss=LossConfig(
+    )
+    loss: LossConfig = LossConfig(
         violation=ViolationLoss(
             weight=1.0,
         ),
@@ -642,5 +625,18 @@ finetuning_no_templ_ptm_config = OpenFoldConfig(
         tm=TMLoss(
             weight=0.1,
         ),
-    ),
-)
+    )
+
+
+@dataclass
+class FinetuningNoTemplatePTMConfig(FinetuningPTMConfig):
+    model: ModelConfig = ModelConfig(
+        heads=HeadsConfig(
+            tm=HeadsTm(
+                enabled=True,
+            ),
+        ),
+        template=TemplateConfig(
+            enabled=False,
+        ),
+    )
