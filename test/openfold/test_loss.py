@@ -17,6 +17,7 @@ import os
 import ml_collections as mlc
 import numpy as np
 import torch
+
 from proteome.models.folding.openfold.data import data_transforms
 from proteome.models.folding.openfold.utils.loss import (
     backbone_loss,
@@ -47,8 +48,6 @@ from proteome.models.folding.openfold.utils.tensor_utils import (
 from .compare_utils import (
     alphafold_is_installed,
     fetch_alphafold_module_weights,
-    get_alphafold_config,
-    get_global_pretrained_openfold,
     import_alphafold,
     skip_unless_alphafold_installed,
 )

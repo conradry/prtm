@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from dataclasses import asdict
+from typing import Dict, Mapping, Sequence
 
-import ml_collections
 import numpy as np
 import torch
+from proteome.models.folding.openfold.config import DataConfig, Features
 from proteome.models.folding.openfold.data import input_pipeline
 
 FeatureDict = Mapping[str, np.ndarray]
@@ -39,41 +39,23 @@ def np_to_tensor_dict(
         A dictionary of features mapping feature names to features. Only the given
         features are returned, all other ones are filtered out.
     """
-    tensor_dict = {k: torch.tensor(v) for k, v in np_example.items() if k in features}
+    tensor_dict = {
+        k: torch.tensor(v) for k, v in np_example.items() 
+        if k in features and v is not None
+    }
 
     return tensor_dict
 
 
-def make_data_config(
-    config: ml_collections.ConfigDict,
-    mode: str,
-    num_res: int,
-) -> Tuple[ml_collections.ConfigDict, List[str]]:
-    cfg = copy.deepcopy(config)
-    mode_cfg = cfg[mode]
-    with cfg.unlocked():
-        if mode_cfg.crop_size is None:
-            mode_cfg.crop_size = num_res
-
-    feature_names = cfg.common.unsupervised_features
-
-    if cfg.common.use_templates:
-        feature_names += cfg.common.template_features
-
-    if cfg[mode].supervised:
-        feature_names += cfg.supervised.supervised_features
-
-    return cfg, feature_names
-
-
 def np_example_to_features(
-    np_example: FeatureDict,
-    config: ml_collections.ConfigDict,
-    mode: str,
+    np_example: Features,
+    config: DataConfig,
 ):
-    np_example = dict(np_example)
-    num_res = int(np_example["seq_length"][0])
-    cfg, feature_names = make_data_config(config, mode=mode, num_res=num_res)
+    np_example = asdict(np_example)
+    feature_names = config.common.unsupervised_features
+
+    if config.common.use_templates:
+        feature_names += config.common.template_features
 
     if "deletion_matrix_int" in np_example:
         np_example["deletion_matrix"] = np_example.pop("deletion_matrix_int").astype(
@@ -84,24 +66,15 @@ def np_example_to_features(
     with torch.no_grad():
         features = input_pipeline.process_tensors_from_config(
             tensor_dict,
-            cfg.common,
-            cfg[mode],
+            config.common,
+            config.predict,
         )
 
-    if mode == "train":
-        p = torch.rand(1).item()
-        use_clamped_fape_value = float(p < cfg.supervised.clamp_prob)
-        features["use_clamped_fape"] = torch.full(
-            size=[cfg.common.max_recycling_iters + 1],
-            fill_value=use_clamped_fape_value,
-            dtype=torch.float32,
-        )
-    else:
-        features["use_clamped_fape"] = torch.full(
-            size=[cfg.common.max_recycling_iters + 1],
-            fill_value=0.0,
-            dtype=torch.float32,
-        )
+    features["use_clamped_fape"] = torch.full(
+        size=[config.common.max_recycling_iters + 1],
+        fill_value=0.0,
+        dtype=torch.float32,
+    )
 
     return {k: v for k, v in features.items()}
 
@@ -109,17 +82,15 @@ def np_example_to_features(
 class FeaturePipeline:
     def __init__(
         self,
-        config: ml_collections.ConfigDict,
+        config: DataConfig,
     ):
         self.config = config
 
     def process_features(
         self,
-        raw_features: FeatureDict,
-        mode: str = "train",
+        raw_features: Features,
     ) -> FeatureDict:
         return np_example_to_features(
             np_example=raw_features,
             config=self.config,
-            mode=mode,
         )

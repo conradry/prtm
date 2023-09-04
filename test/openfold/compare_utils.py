@@ -5,9 +5,6 @@ import sys
 
 import numpy as np
 import pytest
-from proteome.models.folding.openfold.config import model_config
-from proteome.models.folding.openfold.model.model import AlphaFold
-from proteome.models.folding.openfold.utils.import_weights import import_jax_weights_
 
 # Give JAX some GPU memory discipline
 # (by default it hogs 90% of GPU memory. This disables that behavior and also
@@ -42,30 +39,8 @@ def import_alphafold():
     return module
 
 
-def get_alphafold_config():
-    config = alphafold.model.config.model_config("model_1_ptm")  # noqa
-    config.model.global_config.deterministic = True
-    return config
-
-
 _param_path = "openfold/resources/params/params_model_1_ptm.npz"
 _model = None
-
-
-def get_global_pretrained_openfold():
-    global _model
-    if _model is None:
-        _model = AlphaFold(model_config("model_1_ptm"))
-        _model = _model.eval()
-        if not os.path.exists(_param_path):
-            raise FileNotFoundError(
-                """Cannot load pretrained parameters. Make sure to run the 
-                installation script before running tests."""
-            )
-        import_jax_weights_(_model, _param_path, version="model_1_ptm")
-        _model = _model.cuda()
-
-    return _model
 
 
 _orig_weights = None

@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import weakref
+from dataclasses import asdict
 from functools import partial
 
 import torch
 import torch.nn as nn
 
 from proteome.constants import residue_constants
+from proteome.models.folding.openfold.config import OpenFoldConfig
 from proteome.models.folding.openfold.model.embedders import (
     ExtraMSAEmbedder, InputEmbedder, RecyclingEmbedder, TemplateAngleEmbedder,
     TemplatePairEmbedder)
@@ -33,7 +35,6 @@ from proteome.models.folding.openfold.model.template import (
 from proteome.models.folding.openfold.utils.feats import (
     atom14_to_atom37, build_extra_msa_feat, build_template_angle_feat,
     build_template_pair_feat, pseudo_beta_fn)
-from proteome.models.folding.openfold.utils.loss import compute_plddt
 from proteome.models.folding.openfold.utils.tensor_utils import (
     add, dict_multimap, tensor_tree_map)
 
@@ -45,7 +46,7 @@ class AlphaFold(nn.Module):
     Implements Algorithm 2 (but with training).
     """
 
-    def __init__(self, config):
+    def __init__(self, config: OpenFoldConfig):
         """
         Args:
             config:
@@ -60,42 +61,42 @@ class AlphaFold(nn.Module):
 
         # Main trunk + structure module
         self.input_embedder = InputEmbedder(
-            **self.config["input_embedder"],
+            **asdict(self.config.input_embedder),
         )
         self.recycling_embedder = RecyclingEmbedder(
-            **self.config["recycling_embedder"],
+            **asdict(self.config.recycling_embedder),
         )
 
         if self.template_config.enabled:
             self.template_angle_embedder = TemplateAngleEmbedder(
-                **self.template_config["template_angle_embedder"],
+                **asdict(self.template_config.template_angle_embedder),
             )
             self.template_pair_embedder = TemplatePairEmbedder(
-                **self.template_config["template_pair_embedder"],
+                **asdict(self.template_config.template_pair_embedder),
             )
             self.template_pair_stack = TemplatePairStack(
-                **self.template_config["template_pair_stack"],
+                **asdict(self.template_config.template_pair_stack),
             )
             self.template_pointwise_att = TemplatePointwiseAttention(
-                **self.template_config["template_pointwise_attention"],
+                **asdict(self.template_config.template_pointwise_attention),
             )
 
         if self.extra_msa_config.enabled:
             self.extra_msa_embedder = ExtraMSAEmbedder(
-                **self.extra_msa_config["extra_msa_embedder"],
+                **asdict(self.extra_msa_config.extra_msa_embedder),
             )
             self.extra_msa_stack = ExtraMSAStack(
-                **self.extra_msa_config["extra_msa_stack"],
+                **asdict(self.extra_msa_config.extra_msa_stack),
             )
 
         self.evoformer = EvoformerStack(
-            **self.config["evoformer_stack"],
+            **asdict(self.config.evoformer_stack),
         )
         self.structure_module = StructureModule(
-            **self.config["structure_module"],
+            **asdict(self.config.structure_module),
         )
         self.aux_heads = AuxiliaryHeads(
-            self.config["heads"],
+            self.config.heads,
         )
 
     def embed_templates(self, batch, z, pair_mask, templ_dim, inplace_safe):
@@ -141,7 +142,7 @@ class AlphaFold(nn.Module):
                 use_unit_vector=self.config.template.use_unit_vector,
                 inf=self.config.template.inf,
                 eps=self.config.template.eps,
-                **self.config.template.distogram,
+                **asdict(self.config.template.distogram),
             ).to(z.dtype)
             t = self.template_pair_embedder(t)
 

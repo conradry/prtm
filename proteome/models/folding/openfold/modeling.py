@@ -1,16 +1,12 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
-import ml_collections as mlc
 import numpy as np
 import torch
 
 from proteome import protein
 from proteome.models.folding.openfold import config
-from proteome.models.folding.openfold.data import (
-    data_pipeline,
-    feature_pipeline,
-)
+from proteome.models.folding.openfold.data import data_pipeline, feature_pipeline
 from proteome.models.folding.openfold.model import model
 from proteome.models.folding.openfold.utils.tensor_utils import tensor_tree_map
 from proteome.query.pipeline import QueryPipelines
@@ -22,6 +18,14 @@ OPENFOLD_MODEL_URLS = {
     "finetuning-5": "s3://openfold/openfold_params/finetuning_5.pt",
     "finetuning_ptm-2": "s3://openfold/openfold_params/finetuning_ptm_2.pt",
     "finetuning_no_templ_ptm-1": "s3://openfold/openfold_params/finetuning_no_templ_ptm_1.pt",
+}
+
+OPENFOLD_MODEL_CONFIGS = {
+    "finetuning-3": config.FinetuningConfig(),
+    "finetuning-4": config.FinetuningConfig(),
+    "finetuning-5": config.FinetuningConfig(),
+    "finetuning_ptm-2": config.FinetuningPTMConfig(),
+    "finetuning_no_templ_ptm-1": config.FinetuningNoTemplatePTMConfig(),
 }
 
 
@@ -41,16 +45,16 @@ def _placeholder_template_feats(
     }
 
 
-def _get_model_config(model_name: str) -> mlc.ConfigDict:
+def _get_model_config(model_name: str) -> config.OpenFoldConfig:
     """Get the model config for a given model name."""
     # All `finetuning` models use the same config.
-    return config.model_config(name=model_name.split("-")[0])
+    return OPENFOLD_MODEL_CONFIGS[model_name]
 
 
 class OpenFoldForFolding:
     def __init__(
-        self, 
-        model_name: str = "finetuning-3", 
+        self,
+        model_name: str = "finetuning-3",
         msa_pipeline: str = "alphafold_jackhmmer",
         random_seed: Optional[int] = None,
     ):
@@ -96,16 +100,15 @@ class OpenFoldForFolding:
         num_templates = 1  # dummy number --- is ignored
 
         feature_dict = {}
-        feature_dict.update(
-            data_pipeline.make_sequence_features(sequence, "test", num_res)
-        )
+        feature_dict.update(data_pipeline.make_sequence_features(sequence, num_res))
         feature_dict.update(
             data_pipeline.make_msa_features(msas, deletion_matrices=deletion_matrices)
         )
         feature_dict.update(_placeholder_template_feats(num_templates, num_res))
+        features = config.Features(**feature_dict)
 
-        pipeline = feature_pipeline.FeaturePipeline(self.cfg.data)  # type: ignore
-        processed_feature_dict = pipeline.process_features(feature_dict, mode="predict")
+        pipeline = feature_pipeline.FeaturePipeline(self.cfg.data)
+        processed_feature_dict = pipeline.process_features(features)
         processed_feature_dict = tensor_tree_map(
             lambda t: t.to(self.device), processed_feature_dict
         )

@@ -12,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import asdict
 
 import torch
 import torch.nn as nn
+from proteome.models.folding.openfold.config import HeadsConfig
 from proteome.models.folding.openfold.model.primitives import LayerNorm, Linear
 from proteome.models.folding.openfold.utils.loss import (
     compute_plddt,
@@ -27,28 +29,28 @@ from proteome.models.folding.openfold.utils.precision_utils import (
 
 
 class AuxiliaryHeads(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: HeadsConfig):
         super(AuxiliaryHeads, self).__init__()
 
         self.plddt = PerResidueLDDTCaPredictor(
-            **config["lddt"],
+            **asdict(config.lddt),
         )
 
         self.distogram = DistogramHead(
-            **config["distogram"],
+            **asdict(config.distogram),
         )
 
         self.masked_msa = MaskedMSAHead(
-            **config["masked_msa"],
+            **asdict(config.masked_msa),
         )
 
         self.experimentally_resolved = ExperimentallyResolvedHead(
-            **config["experimentally_resolved"],
+            **asdict(config.experimentally_resolved),
         )
 
         if config.tm.enabled:
             self.tm = TMScoreHead(
-                **config.tm,
+                **asdict(config.tm),
             )
 
         self.config = config
@@ -73,11 +75,11 @@ class AuxiliaryHeads(nn.Module):
         if self.config.tm.enabled:
             tm_logits = self.tm(outputs["pair"])
             aux_out["tm_logits"] = tm_logits
-            aux_out["predicted_tm_score"] = compute_tm(tm_logits, **self.config.tm)
+            aux_out["predicted_tm_score"] = compute_tm(tm_logits, **asdict(self.config.tm))
             aux_out.update(
                 compute_predicted_aligned_error(
                     tm_logits,
-                    **self.config.tm,
+                    **asdict(self.config.tm),
                 )
             )
 

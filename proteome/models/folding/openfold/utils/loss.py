@@ -17,13 +17,13 @@ import logging
 from functools import partial
 from typing import Dict, Optional, Tuple
 
-import ml_collections
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions.bernoulli import Bernoulli
 
 from proteome.constants import residue_constants
+from proteome.models.folding.openfold.config import FAPELoss
 from proteome.models.folding.openfold.utils import feats
 from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
 from proteome.models.folding.openfold.utils.tensor_utils import (
@@ -256,7 +256,7 @@ def sidechain_loss(
 def fape_loss(
     out: Dict[str, torch.Tensor],
     batch: Dict[str, torch.Tensor],
-    config: ml_collections.ConfigDict,
+    config: FAPELoss,
 ) -> torch.Tensor:
     bb_loss = backbone_loss(
         traj=out["sm"]["frames"],
@@ -1158,7 +1158,7 @@ def find_structural_violations(
 def find_structural_violations_np(
     batch: Dict[str, np.ndarray],
     atom14_pred_positions: np.ndarray,
-    config: ml_collections.ConfigDict,
+    config: Dict[str, float],
 ) -> Dict[str, np.ndarray]:
     to_tensor = lambda x: torch.tensor(x)
     batch = tree_map(to_tensor, batch, np.ndarray)

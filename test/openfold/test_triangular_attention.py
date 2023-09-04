@@ -15,6 +15,7 @@ import copy
 
 import numpy as np
 import torch
+
 from proteome.models.folding.openfold.model.triangular_attention import (
     TriangleAttention,
 )
@@ -23,8 +24,6 @@ from proteome.models.folding.openfold.utils.tensor_utils import tree_map
 from .compare_utils import (
     alphafold_is_installed,
     fetch_alphafold_module_weights,
-    get_alphafold_config,
-    get_global_pretrained_openfold,
     import_alphafold,
     skip_unless_alphafold_installed,
 )
