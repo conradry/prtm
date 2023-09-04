@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.data.data_transforms import (
+from proteome.models.openfold.data.data_transforms import (
     MSA_FEATURE_NAMES,
     add_distillation_flag,
     correct_msa_restypes,

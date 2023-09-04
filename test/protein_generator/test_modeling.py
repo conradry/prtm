@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.protein_generator import config
-from proteome.models.design.protein_generator.modeling import (
+from proteome.models.protein_generator import config
+from proteome.models.protein_generator.modeling import (
     ProteinGeneratorForJointDesign,
 )
 

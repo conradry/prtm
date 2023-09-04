@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.proteinmpnn import modeling
+from proteome.models.proteinmpnn import modeling
 
 
 EXPECTED_SEQUENCES = {

@@ -18,8 +18,8 @@ import ml_collections as mlc
 import numpy as np
 import torch
 
-from proteome.models.folding.openfold.data import data_transforms
-from proteome.models.folding.openfold.utils.loss import (
+from proteome.models.openfold.data import data_transforms
+from proteome.models.openfold.utils.loss import (
     backbone_loss,
     between_residue_bond_loss,
     between_residue_clash_loss,
@@ -38,8 +38,8 @@ from proteome.models.folding.openfold.utils.loss import (
     torsion_angle_loss,
     violation_loss,
 )
-from proteome.models.folding.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.folding.openfold.utils.tensor_utils import (
+from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from proteome.models.openfold.utils.tensor_utils import (
     dict_multimap,
     tensor_tree_map,
     tree_map,

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from proteome import protein
-from proteome.models.folding.rosettafold.modeling import (
+from proteome.models.rosettafold.modeling import (
     ROSETTAFOLD_MODEL_URLS,
     RoseTTAFoldForFolding,
 )

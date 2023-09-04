@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from proteome import protein
-from proteome.models.design.genie import config
-from proteome.models.design.genie.modeling import (
+from proteome.models.genie import config
+from proteome.models.genie.modeling import (
     GenieForStructureDesign, 
     GENIE_MODEL_URLS,
 )
