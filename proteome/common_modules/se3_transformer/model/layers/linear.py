@@ -27,8 +27,9 @@ from typing import Dict
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.rfdiffusion.se3_transformer.model.fiber import Fiber
 from torch import Tensor
+
+from proteome.common_modules.se3_transformer.model.fiber import Fiber
 
 
 class LinearSE3(nn.Module):

@@ -30,10 +30,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 from dgl import DGLGraph
-from proteome.models.protein_generator.se3_transformer.model.fiber import Fiber
-from proteome.models.protein_generator.se3_transformer.runtime.utils import degree_to_dim, unfuse_features
 from torch import Tensor
 from torch.cuda.nvtx import range as nvtx_range
+
+from proteome.common_modules.se3_transformer.model.fiber import Fiber
+from proteome.common_modules.se3_transformer.runtime.utils import (
+    degree_to_dim,
+    unfuse_features,
+)
 
 
 class ConvSE3FuseLevel(Enum):

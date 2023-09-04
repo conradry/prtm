@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-from proteome.models.protein_generator.se3_transformer.model import (
-    SE3Transformer,
-)
-from proteome.models.protein_generator.se3_transformer.model.fiber import Fiber
+
+from proteome.common_modules.se3_transformer.model import SE3Transformer
+from proteome.common_modules.se3_transformer.model.fiber import Fiber
 from proteome.models.protein_generator.util import init_lecun_normal_param
 
 
