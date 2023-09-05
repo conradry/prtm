@@ -8,12 +8,13 @@ import torch
 from scipy.spatial.transform import Rotation as scipy_R
 
 from proteome import protein
+from proteome.common_modules.rosetta.util import (
+    ComputeAllAtomCoords,
+    rigid_from_3_points,
+)
 from proteome.models.rfdiffusion import config
 from proteome.models.rfdiffusion.diffusion import get_beta_schedule
-from proteome.models.rfdiffusion.secstruct_adj import \
-    make_ss_block_adj_from_structure
-from proteome.models.rfdiffusion.util import rigid_from_3_points
-from proteome.models.rfdiffusion.util_module import ComputeAllAtomCoords
+from proteome.models.rfdiffusion.secstruct_adj import make_ss_block_adj_from_structure
 
 ###########################################################
 #### Functions which can be called outside of Denoiser ####

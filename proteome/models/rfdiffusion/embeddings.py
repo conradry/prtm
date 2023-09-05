@@ -4,17 +4,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from proteome.models.rfdiffusion.attention_module import (
+
+from proteome.common_modules.rosetta.attention_module import (
     Attention,
     AttentionWithBias,
     FeedForwardLayer,
 )
-from proteome.models.rfdiffusion.track_module import PairStr2Pair
-from proteome.models.rfdiffusion.util_module import (
+from proteome.common_modules.rosetta.util import (
     create_custom_forward,
     init_lecun_normal,
     rbf,
 )
+from proteome.models.rfdiffusion.track_module import PairStr2Pair
 
 # Module contains classes and functions to generate initial embeddings
 

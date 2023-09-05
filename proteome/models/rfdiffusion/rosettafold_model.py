@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
-from proteome.models.rfdiffusion.auxiliary_predictor import (
+
+from proteome.common_modules.rosetta.auxiliary_predictor import (
     DistanceNetwork,
     ExpResolvedNetwork,
     LDDTNetwork,

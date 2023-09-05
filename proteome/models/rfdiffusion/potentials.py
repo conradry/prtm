@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from proteome.models.rfdiffusion.util import generate_Cbeta
+
+from proteome.common_modules.rosetta.util import generate_Cbeta
 
 
 class Potential:

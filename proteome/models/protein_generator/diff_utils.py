@@ -1,8 +1,8 @@
 import torch
 
-from proteome.models.protein_generator.contigs import lddt_unbin
-from proteome.models.protein_generator.kinematics import get_init_xyz
-from proteome.models.protein_generator.util import *
+from proteome.common_modules.rosetta.contigs import lddt_unbin
+from proteome.common_modules.rosetta.kinematics import get_init_xyz
+from proteome.common_modules.rosetta.util import *
 
 
 def mask_inputs(
