@@ -1,12 +1,9 @@
+import torch
 import torch.nn as nn
 
+from proteome.common_modules.rosetta.util import init_lecun_normal_param
 from proteome.common_modules.se3_transformer.model import SE3Transformer
 from proteome.common_modules.se3_transformer.model.fiber import Fiber
-from proteome.models.rfdiffusion.util_module import init_lecun_normal_param
-
-# from equivariant_attention.modules import get_basis_and_r, GSE3Res, GNormBias
-# from equivariant_attention.modules import GConvSE3, GNormSE3
-# from equivariant_attention.fibers import Fiber
 
 
 class SE3TransformerWrapper(nn.Module):

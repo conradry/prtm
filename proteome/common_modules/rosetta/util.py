@@ -6,8 +6,20 @@ import scipy.sparse
 import torch
 import torch.nn as nn
 
+from proteome.common_modules.rosetta.scoring import *
 from proteome.constants.chemical import *
-from proteome.models.protein_generator.scoring import *
+
+
+def generate_Cbeta(N, Ca, C):
+    # recreate Cb given N,Ca,C
+    b = Ca - N
+    c = C - Ca
+    a = torch.cross(b, c, dim=-1)
+    # Cb = -0.58273431*a + 0.56802827*b - 0.54067466*c + Ca
+    # fd: below matches sidechain generator (=Rosetta params)
+    Cb = -0.57910144 * a + 0.5689693 * b - 0.5441217 * c + Ca
+
+    return Cb
 
 
 def th_ang_v(ab, bc, eps: float = 1e-8):
@@ -262,120 +274,6 @@ def cross_product_matrix(u):
     return matrix
 
 
-# writepdb
-def writepdb(filename, atoms, seq, idx_pdb=None, bfacts=None):
-    f = open(filename, "w")
-    ctr = 1
-    scpu = seq.cpu().squeeze()
-    atomscpu = atoms.cpu().squeeze()
-    if bfacts is None:
-        bfacts = torch.zeros(atomscpu.shape[0])
-    if idx_pdb is None:
-        idx_pdb = 1 + torch.arange(atomscpu.shape[0])
-
-    Bfacts = torch.clamp(bfacts.cpu(), 0, 1)
-    for i, s in enumerate(scpu):
-        if len(atomscpu.shape) == 2:
-            f.write(
-                "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
-                % (
-                    "ATOM",
-                    ctr,
-                    " CA ",
-                    num2aa[s],
-                    "A",
-                    idx_pdb[i],
-                    atomscpu[i, 0],
-                    atomscpu[i, 1],
-                    atomscpu[i, 2],
-                    1.0,
-                    Bfacts[i],
-                )
-            )
-            ctr += 1
-        elif atomscpu.shape[1] == 3:
-            for j, atm_j in enumerate([" N  ", " CA ", " C  "]):
-                f.write(
-                    "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
-                    % (
-                        "ATOM",
-                        ctr,
-                        atm_j,
-                        num2aa[s],
-                        "A",
-                        idx_pdb[i],
-                        atomscpu[i, j, 0],
-                        atomscpu[i, j, 1],
-                        atomscpu[i, j, 2],
-                        1.0,
-                        Bfacts[i],
-                    )
-                )
-                ctr += 1
-        else:
-            natoms = atomscpu.shape[1]
-            if natoms != 14 and natoms != 27:
-                print("bad size!", atoms.shape)
-                assert False
-            atms = aa2long[s]
-            # his prot hack
-            if (
-                s == 8
-                and torch.linalg.norm(atomscpu[i, 9, :] - atomscpu[i, 5, :]) < 1.7
-            ):
-                atms = (
-                    " N  ",
-                    " CA ",
-                    " C  ",
-                    " O  ",
-                    " CB ",
-                    " CG ",
-                    " NE2",
-                    " CD2",
-                    " CE1",
-                    " ND1",
-                    None,
-                    None,
-                    None,
-                    None,
-                    " H  ",
-                    " HA ",
-                    "1HB ",
-                    "2HB ",
-                    " HD2",
-                    " HE1",
-                    " HD1",
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                )  # his_d
-
-            for j, atm_j in enumerate(atms):
-                if (
-                    j < natoms and atm_j is not None
-                ):  # and not torch.isnan(atomscpu[i,j,:]).any()):
-                    f.write(
-                        "%-6s%5s %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f\n"
-                        % (
-                            "ATOM",
-                            ctr,
-                            atm_j,
-                            num2aa[s],
-                            "A",
-                            idx_pdb[i],
-                            atomscpu[i, j, 0],
-                            atomscpu[i, j, 1],
-                            atomscpu[i, j, 2],
-                            1.0,
-                            Bfacts[i],
-                        )
-                    )
-                    ctr += 1
-
-
 # resolve tip atom indices
 tip_indices = torch.full((22,), 0)
 for i in range(22):
@@ -615,6 +513,9 @@ for i in range(22):
     NCpp = NCp - torch.dot(NCp, NCr) / torch.dot(NCr, NCr) * NCr
     reference_angles[i, 1, :] = th_ang_v(CBr - CAr, NCpp)
     reference_angles[i, 2, :] = th_ang_v(CGr, torch.tensor([-1.0, 0.0, 0.0]))
+
+N_BACKBONE_ATOMS = 3
+N_HEAVY = 14
 
 
 def get_rmsd(a, b, eps=1e-6):

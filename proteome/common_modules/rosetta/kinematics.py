@@ -81,6 +81,17 @@ def get_dih(a, b, c, d):
     return torch.atan2(y, x)
 
 
+def get_Cb(xyz):
+    """recreate Cb given N,Ca,C"""
+    N = xyz[..., 0, :]
+    Ca = xyz[..., 1, :]
+    C = xyz[..., 2, :]
+    b = Ca - N
+    c = C - Ca
+    a = torch.cross(b, c, dim=-1)
+    return -0.58273431 * a + 0.56802827 * b - 0.54067466 * c + Ca
+
+
 # ============================================================
 def xyz_to_c6d(xyz, params=PARAMS):
     """convert cartesian coordinates into 2d distance
@@ -103,12 +114,7 @@ def xyz_to_c6d(xyz, params=PARAMS):
     N = xyz[:, :, 0]
     Ca = xyz[:, :, 1]
     C = xyz[:, :, 2]
-
-    # recreate Cb given N,Ca,C
-    b = Ca - N
-    c = C - Ca
-    a = torch.cross(b, c, dim=-1)
-    Cb = -0.58273431 * a + 0.56802827 * b - 0.54067466 * c + Ca
+    Cb = get_Cb(xyz)
 
     # 6d coordinates order: (dist,omega,theta,phi)
     c6d = torch.zeros([batch, nres, nres, 4], dtype=xyz.dtype, device=xyz.device)
@@ -193,9 +199,6 @@ def xyz_to_chi1(xyz_t):
 
 
 def xyz_to_bbtor(xyz, params=PARAMS):
-    xyz.shape[0]
-    xyz.shape[1]
-
     # three anchor atoms
     N = xyz[:, :, 0]
     Ca = xyz[:, :, 1]

@@ -6,15 +6,16 @@ import torch
 import torch.nn.functional as nn
 
 from proteome import protein
+from proteome.common_modules.rosetta import util
+from proteome.common_modules.rosetta.contigs import ContigMap
+from proteome.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
+from proteome.common_modules.rosetta.util import ComputeAllAtomCoords
 from proteome.models.rfdiffusion import config
 from proteome.models.rfdiffusion import inference_utils as iu
-from proteome.models.rfdiffusion import symmetry, util
-from proteome.models.rfdiffusion.contigs import ContigMap
+from proteome.models.rfdiffusion import symmetry
 from proteome.models.rfdiffusion.diffusion import Diffuser
-from proteome.models.rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
 from proteome.models.rfdiffusion.potentials_manager import PotentialManager
 from proteome.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
-from proteome.models.rfdiffusion.util_module import ComputeAllAtomCoords
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -1136,7 +1137,9 @@ class ScaffoldedSampler(SelfConditioningSampler):
             ), "Giving a target is the wrong way of handling this is you're doing contigs and secondary structure"
 
             # process target and reinitialise potential_manager. This is here because the 'target' is always set up to be the second chain in out inputs.
-            self.target_structure = iu.process_target(self.inference_params.reference_structure)
+            self.target_structure = iu.process_target(
+                self.inference_params.reference_structure
+            )
             self.contig_map = self.construct_contig(self.target_structure)
             self.mappings = self.contig_map.get_mappings()
             self.mask_seq = torch.from_numpy(self.contig_map.inpaint_seq)[None, :]

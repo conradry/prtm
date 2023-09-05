@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from opt_einsum import contract as einsum
-from proteome.models.protein_generator.util import init_lecun_normal
+
+from proteome.common_modules.rosetta.util import init_lecun_normal
 
 
 class FeedForwardLayer(nn.Module):
@@ -382,7 +383,7 @@ class BiasedAxialAttention(nn.Module):
         nn.init.zeros_(self.to_out.weight)
         nn.init.zeros_(self.to_out.bias)
 
-    def forward(self, pair, bias, same_chain=None):
+    def forward(self, pair, bias):
         # pair: (B, L, L, d_pair)
         B, L = pair.shape[:2]
 
@@ -404,12 +405,6 @@ class BiasedAxialAttention(nn.Module):
         attn = einsum("bnihk,bnjhk->bijh", query, key)  # tied attention
         attn = attn + bias  # apply bias
         attn = F.softmax(attn, dim=-2)  # (B, L, L, h)
-
-        if same_chain is not None:
-            ic(same_chain)
-            ic(attn)
-            ic(attn[~same_chain])
-            attn[~same_chain] *= 1.1
 
         out = einsum("bijh,bkjhd->bikhd", attn, value).reshape(B, L, L, -1)
         out = gate * out

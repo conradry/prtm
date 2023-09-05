@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from icecream import ic
 from opt_einsum import contract as einsum
-from proteome.models.protein_generator.attention_module import *
-from proteome.models.protein_generator.se3_network import SE3TransformerWrapper
-from proteome.models.protein_generator.util import *
+
+from proteome.common_modules.rosetta.attention_module import *
+from proteome.common_modules.rosetta.se3_network import SE3TransformerWrapper
+from proteome.common_modules.rosetta.util import *
 
 # Components for three-track blocks
 # 1. MSA -> MSA update (biased attention. bias from pair & structure)
@@ -293,14 +293,6 @@ class Str2Str(nn.Module):
         T_in = T_in.type(torch.float32)
         xyz = xyz.type(torch.float32)
 
-        # ic(msa.dtype)
-        # ic(pair.dtype)
-        # ic(R_in.dtype)
-        # ic(T_in.dtype)
-        # ic(xyz.dtype)
-        # ic(state.dtype)
-        # ic(idx.dtype)
-
         # process msa & pair features
         node = self.norm_msa(msa[:, 0])
         pair = self.norm_pair(pair)
@@ -350,16 +342,6 @@ class Str2Str(nn.Module):
         delRi[:, :, 2, 0] = 2 * qB * qD - 2 * qA * qC
         delRi[:, :, 2, 1] = 2 * qC * qD + 2 * qA * qB
         delRi[:, :, 2, 2] = qA * qA - qB * qB - qC * qC + qD * qD
-        #
-        ## convert vector to rotation matrix
-        # R_angle = torch.norm(R, dim=-1, keepdim=True) # (B, L, 1)
-        # cos_angle = torch.cos(R_angle).unsqueeze(2) # (B, L, 1, 1)
-        # sin_angle = torch.sin(R_angle).unsqueeze(2) # (B, L, 1, 1)
-        # R_vector = R / (R_angle+eps) # (B, L, 3)
-
-        # delRi = cos_angle*torch.eye(3, device=R.device).reshape(1,1,3,3) \
-        #      + sin_angle*cross_product_matrix(R_vector) \
-        #      + (1.0-cos_angle)*einsum('bni,bnj->bnij', R_vector, R_vector)
 
         Ri = einsum("bnij,bnjk->bnik", delRi, R_in)
         Ti = delTi + T_in  # einsum('bnij,bnj->bni', delRi, T_in) + delTi

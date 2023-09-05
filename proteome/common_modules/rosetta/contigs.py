@@ -2,8 +2,211 @@ import random
 import sys
 
 import numpy as np
+import torch
+import torch.nn as nn
 
 from proteome import protein
+from proteome.common_modules.rosetta.kinematics import *
+from proteome.common_modules.rosetta.util import *
+
+
+def TemplFeaturizeFixbb(seq, conf_1d=None):
+    """
+    Template 1D featurizer for fixed BB examples :
+    Parameters:
+        seq (torch.tensor, required): Integer sequence
+        conf_1d (torch.tensor, optional): Precalcualted confidence tensor
+    """
+    seq.shape[-1]
+    t1d = torch.nn.functional.one_hot(seq, num_classes=21)  # one hot sequence
+    if conf_1d is None:
+        conf = torch.ones_like(seq)[..., None]
+    else:
+        conf = conf_1d[:, None]
+    t1d = torch.cat((t1d, conf), dim=-1)
+    return t1d
+
+
+def MSAFeaturize_fixbb(msa, params):
+    """
+    Input: full msa information
+    Output: Single sequence, with some percentage of amino acids mutated (but no resides 'masked')
+
+    This is modified from autofold2, to remove mutations of the single sequence
+    """
+    N, L = msa.shape
+    # raw MSA profile
+    raw_profile = torch.nn.functional.one_hot(msa, num_classes=22)
+    raw_profile = raw_profile.float().mean(dim=0)
+
+    b_seq = list()
+    b_msa_clust = list()
+    b_msa_seed = list()
+    b_msa_extra = list()
+    b_mask_pos = list()
+    for i_cycle in range(params["MAXCYCLE"]):
+        assert torch.max(msa) < 22
+        msa_onehot = torch.nn.functional.one_hot(msa[:1], num_classes=22)
+        msa_fakeprofile_onehot = torch.nn.functional.one_hot(
+            msa[:1], num_classes=26
+        )  # add the extra two indel planes, which will be set to zero
+        msa_full_onehot = torch.cat((msa_onehot, msa_fakeprofile_onehot), dim=-1)
+
+        # make fake msa_extra
+        msa_extra_onehot = torch.nn.functional.one_hot(msa[:1], num_classes=25)
+
+        # make fake msa_clust and mask_pos
+        msa_clust = msa[:1]
+        mask_pos = torch.full_like(msa_clust, 1).bool()
+        b_seq.append(msa[0].clone())
+        b_msa_seed.append(
+            msa_full_onehot[:1].clone()
+        )  # masked single sequence onehot (nb no mask so just single sequence onehot)
+        b_msa_extra.append(
+            msa_extra_onehot[:1].clone()
+        )  # masked single sequence onehot (nb no mask so just single sequence onehot)
+        b_msa_clust.append(msa_clust[:1].clone())  # unmasked original single sequence
+        b_mask_pos.append(
+            mask_pos[:1].clone()
+        )  # mask positions in single sequence (all zeros)
+
+    b_seq = torch.stack(b_seq)
+    b_msa_clust = torch.stack(b_msa_clust)
+    b_msa_seed = torch.stack(b_msa_seed)
+    b_msa_extra = torch.stack(b_msa_extra)
+    b_mask_pos = torch.stack(b_mask_pos)
+
+    return b_seq, b_msa_clust, b_msa_seed, b_msa_extra, b_mask_pos
+
+
+def MSAFeaturize(msa, params):
+    """
+    Input: full msa information
+    Output: Single sequence, with some percentage of amino acids mutated (but no resides 'masked')
+
+    This is modified from autofold2, to remove mutations of the single sequence
+    """
+    N, L = msa.shape
+    # raw MSA profile
+    raw_profile = torch.nn.functional.one_hot(msa, num_classes=22)
+    raw_profile = raw_profile.float().mean(dim=0)
+
+    b_seq = list()
+    b_msa_clust = list()
+    b_msa_seed = list()
+    b_msa_extra = list()
+    b_mask_pos = list()
+    for i_cycle in range(params["MAXCYCLE"]):
+        assert torch.max(msa) < 22
+        msa_onehot = torch.nn.functional.one_hot(msa, num_classes=22)
+        msa_fakeprofile_onehot = torch.nn.functional.one_hot(
+            msa, num_classes=26
+        )  # add the extra two indel planes, which will be set to zero
+        msa_full_onehot = torch.cat((msa_onehot, msa_fakeprofile_onehot), dim=-1)
+
+        # make fake msa_extra
+        msa_extra_onehot = torch.nn.functional.one_hot(msa, num_classes=25)
+
+        # make fake msa_clust and mask_pos
+        msa_clust = msa
+        mask_pos = torch.full_like(msa_clust, 1).bool()
+        b_seq.append(msa[0].clone())
+        b_msa_seed.append(
+            msa_full_onehot.clone()
+        )  # masked single sequence onehot (nb no mask so just single sequence onehot)
+        b_msa_extra.append(
+            msa_extra_onehot.clone()
+        )  # masked single sequence onehot (nb no mask so just single sequence onehot)
+        b_msa_clust.append(msa_clust.clone())  # unmasked original single sequence
+        b_mask_pos.append(
+            mask_pos.clone()
+        )  # mask positions in single sequence (all zeros)
+
+    b_seq = torch.stack(b_seq)
+    b_msa_clust = torch.stack(b_msa_clust)
+    b_msa_seed = torch.stack(b_msa_seed)
+    b_msa_extra = torch.stack(b_msa_extra)
+    b_mask_pos = torch.stack(b_mask_pos)
+
+    return b_seq, b_msa_clust, b_msa_seed, b_msa_extra, b_mask_pos
+
+
+def mask_inputs(
+    seq,
+    msa_masked,
+    msa_full,
+    xyz_t,
+    t1d,
+    input_seq_mask=None,
+    input_str_mask=None,
+    input_t1dconf_mask=None,
+    loss_seq_mask=None,
+    loss_str_mask=None,
+):
+    """
+    Parameters:
+        seq (torch.tensor, required): (B,I,L) integer sequence
+        msa_masked (torch.tensor, required): (B,I,N_short,L,46)
+        msa_full  (torch,.tensor, required): (B,I,N_long,L,23)
+
+        xyz_t (torch,tensor): (B,T,L,14,3) template crds BEFORE they go into get_init_xyz
+
+        t1d (torch.tensor, required): (B,I,L,22) this is the t1d before tacking on the chi angles
+
+        str_mask_1D (torch.tensor, required): Shape (L) rank 1 tensor where structure is masked at False positions
+        seq_mask_1D (torch.tensor, required): Shape (L) rank 1 tensor where seq is masked at False positions
+    """
+
+    ###########
+    B, _, _ = seq.shape
+    assert B == 1, "batch sizes > 1 not supported"
+    seq_mask = input_seq_mask[0]
+    seq[:, :, ~seq_mask] = 21  # mask token categorical value
+
+    ### msa_masked ###
+    ##################
+    msa_masked[:, :, :, ~seq_mask, :20] = 0
+    msa_masked[:, :, :, ~seq_mask, 20] = 0
+    msa_masked[:, :, :, ~seq_mask, 21] = 1  # set to the unkown char
+
+    # index 44/45 is insertion/deletion
+    # index 43 is the unknown token
+    # index 42 is the masked token
+    msa_masked[:, :, :, ~seq_mask, 22:42] = 0
+    msa_masked[:, :, :, ~seq_mask, 43] = 1
+    msa_masked[:, :, :, ~seq_mask, 42] = 0
+
+    # insertion/deletion stuff
+    msa_masked[:, :, :, ~seq_mask, 44:] = 0
+
+    ### msa_full ###
+    ################
+    msa_full[:, :, :, ~seq_mask, :20] = 0
+    msa_full[:, :, :, ~seq_mask, 21] = 1
+    msa_full[:, :, :, ~seq_mask, 20] = 0
+    msa_full[
+        :, :, :, ~seq_mask, -1
+    ] = 0  # NOTE: double check this is insertions/deletions and 0 makes sense
+
+    ### t1d ###
+    ###########
+    # NOTE: Not adjusting t1d last dim (confidence) from sequence mask
+    t1d[:, :, ~seq_mask, :20] = 0
+    t1d[:, :, ~seq_mask, 20] = 1  # unknown
+
+    t1d[:, :, :, 21] *= input_t1dconf_mask
+
+    t1d = torch.cat(
+        (t1d, torch.zeros((t1d.shape[0], t1d.shape[1], t1d.shape[2], 2)).float()), -1
+    ).to(seq.device)
+
+    xyz_t[:, :, ~seq_mask, 3:, :] = float("nan")
+
+    # Structure masking
+    str_mask = input_str_mask[0]
+    xyz_t[:, :, ~str_mask, :, :] = float("nan")
+
+    return seq, msa_masked, msa_full, xyz_t, t1d
 
 
 class ContigMap:
@@ -414,3 +617,14 @@ class ContigMap:
         mappings["sampled_mask"] = self.sampled_mask
         mappings["mask_1d"] = self.mask_1d
         return mappings
+
+
+def lddt_unbin(pred_lddt):
+    nbin = pred_lddt.shape[1]
+    bin_step = 1.0 / nbin
+    lddt_bins = torch.linspace(
+        bin_step, 1.0, nbin, dtype=pred_lddt.dtype, device=pred_lddt.device
+    )
+
+    pred_lddt = nn.Softmax(dim=1)(pred_lddt)
+    return torch.sum(lddt_bins[None, :, None] * pred_lddt, dim=1)

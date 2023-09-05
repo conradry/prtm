@@ -2,17 +2,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from proteome.models.protein_generator.attention_module import (
+
+from proteome.common_modules.rosetta.attention_module import (
     Attention,
     AttentionWithBias,
     FeedForwardLayer,
 )
-from proteome.models.protein_generator.track_module import PairStr2Pair
-from proteome.models.protein_generator.util import (
+from proteome.common_modules.rosetta.util import (
     create_custom_forward,
     init_lecun_normal,
     rbf,
 )
+from proteome.models.protein_generator.track_module import PairStr2Pair
 
 # Module contains classes and functions to generate initial embeddings
 
@@ -265,11 +266,9 @@ class Templ_emb(nn.Module):
 
     def reset_parameter(self):
         self.emb = init_lecun_normal(self.emb)
-        # nn.init.zeros_(self.emb.weight) #init weights to zero
         nn.init.zeros_(self.emb.bias)
 
         nn.init.kaiming_normal_(self.emb_t1d.weight, nonlinearity="relu")
-        # nn.init.zeros_(self.emb_t1d.weight)
         nn.init.zeros_(self.emb_t1d.bias)
 
         self.proj_t1d = init_lecun_normal(self.proj_t1d)
@@ -286,10 +285,6 @@ class Templ_emb(nn.Module):
         right = t1d.unsqueeze(2).expand(-1, -1, L, -1, -1)
         #
         templ = torch.cat((t2d, left, right), -1)  # (B, T, L, L, 88)
-
-        # ic(templ.shape)
-        # ic(templ.dtype)
-        # ic(self.emb.weight.dtype)
         templ = self.emb(templ)  # Template templures (B, T, L, L, d_templ)
         # process each template features
         xyz_t = xyz_t.reshape(B * T, L, -1, 3)

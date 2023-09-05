@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
-from proteome.models.protein_generator.auxiliary_predictor import (
+
+from proteome.common_modules.rosetta.auxiliary_predictor import (
     DistanceNetwork,
     ExpResolvedNetwork,
     LDDTNetwork,
     MaskedTokenNetwork,
 )
+from proteome.common_modules.rosetta.util import INIT_CRDS
 from proteome.models.protein_generator.embeddings import (
     Extra_emb,
     MSA_emb,
@@ -14,7 +16,6 @@ from proteome.models.protein_generator.embeddings import (
     Templ_emb,
 )
 from proteome.models.protein_generator.track_module import IterativeSimulator
-from proteome.models.protein_generator.util import INIT_CRDS
 
 
 class RoseTTAFoldModule(nn.Module):
@@ -110,15 +111,6 @@ class RoseTTAFoldModule(nn.Module):
     ):
         B, N, L = msa_latent.shape[:3]
         # Get embeddings
-        # ic(seq.shape)
-        # ic(msa_latent.shape)
-        # ic(seq1hot.shape)
-        # ic(idx.shape)
-        # ic(xyz.shape)
-        # ic(seq1hot.shape)
-        # ic(t1d.shape)
-        # ic(t2d.shape)
-
         idx = idx.long()
         msa_latent, pair, state = self.latent_emb(msa_latent, seq, idx, seq1hot=seq1hot)
 
@@ -132,40 +124,17 @@ class RoseTTAFoldModule(nn.Module):
         if state_prev == None:
             state_prev = torch.zeros_like(state)
 
-        # ic(seq.shape)
-        # ic(msa_prev.shape)
-        # ic(pair_prev.shape)
-        # ic(xyz.shape)
-        # ic(state_prev.shape)
-
         msa_recycle, pair_recycle, state_recycle = self.recycle(
             seq, msa_prev, pair_prev, xyz, state_prev
         )
         msa_latent[:, 0] = msa_latent[:, 0] + msa_recycle.reshape(B, L, -1)
         pair = pair + pair_recycle
         state = state + state_recycle
-        #
-        # ic(t1d.dtype)
-        # ic(t2d.dtype)
-        # ic(alpha_t.dtype)
-        # ic(xyz_t.dtype)
-        # ic(pair.dtype)
-        # ic(state.dtype)
-
-        # import pdb; pdb.set_trace()
 
         # add template embedding
         pair, state = self.templ_emb(
             t1d, t2d, alpha_t, xyz_t, pair, state, use_checkpoint=use_checkpoint
         )
-
-        # ic(seq.dtype)
-        # ic(msa_latent.dtype)
-        # ic(msa_full.dtype)
-        # ic(pair.dtype)
-        # ic(xyz.dtype)
-        # ic(state.dtype)
-        # ic(idx.dtype)
 
         # Predict coordinates from given inputs
         msa, pair, R, T, alpha_s, state = self.simulator(
