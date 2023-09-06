@@ -18,7 +18,7 @@ import dataclasses
 import io
 import re
 import string
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Self, Sequence, Union
 
 import modelcif
 import modelcif.alignment
@@ -42,56 +42,653 @@ PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
 assert PDB_MAX_CHAINS == 62
 
+"""
+Some notes about number of atoms:
+- The full 37 atom representation covers all possible atoms, though no amino acid has all
+of them. Trytophan has the most with 27.
+- The 14 atom representation covers all atoms in the backbone and sidechain of all amino
+acids excluding hydrogens. In this case the positions of the atoms are not fixed in the
+array. For example, in ILE, the CD1 atom is at index 7, but in LEU it's at index 6.
+- The 27 atom representation covers all atoms including hydrogens for each residue.
+- The 5 atom representation covers the backbone (N, CA, C) plus O and CB.
+- The 4 atom representation covers the backbone (N, CA, C) plus O.
+- The 3 atom representation covers the backbone (N, CA, C).
+- The 1 atom representation covers only the CA atom.
+"""
 
-@dataclasses.dataclass(frozen=True)
+
+def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
+    chain_end = "TER"
+    return (
+        f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
+        f"{chain_name:>1}{residue_index:>4}"
+    )
+
+
 class Protein:
-    """Protein structure representation."""
+    VALID_ATOM_COUNTS = [1, 3, 4, 5, 14, 27, 37]
 
-    # Cartesian coordinates of atoms in angstroms. The atom types correspond to
-    # residue_constants.atom_types, i.e. the first three are N, CA, C.
-    atom_positions: np.ndarray  # [num_res, num_atom_type, 3]
+    def __init__(
+        self,
+        atom_positions: Union[np.ndarray, torch.Tensor],
+        aatype: Union[np.ndarray, torch.Tensor],
+        atom_mask: Union[np.ndarray, torch.Tensor],
+        residue_index: Union[np.ndarray, torch.Tensor],
+        b_factors: Union[np.ndarray, torch.Tensor],
+        chain_index: Union[np.ndarray, torch.Tensor],
+        parents: Optional[Sequence[str]] = None,
+        parents_chain_index: Optional[Sequence[int]] = None,
+        hetatom_positions: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        hetatom_names: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        remark: Optional[str] = None,
+    ):
+        """
+        Initializes a Protein object with the given attributes. The expected number of
+        atoms for this base representation is 37.
 
-    # Amino-acid type for each residue represented as an integer between 0 and
-    # 20, where 20 is 'X'.
-    aatype: np.ndarray  # [num_res]
+        Args:
+            atom_positions (Union[np.ndarray, torch.Tensor]):
+                Cartesian coordinates of atoms in angstroms. The atom types correspond to
+                residue_constants.atom_types, i.e. the first three are N, CA, C. The expected
+                shape is [num_res, num_atom_type, 3].
+            aatype (Union[np.ndarray, torch.Tensor]):
+                Amino-acid type for each residue represented as an integer between 0 and 20.
+                The expected shape is [num_res].
+            atom_mask (Union[np.ndarray, torch.Tensor]):
+                Binary float mask to indicate presence of a particular atom. The expected
+                shape is [num_res, num_atom_type].
+            residue_index (Union[np.ndarray, torch.Tensor]):
+                Residue index as used in PDB. The expected shape is [num_res]. The lowest index
+                value is 1.
+            b_factors (Union[np.ndarray, torch.Tensor]):
+                B-factors, or temperature factors, of each residue. The expected shape is
+                [num_res, num_atom_type].
+            chain_index (Union[np.ndarray, torch.Tensor]):
+                Chain indices for multi-chain predictions. The expected shape is [num_res].
+            remark (Optional[str], optional):
+                Optional remark about the protein. Defaults to None.
+            parents (Optional[Sequence[str]], optional):
+                Templates used to generate this protein. Defaults to None.
+            parents_chain_index (Optional[Sequence[int]], optional):
+                Chain corresponding to each parent. Defaults to None.
+            hetatom_positions (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                HETATM positions. Defaults to None. Expected shape is [num_hetatoms, 3].
+            hetatom_names (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                HETATM names. Defaults to None. Expected shape is [num_hetatoms].
+        """
+        self.atom_positions = atom_positions
+        self.aatype = aatype
+        self.atom_mask = atom_mask
+        self.residue_index = residue_index
+        self.chain_index = chain_index
+        self.b_factors = b_factors
+        self.parents = parents
+        self.parents_chain_index = parents_chain_index
+        self.hetatom_positions = hetatom_positions
+        self.hetatom_names = hetatom_names
+        self.remark = remark
 
-    # Binary float mask to indicate presence of a particular atom. 1.0 if an atom
-    # is present and 0.0 if not. This should be used for loss masking.
-    atom_mask: np.ndarray  # [num_res, num_atom_type]
+        self.fields = [
+            "atom_positions",
+            "aatype",
+            "atom_mask",
+            "residue_index",
+            "chain_index",
+            "b_factors",
+            "parents",
+            "parents_chain_index",
+            "hetatom_positions",
+            "hetatom_names",
+            "remark",
+        ]
 
-    # Residue index as used in PDB. It is not necessarily continuous or 0-indexed.
-    residue_index: np.ndarray  # [num_res]
+        self._validate_inputs()
 
-    # B-factors, or temperature factors, of each residue (in sq. angstroms units),
-    # representing the displacement of the residue from its ground truth mean
-    # value.
-    b_factors: np.ndarray  # [num_res, num_atom_type]
+    def _validate_inputs(self):
+        """Verifies the shapes and values of the creation parameters"""
+        num_res, num_atom_type = self.atom_positions.shape[:2]
+        assert num_atom_type in self.VALID_ATOM_COUNTS, (
+            f"Invalid number of atoms: {num_atom_type}. "
+            f"Valid values are {self.VALID_ATOM_COUNTS}."
+        )
 
-    # Chain indices for multi-chain predictions
-    chain_index: Optional[np.ndarray] = None
+        # Validate that num_res is the same for all relevant arrays
+        for arr in [
+            self.aatype,
+            self.atom_mask,
+            self.residue_index,
+            self.b_factors,
+            self.chain_index,
+        ]:
+            if arr is not None:
+                assert arr.shape[0] == num_res
 
-    # Optional remark about the protein. Included as a comment in output PDB
-    # files
-    remark: Optional[str] = None
+        # Validate that num_atom_type is the same for all relevant arrays
+        for arr in [self.atom_mask, self.b_factors]:
+            if arr is not None:
+                assert arr.shape[1] == num_atom_type
 
-    # Templates used to generate this protein (prediction-only)
-    parents: Optional[Sequence[str]] = None
+        # Validate that the residue index is 1-indexed
+        assert self.residue_index.min() == 1, "Residue index must be 1-indexed"
+        assert self.chain_index.max() < PDB_MAX_CHAINS, "Chain index must be < 62"
 
-    # Chain corresponding to each parent
-    parents_chain_index: Optional[Sequence[int]] = None
+    def to_torch(self) -> Self:
+        """Converts a `Protein` instance to torch tensors."""
+        prot_dict = {}
+        for field in self.fields:
+            v = getattr(self, field)
+            if isinstance(v, np.ndarray):
+                # Check if array is any float or integer type
+                if np.issubdtype(v.dtype, np.floating):
+                    prot_dict[field] = torch.from_numpy(v).float()
+                elif np.issubdtype(v.dtype, np.integer):
+                    prot_dict[field] = torch.from_numpy(v).long()
+                elif np.issubdtype(v.dtype, np.bool_):
+                    prot_dict[field] = torch.from_numpy(v).bool()
+            elif isinstance(v, torch.tensor):
+                # If already a tensor, do nothing
+                prot_dict[field] = v
 
-    # HETATM positions
-    hetatom_positions: Optional[np.ndarray] = None
+        return Protein(**prot_dict)
 
-    # HETATM names
-    hetatom_names: Optional[np.ndarray] = None
+    def to_numpy(self) -> Self:
+        """Converts a `Protein` instance to numpy arrays."""
+        prot_dict = {}
+        for field in self.fields:
+            v = getattr(self, field)
+            if isinstance(v, torch.Tensor):
+                prot_dict[field] = v.detach().cpu().numpy()
+            elif isinstance(v, np.ndarray):
+                prot_dict[field] = v
 
-    def __post_init__(self):
-        if len(np.unique(self.chain_index)) > PDB_MAX_CHAINS:
-            raise ValueError(
-                f"Cannot build an instance with more than {PDB_MAX_CHAINS} "
-                "chains because these cannot be written to PDB format"
+        return Protein(**prot_dict)
+
+    def get_pdb_headers(self, chain_id: int = 0) -> Sequence[str]:
+        pdb_headers = []
+
+        remark = self.remark
+        if remark is not None:
+            pdb_headers.append(f"REMARK {remark}")
+
+        parents = self.parents
+        parents_chain_index = self.parents_chain_index
+        if parents_chain_index is not None:
+            parents = [p for i, p in zip(parents_chain_index, parents) if i == chain_id]
+
+        if parents is None or len(parents) == 0:
+            parents = ["N/A"]
+
+        pdb_headers.append(f"PARENT {' '.join(parents)}")
+
+        return pdb_headers
+
+    def to_pdb(self) -> str:
+        """Converts this `Protein` instance to a PDB string.
+
+        Returns:
+            PDB string.
+        """
+        restypes = residue_constants.restypes + ["X"]
+        res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], "UNK")
+        atom_types = residue_constants.atom_types
+
+        pdb_lines = []
+
+        atom_mask = self.atom_mask
+        aatype = self.aatype
+        atom_positions = self.atom_positions
+        residue_index = self.residue_index.astype("int")
+        b_factors = self.b_factors
+        chain_index = self.chain_index
+
+        if aatype.max() > residue_constants.restype_num:
+            raise ValueError("Invalid aatypes, out of range.")
+
+        # Construct a mapping from chain integer indices to chain ID strings.
+        chain_ids = {}
+        unique_fn = np.unique if isinstance(chain_index, np.ndarray) else torch.unique
+        for i in unique_fn(chain_index):
+            if i >= PDB_MAX_CHAINS:
+                raise ValueError(
+                    f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
+                )
+            chain_ids[i] = PDB_CHAIN_IDS[i]
+
+        headers = self.get_pdb_headers()
+        if len(headers) > 0:
+            pdb_lines.extend(headers)
+
+        pdb_lines.append("MODEL     1")
+        n = aatype.shape[0]
+        atom_index = 1
+        last_chain_index = chain_index[0]
+        prev_chain_index = 0
+        chain_tags = string.ascii_uppercase
+
+        # Add all atom sites.
+        for i in range(aatype.shape[0]):
+            # Close the previous chain if in a multichain PDB.
+            if last_chain_index != chain_index[i]:
+                pdb_lines.append(
+                    _chain_end(
+                        atom_index,
+                        res_1to3(aatype[i - 1]),
+                        chain_ids[chain_index[i - 1]],
+                        residue_index[i - 1],
+                    )
+                )
+                last_chain_index = chain_index[i]
+                atom_index += 1  # Atom index increases at the TER symbol.
+
+            res_name_3 = res_1to3(aatype[i])
+            for atom_name, pos, mask, b_factor in zip(
+                atom_types, atom_positions[i], atom_mask[i], b_factors[i]
+            ):
+                if mask < 0.5:
+                    continue
+
+                record_type = "ATOM"
+                name = atom_name if len(atom_name) == 4 else f" {atom_name}"
+                alt_loc = ""
+                insertion_code = ""
+                occupancy = 1.00
+                element = atom_name[0]  # Protein supports only C, N, O, S, this works.
+                charge = ""
+
+                chain_tag = "A"
+                if chain_index is not None:
+                    chain_tag = chain_tags[chain_index[i]]
+
+                # PDB is a columnar format, every space matters here!
+                atom_line = (
+                    f"{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}"
+                    # TODO: check this refactor, chose main branch version
+                    # f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
+                    f"{res_name_3:>3} {chain_tag:>1}"
+                    f"{residue_index[i]:>4}{insertion_code:>1}   "
+                    f"{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}"
+                    f"{occupancy:>6.2f}{b_factor:>6.2f}          "
+                    f"{element:>2}{charge:>2}"
+                )
+                pdb_lines.append(atom_line)
+                atom_index += 1
+
+            should_terminate = i == n - 1
+            if chain_index is not None:
+                if i != n - 1 and chain_index[i + 1] != prev_chain_index:
+                    should_terminate = True
+                    prev_chain_index = chain_index[i + 1]
+
+            if should_terminate:
+                # Close the chain.
+                chain_end = "TER"
+                chain_termination_line = (
+                    f"{chain_end:<6}{atom_index:>5}      "
+                    f"{res_1to3(aatype[i]):>3} "
+                    f"{chain_tag:>1}{residue_index[i]:>4}"
+                )
+                pdb_lines.append(chain_termination_line)
+                atom_index += 1
+
+                if i != n - 1:
+                    # "prev" is a misnomer here. This happens at the beginning of
+                    # each new chain.
+                    pdb_lines.extend(self.get_pdb_headers(prev_chain_index))
+
+        pdb_lines.append("ENDMDL")
+        pdb_lines.append("END")
+
+        # Pad all lines to 80 characters
+        pdb_lines = [line.ljust(80) for line in pdb_lines]
+        return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
+
+    def to_modelcif(self) -> str:
+        """
+        Converts a `Protein` instance to a ModelCIF string. Chains with identical modelled coordinates
+        will be treated as the same polymer entity. But note that if chains differ in modelled regions,
+        no attempt is made at identifying them as a single polymer entity.
+
+        Args:
+            prot: The protein to convert to PDB.
+
+        Returns:
+           ModelCIF string.
+        """
+
+        restypes = residue_constants.restypes + ["X"]
+        atom_types = residue_constants.atom_types
+
+        atom_mask = self.atom_mask
+        aatype = self.aatype
+        atom_positions = self.atom_positions
+        residue_index = self.residue_index.astype("int")
+        b_factors = self.b_factors
+        chain_index = self.chain_index
+
+        n = aatype.shape[0]
+        if chain_index is None:
+            chain_index = [0 for i in range(n)]
+
+        system = modelcif.System(title="Model prediction")
+
+        # Finding chains and creating entities
+        seqs = {}
+        seq = []
+        last_chain_idx = None
+        for i in range(n):
+            if last_chain_idx is not None and last_chain_idx != chain_index[i]:
+                seqs[last_chain_idx] = seq
+                seq = []
+            seq.append(restypes[aatype[i]])
+            last_chain_idx = chain_index[i]
+        # finally add the last chain
+        seqs[last_chain_idx] = seq
+
+        # now reduce sequences to unique ones (note this won't work if different asyms have different unmodelled regions)
+        unique_seqs = {}
+        for chain_idx, seq_list in seqs.items():
+            seq = "".join(seq_list)
+            if seq in unique_seqs:
+                unique_seqs[seq].append(chain_idx)
+            else:
+                unique_seqs[seq] = [chain_idx]
+
+        # adding 1 entity per unique sequence
+        entities_map = {}
+        for key, value in unique_seqs.items():
+            model_e = modelcif.Entity(key, description="Model subunit")
+            for chain_idx in value:
+                entities_map[chain_idx] = model_e
+
+        chain_tags = string.ascii_uppercase
+        asym_unit_map = {}
+        for chain_idx in set(chain_index):
+            # Define the model assembly
+            chain_id = chain_tags[chain_idx]
+            asym = modelcif.AsymUnit(
+                entities_map[chain_idx],
+                details="Model subunit %s" % chain_id,
+                id=chain_id,
             )
+            asym_unit_map[chain_idx] = asym
+        modeled_assembly = modelcif.Assembly(
+            asym_unit_map.values(), name="Modeled assembly"
+        )
+
+        class _LocalPLDDT(modelcif.qa_metric.Local, modelcif.qa_metric.PLDDT):
+            name = "pLDDT"
+            software = None
+            description = "Predicted lddt"
+
+        class _GlobalPLDDT(modelcif.qa_metric.Global, modelcif.qa_metric.PLDDT):
+            name = "pLDDT"
+            software = None
+            description = "Global pLDDT, mean of per-residue pLDDTs"
+
+        class _MyModel(modelcif.model.AbInitioModel):
+            def get_atoms(self):
+                # Add all atom sites.
+                for i in range(n):
+                    for atom_name, pos, mask, b_factor in zip(
+                        atom_types, atom_positions[i], atom_mask[i], b_factors[i]
+                    ):
+                        if mask < 0.5:
+                            continue
+                        element = atom_name[
+                            0
+                        ]  # Protein supports only C, N, O, S, this works.
+                        yield modelcif.model.Atom(
+                            asym_unit=asym_unit_map[chain_index[i]],
+                            type_symbol=element,
+                            seq_id=residue_index[i],
+                            atom_id=atom_name,
+                            x=pos[0],
+                            y=pos[1],
+                            z=pos[2],
+                            het=False,
+                            biso=b_factor,
+                            occupancy=1.00,
+                        )
+
+            def add_scores(self):
+                # local scores
+                plddt_per_residue = {}
+                for i in range(n):
+                    for mask, b_factor in zip(atom_mask[i], b_factors[i]):
+                        if mask < 0.5:
+                            continue
+                        # add 1 per residue, not 1 per atom
+                        if chain_index[i] not in plddt_per_residue:
+                            # first time a chain index is seen: add the key and start the residue dict
+                            plddt_per_residue[chain_index[i]] = {
+                                residue_index[i]: b_factor
+                            }
+                        if residue_index[i] not in plddt_per_residue[chain_index[i]]:
+                            plddt_per_residue[chain_index[i]][
+                                residue_index[i]
+                            ] = b_factor
+                plddts = []
+                for chain_idx in plddt_per_residue:
+                    for residue_idx in plddt_per_residue[chain_idx]:
+                        plddt = plddt_per_residue[chain_idx][residue_idx]
+                        plddts.append(plddt)
+                        self.qa_metrics.append(
+                            _LocalPLDDT(
+                                asym_unit_map[chain_idx].residue(residue_idx), plddt
+                            )
+                        )
+                # global score
+                self.qa_metrics.append((_GlobalPLDDT(np.mean(plddts))))
+
+        # Add the model and modeling protocol to the file and write them out:
+        model = _MyModel(assembly=modeled_assembly, name="Best scoring model")
+        model.add_scores()
+
+        model_group = modelcif.model.ModelGroup([model], name="All models")
+        system.model_groups.append(model_group)
+
+        fh = io.StringIO()
+        modelcif.dumper.write(fh, [system])
+        return fh.getvalue()
+
+    def to_biopdb_structure(self) -> Structure:
+        """Converts from a `Protein` to a BioPython PDB structure."""
+        pdb_str = self.to_pdb()
+        pdb_fh = io.StringIO(pdb_str)
+        parser = PDBParser(QUIET=True)
+        return parser.get_structure("none", pdb_fh)
+
+    def to_rosetta_pose(self):  # can't type hint conditional import
+        """Converts a protein to a PyRosetta pose."""
+        try:
+            from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
+            from pyrosetta.rosetta.core.pose import Pose
+        except:
+            raise ImportError("PyRosetta is not installed")
+
+        pose = Pose()
+        pdb_str = self.to_pdb()
+        pose_from_pdbstring(pose, pdb_str)
+        return pose
+
+    @classmethod
+    def from_pdb_string(
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> Self:
+        """Takes a PDB string and constructs a Protein object.
+
+        WARNING: All non-standard residue types will be converted into UNK. All
+        non-standard atoms will be ignored.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A new `Protein` parsed from the pdb contents.
+        """
+        pdb_fh = io.StringIO(pdb_str)
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure("none", pdb_fh)
+        models = list(structure.get_models())
+        if len(models) != 1:
+            raise ValueError(
+                f"Only single model PDBs are supported. Found {len(models)} models."
+            )
+        model = models[0]
+
+        atom_positions = []
+        aatype = []
+        atom_mask = []
+        residue_index = []
+        chain_ids = []
+        b_factors = []
+
+        if parse_hetatom:
+            hetatom_positions = []
+            hetatom_names = []
+
+        for chain in model:
+            if chain_id is not None and chain.id != chain_id:
+                continue
+            for res in chain:
+                if res.id[2] != " ":
+                    raise ValueError(
+                        f"PDB contains an insertion code at chain {chain.id} and residue "
+                        f"index {res.id[1]}. These are not supported."
+                    )
+                res_shortname = residue_constants.restype_3to1.get(res.resname, "X")
+                restype_idx = residue_constants.restype_order.get(
+                    res_shortname, residue_constants.restype_num
+                )
+
+                if parse_hetatom:
+                    if len(res.id[0].strip()) > 0:
+                        for atom in res:
+                            hetatom_positions.append(atom.coord)
+                            hetatom_names.append(res.id[0].lstrip("H_"))
+                        continue
+
+                atom_count = residue_constants.atom_type_num
+                pos = np.zeros((atom_count, 3))
+                mask = np.zeros((atom_count,))
+                res_b_factors = np.zeros((atom_count,))
+                for atom in res:
+                    if atom.name not in residue_constants.atom_types:
+                        continue
+                    else:
+                        atom_index = residue_constants.atom_order[atom.name]
+
+                    pos[atom_index] = atom.coord
+                    mask[atom_index] = 1.0
+                    res_b_factors[atom_index] = atom.bfactor
+
+                if np.sum(mask) < 0.5:
+                    # If no known atom positions are reported for the residue then skip it.
+                    continue
+                aatype.append(restype_idx)
+                atom_positions.append(pos)
+                atom_mask.append(mask)
+                residue_index.append(res.id[1])
+                chain_ids.append(chain.id)
+                b_factors.append(res_b_factors)
+
+        parents = None
+        parents_chain_index = None
+        if "PARENT" in pdb_str:
+            parents = []
+            parents_chain_index = []
+            chain_id = 0
+            for l in pdb_str.split("\n"):
+                if "PARENT" in l:
+                    if not "N/A" in l:
+                        parent_names = l.split()[1:]
+                        parents.extend(parent_names)
+                        parents_chain_index.extend([chain_id for _ in parent_names])
+                    chain_id += 1
+
+        chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
+        chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
+
+        if parse_hetatom:
+            hetatom_positions = np.array(hetatom_positions)
+            hetatom_names = np.array(hetatom_names)
+        else:
+            hetatom_positions = None
+            hetatom_names = None
+
+        protein = Protein(
+            atom_positions=np.array(atom_positions),
+            atom_mask=np.array(atom_mask),
+            aatype=np.array(aatype),
+            residue_index=np.array(residue_index),
+            chain_index=chain_index,
+            b_factors=np.array(b_factors),
+            parents=parents,
+            parents_chain_index=parents_chain_index,
+            hetatom_positions=hetatom_positions,
+            hetatom_names=hetatom_names,
+        )
+
+        return protein
+
+    @classmethod
+    def from_rosetta_pose(pose):  # can't type hint conditional import
+        """Converts a PyRosetta pose to a protein."""
+        try:
+            from pyrosetta.rosetta.std import ostringstream
+        except:
+            raise ImportError("PyRosetta is not installed")
+
+        buffer = ostringstream()
+        pose.dump_pdb(buffer)
+        return Protein.from_pdb_string(buffer.str())
+
+
+class Protein27(Protein):
+    VALID_ATOM_COUNTS = [27]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class Protein14(Protein):
+    VALID_ATOM_COUNTS = [14]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class Protein5(Protein):
+    VALID_ATOM_COUNTS = [5]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class Protein4(Protein):
+    VALID_ATOM_COUNTS = [4]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class Protein3(Protein):
+    VALID_ATOM_COUNTS = [3]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class ProteinCATrace(Protein):
+    VALID_ATOM_COUNTS = [1]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Protein:
@@ -108,40 +705,6 @@ def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Prot
     prot_27_padded = Protein(**prot_dict)
 
     return prot_27_padded
-
-
-def crop_protein_37_to_27(prot: Protein) -> Protein:
-    prot_dict = dataclasses.asdict(prot)
-    prot_dict["atom_positions"] = prot.atom_positions[:, :27, :]
-    prot_dict["atom_mask"] = prot.atom_mask[:, :27]
-    prot_dict["b_factors"] = prot.b_factors[:, :27]
-    prot_27 = Protein(**prot_dict)
-
-    return prot_27
-
-
-def to_torch(prot: Protein) -> Protein:
-    """Converts a `Protein` instance to torch tensors."""
-    prot_dict = dataclasses.asdict(prot)
-    for k, v in prot_dict.items():
-        if isinstance(v, np.ndarray):
-            # Check if array is any float or integer type
-            if np.issubdtype(v.dtype, np.floating):
-                prot_dict[k] = torch.from_numpy(v).float()
-            elif np.issubdtype(v.dtype, np.integer):
-                prot_dict[k] = torch.from_numpy(v).long()
-            elif np.issubdtype(v.dtype, np.bool_):
-                prot_dict[k] = torch.from_numpy(v).bool()
-
-    return Protein(**prot_dict)
-
-
-def to_biopdb_structure(prot: Protein) -> Structure:
-    """Converts from a `Protein` to a BioPython PDB structure."""
-    pdb_str = to_pdb(prot)
-    pdb_fh = io.StringIO(pdb_str)
-    parser = PDBParser(QUIET=True)
-    return parser.get_structure("none", pdb_fh)
 
 
 def to_ca_only_protein(protein: Protein) -> Protein:
@@ -178,235 +741,6 @@ def to_backbone_only_protein(protein: Protein) -> Protein:
         parents=protein.parents,
         parents_chain_index=protein.parents_chain_index,
     )
-
-
-def from_pdb_string(
-    pdb_str: str,
-    chain_id: Optional[str] = None,
-    backbone_only: bool = False,
-    ca_only: bool = False,
-    atom14_format: bool = False,
-    parse_hetatom: bool = False,
-) -> Protein:
-    """Takes a PDB string and constructs a Protein object.
-
-    WARNING: All non-standard residue types will be converted into UNK. All
-      non-standard atoms will be ignored.
-
-    Args:
-        pdb_str: The contents of the pdb file
-        chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
-        is parsed.
-        backbone_only: If True, then only the 3 backbone atoms are parsed for each residue.
-        ca_only: If True, then only the CA atom is parsed for each residue.
-        atom14_format: If True, only 14 atoms are parsed. The order of the atoms is defined in
-        residue_constants.restype1_to_atom14_names. This is used by some RoseTTAFOld models.
-        Unlike the full 37 atom parser, an atoms position is not fixed in the array. For example,
-        in ILE, the CD1 atom is at index 7, but in LEU it's at index 6.
-
-    Returns:
-        A new `Protein` parsed from the pdb contents.
-    """
-    assert not (
-        backbone_only and ca_only
-    ), "Cannot specify both backbone_only and ca_only"
-    pdb_fh = io.StringIO(pdb_str)
-    parser = PDBParser(QUIET=True)
-    structure = parser.get_structure("none", pdb_fh)
-    models = list(structure.get_models())
-    if len(models) != 1:
-        raise ValueError(
-            f"Only single model PDBs are supported. Found {len(models)} models."
-        )
-    model = models[0]
-
-    atom_positions = []
-    aatype = []
-    atom_mask = []
-    residue_index = []
-    chain_ids = []
-    b_factors = []
-
-    if parse_hetatom:
-        hetatom_positions = []
-        hetatom_names = []
-
-    for chain in model:
-        if chain_id is not None and chain.id != chain_id:
-            continue
-        for res in chain:
-            if res.id[2] != " ":
-                raise ValueError(
-                    f"PDB contains an insertion code at chain {chain.id} and residue "
-                    f"index {res.id[1]}. These are not supported."
-                )
-            res_shortname = residue_constants.restype_3to1.get(res.resname, "X")
-            restype_idx = residue_constants.restype_order.get(
-                res_shortname, residue_constants.restype_num
-            )
-
-            if parse_hetatom:
-                if len(res.id[0].strip()) > 0:
-                    for atom in res:
-                        hetatom_positions.append(atom.coord)
-                        hetatom_names.append(res.id[0].lstrip("H_"))
-                    continue
-
-            atom_count = 14 if atom14_format else residue_constants.atom_type_num
-            pos = np.zeros((atom_count, 3))
-            mask = np.zeros((atom_count,))
-            res_b_factors = np.zeros((atom_count,))
-            for atom in res:
-                if (
-                    atom14_format
-                    and atom.name
-                    not in residue_constants.restype1_to_atom14_names[res_shortname]
-                ):
-                    continue
-                elif atom14_format:
-                    atom_index = residue_constants.restype1_to_atom14_names[
-                        res_shortname
-                    ].index(atom.name)
-                elif atom.name not in residue_constants.atom_types:
-                    continue
-                else:
-                    atom_index = residue_constants.atom_order[atom.name]
-
-                pos[atom_index] = atom.coord
-                mask[atom_index] = 1.0
-                res_b_factors[atom_index] = atom.bfactor
-
-            if np.sum(mask) < 0.5:
-                # If no known atom positions are reported for the residue then skip it.
-                continue
-            aatype.append(restype_idx)
-            atom_positions.append(pos)
-            atom_mask.append(mask)
-            residue_index.append(res.id[1])
-            chain_ids.append(chain.id)
-            b_factors.append(res_b_factors)
-
-    parents = None
-    parents_chain_index = None
-    if "PARENT" in pdb_str:
-        parents = []
-        parents_chain_index = []
-        chain_id = 0
-        for l in pdb_str.split("\n"):
-            if "PARENT" in l:
-                if not "N/A" in l:
-                    parent_names = l.split()[1:]
-                    parents.extend(parent_names)
-                    parents_chain_index.extend([chain_id for _ in parent_names])
-                chain_id += 1
-
-    unique_chain_ids = np.unique(chain_ids)
-    chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
-    chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
-
-    if parse_hetatom:
-        hetatom_positions = np.array(hetatom_positions)
-        hetatom_names = np.array(hetatom_names)
-    else:
-        hetatom_positions = None
-        hetatom_names = None
-
-    protein = Protein(
-        atom_positions=np.array(atom_positions),
-        atom_mask=np.array(atom_mask),
-        aatype=np.array(aatype),
-        residue_index=np.array(residue_index),
-        chain_index=chain_index,
-        b_factors=np.array(b_factors),
-        parents=parents,
-        parents_chain_index=parents_chain_index,
-        hetatom_positions=hetatom_positions,
-        hetatom_names=hetatom_names,
-    )
-
-    if ca_only:
-        return to_ca_only_protein(protein)
-    elif backbone_only:
-        return to_backbone_only_protein(protein)
-    else:
-        return protein
-
-
-def from_proteinnet_string(proteinnet_str: str) -> Protein:
-    tag_re = r"(\[[A-Z]+\]\n)"
-    tags = [tag.strip() for tag in re.split(tag_re, proteinnet_str) if len(tag) > 0]
-    groups = zip(tags[0::2], [l.split("\n") for l in tags[1::2]])
-
-    atoms = ["N", "CA", "C"]
-    aatype = None
-    atom_positions = None
-    atom_mask = None
-    for g in groups:
-        if "[PRIMARY]" == g[0]:
-            seq = g[1][0].strip()
-            for i in range(len(seq)):
-                if seq[i] not in residue_constants.restypes:
-                    seq[i] = "X"
-            aatype = np.array(
-                [
-                    residue_constants.restype_order.get(
-                        res_symbol, residue_constants.restype_num
-                    )
-                    for res_symbol in seq
-                ]
-            )
-        elif "[TERTIARY]" == g[0]:
-            tertiary = []
-            for axis in range(3):
-                tertiary.append(list(map(float, g[1][axis].split())))
-            tertiary_np = np.array(tertiary)
-            atom_positions = np.zeros(
-                (len(tertiary[0]) // 3, residue_constants.atom_type_num, 3)
-            ).astype(np.float32)
-            for i, atom in enumerate(atoms):
-                atom_positions[:, residue_constants.atom_order[atom], :] = np.transpose(
-                    tertiary_np[:, i::3]
-                )
-            atom_positions *= PICO_TO_ANGSTROM
-        elif "[MASK]" == g[0]:
-            mask = np.array(list(map({"-": 0, "+": 1}.get, g[1][0].strip())))
-            atom_mask = np.zeros(
-                (
-                    len(mask),
-                    residue_constants.atom_type_num,
-                )
-            ).astype(np.float32)
-            for i, atom in enumerate(atoms):
-                atom_mask[:, residue_constants.atom_order[atom]] = 1
-            atom_mask *= mask[..., None]
-
-    return Protein(
-        atom_positions=atom_positions,
-        atom_mask=atom_mask,
-        aatype=aatype,
-        residue_index=np.arange(len(aatype)),
-        b_factors=None,
-    )
-
-
-def get_pdb_headers(prot: Protein, chain_id: int = 0) -> Sequence[str]:
-    pdb_headers = []
-
-    remark = prot.remark
-    if remark is not None:
-        pdb_headers.append(f"REMARK {remark}")
-
-    parents = prot.parents
-    parents_chain_index = prot.parents_chain_index
-    if parents_chain_index is not None:
-        parents = [p for i, p in zip(parents_chain_index, parents) if i == chain_id]
-
-    if parents is None or len(parents) == 0:
-        parents = ["N/A"]
-
-    pdb_headers.append(f"PARENT {' '.join(parents)}")
-
-    return pdb_headers
 
 
 def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
@@ -459,310 +793,6 @@ def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
     return "\n".join(out_pdb_lines)
 
 
-def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
-    chain_end = "TER"
-    return (
-        f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
-        f"{chain_name:>1}{residue_index:>4}"
-    )
-
-
-def to_pdb(prot: Protein) -> str:
-    """Converts a `Protein` instance to a PDB string.
-
-    Args:
-      prot: The protein to convert to PDB.
-
-    Returns:
-      PDB string.
-    """
-    restypes = residue_constants.restypes + ["X"]
-    res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], "UNK")
-    atom_types = residue_constants.atom_types
-
-    pdb_lines = []
-
-    atom_mask = prot.atom_mask
-    aatype = prot.aatype
-    atom_positions = prot.atom_positions
-    residue_index = prot.residue_index.astype(np.int32)
-    b_factors = prot.b_factors
-    chain_index = prot.chain_index
-
-    if chain_index is None:
-        chain_index = np.zeros(residue_index.shape, dtype=np.int32)
-
-    if np.any(aatype > residue_constants.restype_num):
-        raise ValueError("Invalid aatypes.")
-
-    # Construct a mapping from chain integer indices to chain ID strings.
-    chain_ids = {}
-    for i in np.unique(chain_index):  # np.unique gives sorted output.
-        if i >= PDB_MAX_CHAINS:
-            raise ValueError(
-                f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
-            )
-        chain_ids[i] = PDB_CHAIN_IDS[i]
-
-    headers = get_pdb_headers(prot)
-    if len(headers) > 0:
-        pdb_lines.extend(headers)
-
-    pdb_lines.append("MODEL     1")
-    n = aatype.shape[0]
-    atom_index = 1
-    last_chain_index = chain_index[0]
-    prev_chain_index = 0
-    chain_tags = string.ascii_uppercase
-
-    # Add all atom sites.
-    for i in range(aatype.shape[0]):
-        # Close the previous chain if in a multichain PDB.
-        if last_chain_index != chain_index[i]:
-            pdb_lines.append(
-                _chain_end(
-                    atom_index,
-                    res_1to3(aatype[i - 1]),
-                    chain_ids[chain_index[i - 1]],
-                    residue_index[i - 1],
-                )
-            )
-            last_chain_index = chain_index[i]
-            atom_index += 1  # Atom index increases at the TER symbol.
-
-        res_name_3 = res_1to3(aatype[i])
-        for atom_name, pos, mask, b_factor in zip(
-            atom_types, atom_positions[i], atom_mask[i], b_factors[i]
-        ):
-            if mask < 0.5:
-                continue
-
-            record_type = "ATOM"
-            name = atom_name if len(atom_name) == 4 else f" {atom_name}"
-            alt_loc = ""
-            insertion_code = ""
-            occupancy = 1.00
-            element = atom_name[0]  # Protein supports only C, N, O, S, this works.
-            charge = ""
-
-            chain_tag = "A"
-            if chain_index is not None:
-                chain_tag = chain_tags[chain_index[i]]
-
-            # PDB is a columnar format, every space matters here!
-            atom_line = (
-                f"{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}"
-                # TODO: check this refactor, chose main branch version
-                # f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
-                f"{res_name_3:>3} {chain_tag:>1}"
-                f"{residue_index[i]:>4}{insertion_code:>1}   "
-                f"{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}"
-                f"{occupancy:>6.2f}{b_factor:>6.2f}          "
-                f"{element:>2}{charge:>2}"
-            )
-            pdb_lines.append(atom_line)
-            atom_index += 1
-
-        should_terminate = i == n - 1
-        if chain_index is not None:
-            if i != n - 1 and chain_index[i + 1] != prev_chain_index:
-                should_terminate = True
-                prev_chain_index = chain_index[i + 1]
-
-        if should_terminate:
-            # Close the chain.
-            chain_end = "TER"
-            chain_termination_line = (
-                f"{chain_end:<6}{atom_index:>5}      "
-                f"{res_1to3(aatype[i]):>3} "
-                f"{chain_tag:>1}{residue_index[i]:>4}"
-            )
-            pdb_lines.append(chain_termination_line)
-            atom_index += 1
-
-            if i != n - 1:
-                # "prev" is a misnomer here. This happens at the beginning of
-                # each new chain.
-                pdb_lines.extend(get_pdb_headers(prot, prev_chain_index))
-
-    pdb_lines.append("ENDMDL")
-    pdb_lines.append("END")
-
-    # Pad all lines to 80 characters
-    pdb_lines = [line.ljust(80) for line in pdb_lines]
-    return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
-
-
-def to_rosetta_pose(prot: Protein):  # can't type hint conditional import
-    """Converts a protein to a PyRosetta pose."""
-    try:
-        from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
-        from pyrosetta.rosetta.core.pose import Pose
-    except:
-        raise ImportError("PyRosetta is not installed")
-
-    pose = Pose()
-    pdb_str = to_pdb(prot)
-    pose_from_pdbstring(pose, pdb_str)
-    return pose
-
-
-def from_rosetta_pose(pose):  # can't type hint conditional import
-    """Converts a PyRosetta pose to a protein."""
-    try:
-        from pyrosetta.rosetta.std import ostringstream
-    except:
-        raise ImportError("PyRosetta is not installed")
-
-    buffer = ostringstream()
-    pose.dump_pdb(buffer)
-    return from_pdb_string(buffer.str())
-
-
-def to_modelcif(prot: Protein) -> str:
-    """
-    Converts a `Protein` instance to a ModelCIF string. Chains with identical modelled coordinates
-    will be treated as the same polymer entity. But note that if chains differ in modelled regions,
-    no attempt is made at identifying them as a single polymer entity.
-
-    Args:
-      prot: The protein to convert to PDB.
-
-    Returns:
-      ModelCIF string.
-    """
-
-    restypes = residue_constants.restypes + ["X"]
-    atom_types = residue_constants.atom_types
-
-    atom_mask = prot.atom_mask
-    aatype = prot.aatype
-    atom_positions = prot.atom_positions
-    residue_index = prot.residue_index.astype(np.int32)
-    b_factors = prot.b_factors
-    chain_index = prot.chain_index
-
-    n = aatype.shape[0]
-    if chain_index is None:
-        chain_index = [0 for i in range(n)]
-
-    system = modelcif.System(title="OpenFold prediction")
-
-    # Finding chains and creating entities
-    seqs = {}
-    seq = []
-    last_chain_idx = None
-    for i in range(n):
-        if last_chain_idx is not None and last_chain_idx != chain_index[i]:
-            seqs[last_chain_idx] = seq
-            seq = []
-        seq.append(restypes[aatype[i]])
-        last_chain_idx = chain_index[i]
-    # finally add the last chain
-    seqs[last_chain_idx] = seq
-
-    # now reduce sequences to unique ones (note this won't work if different asyms have different unmodelled regions)
-    unique_seqs = {}
-    for chain_idx, seq_list in seqs.items():
-        seq = "".join(seq_list)
-        if seq in unique_seqs:
-            unique_seqs[seq].append(chain_idx)
-        else:
-            unique_seqs[seq] = [chain_idx]
-
-    # adding 1 entity per unique sequence
-    entities_map = {}
-    for key, value in unique_seqs.items():
-        model_e = modelcif.Entity(key, description="Model subunit")
-        for chain_idx in value:
-            entities_map[chain_idx] = model_e
-
-    chain_tags = string.ascii_uppercase
-    asym_unit_map = {}
-    for chain_idx in set(chain_index):
-        # Define the model assembly
-        chain_id = chain_tags[chain_idx]
-        asym = modelcif.AsymUnit(
-            entities_map[chain_idx], details="Model subunit %s" % chain_id, id=chain_id
-        )
-        asym_unit_map[chain_idx] = asym
-    modeled_assembly = modelcif.Assembly(
-        asym_unit_map.values(), name="Modeled assembly"
-    )
-
-    class _LocalPLDDT(modelcif.qa_metric.Local, modelcif.qa_metric.PLDDT):
-        name = "pLDDT"
-        software = None
-        description = "Predicted lddt"
-
-    class _GlobalPLDDT(modelcif.qa_metric.Global, modelcif.qa_metric.PLDDT):
-        name = "pLDDT"
-        software = None
-        description = "Global pLDDT, mean of per-residue pLDDTs"
-
-    class _MyModel(modelcif.model.AbInitioModel):
-        def get_atoms(self):
-            # Add all atom sites.
-            for i in range(n):
-                for atom_name, pos, mask, b_factor in zip(
-                    atom_types, atom_positions[i], atom_mask[i], b_factors[i]
-                ):
-                    if mask < 0.5:
-                        continue
-                    element = atom_name[
-                        0
-                    ]  # Protein supports only C, N, O, S, this works.
-                    yield modelcif.model.Atom(
-                        asym_unit=asym_unit_map[chain_index[i]],
-                        type_symbol=element,
-                        seq_id=residue_index[i],
-                        atom_id=atom_name,
-                        x=pos[0],
-                        y=pos[1],
-                        z=pos[2],
-                        het=False,
-                        biso=b_factor,
-                        occupancy=1.00,
-                    )
-
-        def add_scores(self):
-            # local scores
-            plddt_per_residue = {}
-            for i in range(n):
-                for mask, b_factor in zip(atom_mask[i], b_factors[i]):
-                    if mask < 0.5:
-                        continue
-                    # add 1 per residue, not 1 per atom
-                    if chain_index[i] not in plddt_per_residue:
-                        # first time a chain index is seen: add the key and start the residue dict
-                        plddt_per_residue[chain_index[i]] = {residue_index[i]: b_factor}
-                    if residue_index[i] not in plddt_per_residue[chain_index[i]]:
-                        plddt_per_residue[chain_index[i]][residue_index[i]] = b_factor
-            plddts = []
-            for chain_idx in plddt_per_residue:
-                for residue_idx in plddt_per_residue[chain_idx]:
-                    plddt = plddt_per_residue[chain_idx][residue_idx]
-                    plddts.append(plddt)
-                    self.qa_metrics.append(
-                        _LocalPLDDT(
-                            asym_unit_map[chain_idx].residue(residue_idx), plddt
-                        )
-                    )
-            # global score
-            self.qa_metrics.append((_GlobalPLDDT(np.mean(plddts))))
-
-    # Add the model and modeling protocol to the file and write them out:
-    model = _MyModel(assembly=modeled_assembly, name="Best scoring model")
-    model.add_scores()
-
-    model_group = modelcif.model.ModelGroup([model], name="All models")
-    system.model_groups.append(model_group)
-
-    fh = io.StringIO()
-    modelcif.dumper.write(fh, [system])
-    return fh.getvalue()
-
-
 def ideal_atom_mask(prot: Protein) -> np.ndarray:
     """Computes an ideal atom mask.
 
@@ -808,40 +838,3 @@ def add_oxygen_to_atom_positions(atom_positions: np.ndarray) -> np.ndarray:
 
     O = C + sum([m * d for m, d in zip(m, d)])
     return np.concatenate((atom_positions, O[:, None, :]), axis=1)
-
-
-def from_openfold_prediction(
-    features: FeatureDict,
-    result: ModelOutput,
-    b_factors: Optional[np.ndarray] = None,
-    chain_index: Optional[np.ndarray] = None,
-    remark: Optional[str] = None,
-    parents: Optional[Sequence[str]] = None,
-    parents_chain_index: Optional[Sequence[int]] = None,
-) -> Protein:
-    """Assembles a protein from a prediction.
-
-    Args:
-      features: Dictionary holding model inputs.
-      result: Dictionary holding model outputs.
-      b_factors: (Optional) B-factors to use for the protein.
-      chain_index: (Optional) Chain indices for multi-chain predictions
-      remark: (Optional) Remark about the prediction
-      parents: (Optional) List of template names
-    Returns:
-      A protein instance.
-    """
-    if b_factors is None:
-        b_factors = np.zeros_like(result["final_atom_mask"])
-
-    return Protein(
-        aatype=features["aatype"],
-        atom_positions=result["final_atom_positions"],
-        atom_mask=result["final_atom_mask"],
-        residue_index=features["residue_index"] + 1,
-        b_factors=b_factors,  # type: ignore
-        chain_index=chain_index,
-        remark=remark,
-        parents=parents,
-        parents_chain_index=parents_chain_index,
-    )
