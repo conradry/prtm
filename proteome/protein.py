@@ -14,9 +14,10 @@
 # limitations under the License.
 
 
+from __future__ import annotations
+
 import dataclasses
 import io
-import re
 import string
 from typing import Any, Dict, List, Mapping, Optional, Self, Sequence, Union
 
@@ -65,7 +66,133 @@ def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
     )
 
 
-class Protein:
+def parse_pdb_string(
+    pdb_str: str,
+    chain_id: Optional[str] = None,
+    parse_hetatom: bool = False,
+) -> Dict[str, np.ndarray]:
+    """Takes a PDB string and parses it into arrays.
+
+    WARNING: All non-standard residue types will be converted into UNK. All
+    non-standard atoms will be ignored.
+
+    Args:
+        pdb_str: The contents of the pdb file
+        chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+        is parsed.
+        parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+    Returns:
+        A dictionary with attributes to construct a protein class
+        and arrays from the parsed pdb.
+    """
+    pdb_fh = io.StringIO(pdb_str)
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("none", pdb_fh)
+    models = list(structure.get_models())
+    if len(models) != 1:
+        raise ValueError(
+            f"Only single model PDBs are supported. Found {len(models)} models."
+        )
+    model = models[0]
+
+    atom_positions = []
+    aatype = []
+    atom_mask = []
+    residue_index = []
+    chain_ids = []
+    b_factors = []
+
+    if parse_hetatom:
+        hetatom_positions = []
+        hetatom_names = []
+
+    for chain in model:
+        if chain_id is not None and chain.id != chain_id:
+            continue
+        for res in chain:
+            if res.id[2] != " ":
+                raise ValueError(
+                    f"PDB contains an insertion code at chain {chain.id} and residue "
+                    f"index {res.id[1]}. These are not supported."
+                )
+            res_shortname = residue_constants.restype_3to1.get(res.resname, "X")
+            restype_idx = residue_constants.restype_order.get(
+                res_shortname, residue_constants.restype_num
+            )
+
+            if parse_hetatom:
+                if len(res.id[0].strip()) > 0:
+                    for atom in res:
+                        hetatom_positions.append(atom.coord)
+                        hetatom_names.append(res.id[0].lstrip("H_"))
+                    continue
+
+            atom_count = residue_constants.atom_type_num
+            pos = np.zeros((atom_count, 3))
+            mask = np.zeros((atom_count,))
+            res_b_factors = np.zeros((atom_count,))
+            for atom in res:
+                if atom.name not in residue_constants.atom_types:
+                    continue
+                else:
+                    atom_index = residue_constants.atom_order[atom.name]
+
+                pos[atom_index] = atom.coord
+                mask[atom_index] = 1.0
+                res_b_factors[atom_index] = atom.bfactor
+
+            if np.sum(mask) < 0.5:
+                # If no known atom positions are reported for the residue then skip it.
+                continue
+            aatype.append(restype_idx)
+            atom_positions.append(pos)
+            atom_mask.append(mask)
+            residue_index.append(res.id[1])
+            chain_ids.append(chain.id)
+            b_factors.append(res_b_factors)
+
+    parents = None
+    parents_chain_index = None
+    if "PARENT" in pdb_str:
+        parents = []
+        parents_chain_index = []
+        chain_id = 0
+        for l in pdb_str.split("\n"):
+            if "PARENT" in l:
+                if not "N/A" in l:
+                    parent_names = l.split()[1:]
+                    parents.extend(parent_names)
+                    parents_chain_index.extend([chain_id for _ in parent_names])
+                chain_id += 1
+
+    chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
+    chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
+
+    if parse_hetatom:
+        hetatom_positions = np.array(hetatom_positions)
+        hetatom_names = np.array(hetatom_names)
+    else:
+        hetatom_positions = None
+        hetatom_names = None
+
+    protein_dict = dict(
+        atom_positions=np.array(atom_positions),
+        atom_mask=np.array(atom_mask),
+        aatype=np.array(aatype),
+        residue_index=np.array(residue_index),
+        chain_index=chain_index,
+        b_factors=np.array(b_factors),
+        parents=parents,
+        parents_chain_index=parents_chain_index,
+        hetatom_positions=hetatom_positions,
+        hetatom_names=hetatom_names,
+    )
+
+    return protein_dict
+
+
+class _Protein:
     VALID_ATOM_COUNTS = [1, 3, 4, 5, 14, 27, 37]
 
     def __init__(
@@ -189,7 +316,7 @@ class Protein:
                 # If already a tensor, do nothing
                 prot_dict[field] = v
 
-        return Protein(**prot_dict)
+        return type(self)(**prot_dict)
 
     def to_numpy(self) -> Self:
         """Converts a `Protein` instance to numpy arrays."""
@@ -201,7 +328,7 @@ class Protein:
             elif isinstance(v, np.ndarray):
                 prot_dict[field] = v
 
-        return Protein(**prot_dict)
+        return type(self)(**prot_dict)
 
     def get_pdb_headers(self, chain_id: int = 0) -> Sequence[str]:
         pdb_headers = []
@@ -222,8 +349,11 @@ class Protein:
 
         return pdb_headers
 
-    def to_pdb(self) -> str:
+    def _to_pdb_from_atom37(self) -> str:
         """Converts this `Protein` instance to a PDB string.
+        This is a private method because children should have
+        an appropriate to_pdb method that makes sure there are 37
+        atoms (or a compatible subset) before calling this method.
 
         Returns:
             PDB string.
@@ -342,7 +472,10 @@ class Protein:
         pdb_lines = [line.ljust(80) for line in pdb_lines]
         return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
-    def to_modelcif(self) -> str:
+    def to_pdb(self):
+        raise NotImplementedError
+
+    def _to_modelcif_from_atom37(self) -> str:
         """
         Converts a `Protein` instance to a ModelCIF string. Chains with identical modelled coordinates
         will be treated as the same polymer entity. But note that if chains differ in modelled regions,
@@ -491,6 +624,9 @@ class Protein:
         modelcif.dumper.write(fh, [system])
         return fh.getvalue()
 
+    def to_modelcif(self):
+        raise NotImplementedError
+
     def to_biopdb_structure(self) -> Structure:
         """Converts from a `Protein` to a BioPython PDB structure."""
         pdb_str = self.to_pdb()
@@ -513,14 +649,12 @@ class Protein:
 
     @classmethod
     def from_pdb_string(
+        cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
     ) -> Self:
-        """Takes a PDB string and constructs a Protein object.
-
-        WARNING: All non-standard residue types will be converted into UNK. All
-        non-standard atoms will be ignored.
+        """Converts a PDB string to a protein.
 
         Args:
             pdb_str: The contents of the pdb file
@@ -529,115 +663,13 @@ class Protein:
             parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
 
         Returns:
-            A new `Protein` parsed from the pdb contents.
+            A `Protein` instance.
         """
-        pdb_fh = io.StringIO(pdb_str)
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure("none", pdb_fh)
-        models = list(structure.get_models())
-        if len(models) != 1:
-            raise ValueError(
-                f"Only single model PDBs are supported. Found {len(models)} models."
-            )
-        model = models[0]
-
-        atom_positions = []
-        aatype = []
-        atom_mask = []
-        residue_index = []
-        chain_ids = []
-        b_factors = []
-
-        if parse_hetatom:
-            hetatom_positions = []
-            hetatom_names = []
-
-        for chain in model:
-            if chain_id is not None and chain.id != chain_id:
-                continue
-            for res in chain:
-                if res.id[2] != " ":
-                    raise ValueError(
-                        f"PDB contains an insertion code at chain {chain.id} and residue "
-                        f"index {res.id[1]}. These are not supported."
-                    )
-                res_shortname = residue_constants.restype_3to1.get(res.resname, "X")
-                restype_idx = residue_constants.restype_order.get(
-                    res_shortname, residue_constants.restype_num
-                )
-
-                if parse_hetatom:
-                    if len(res.id[0].strip()) > 0:
-                        for atom in res:
-                            hetatom_positions.append(atom.coord)
-                            hetatom_names.append(res.id[0].lstrip("H_"))
-                        continue
-
-                atom_count = residue_constants.atom_type_num
-                pos = np.zeros((atom_count, 3))
-                mask = np.zeros((atom_count,))
-                res_b_factors = np.zeros((atom_count,))
-                for atom in res:
-                    if atom.name not in residue_constants.atom_types:
-                        continue
-                    else:
-                        atom_index = residue_constants.atom_order[atom.name]
-
-                    pos[atom_index] = atom.coord
-                    mask[atom_index] = 1.0
-                    res_b_factors[atom_index] = atom.bfactor
-
-                if np.sum(mask) < 0.5:
-                    # If no known atom positions are reported for the residue then skip it.
-                    continue
-                aatype.append(restype_idx)
-                atom_positions.append(pos)
-                atom_mask.append(mask)
-                residue_index.append(res.id[1])
-                chain_ids.append(chain.id)
-                b_factors.append(res_b_factors)
-
-        parents = None
-        parents_chain_index = None
-        if "PARENT" in pdb_str:
-            parents = []
-            parents_chain_index = []
-            chain_id = 0
-            for l in pdb_str.split("\n"):
-                if "PARENT" in l:
-                    if not "N/A" in l:
-                        parent_names = l.split()[1:]
-                        parents.extend(parent_names)
-                        parents_chain_index.extend([chain_id for _ in parent_names])
-                    chain_id += 1
-
-        chain_id_mapping = {cid: n for n, cid in enumerate(string.ascii_uppercase)}
-        chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
-
-        if parse_hetatom:
-            hetatom_positions = np.array(hetatom_positions)
-            hetatom_names = np.array(hetatom_names)
-        else:
-            hetatom_positions = None
-            hetatom_names = None
-
-        protein = Protein(
-            atom_positions=np.array(atom_positions),
-            atom_mask=np.array(atom_mask),
-            aatype=np.array(aatype),
-            residue_index=np.array(residue_index),
-            chain_index=chain_index,
-            b_factors=np.array(b_factors),
-            parents=parents,
-            parents_chain_index=parents_chain_index,
-            hetatom_positions=hetatom_positions,
-            hetatom_names=hetatom_names,
-        )
-
-        return protein
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        return cls(**prot_dict)
 
     @classmethod
-    def from_rosetta_pose(pose):  # can't type hint conditional import
+    def from_rosetta_pose(cls, pose):  # can't type hint conditional import
         """Converts a PyRosetta pose to a protein."""
         try:
             from pyrosetta.rosetta.std import ostringstream
@@ -646,104 +678,307 @@ class Protein:
 
         buffer = ostringstream()
         pose.dump_pdb(buffer)
-        return Protein.from_pdb_string(buffer.str())
+        return cls.from_pdb_string(buffer.str())
+
+    def _pad_to_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
+        # Trivially pad such that relevant arrays have n atoms
+        protein: _Protein = self.to_numpy()
+        num_atoms = protein.atom_positions.shape[1]
+        atom_positions = np.pad(
+            protein.atom_positions,
+            ((0, 0), (0, n - num_atoms), (0, 0)),
+            mode="constant",
+            constant_values=0.0,
+        )
+        atom_mask = np.pad(
+            protein.atom_mask,
+            ((0, 0), (0, n - num_atoms)),
+            mode="constant",
+            constant_values=0.0,
+        )
+        b_factors = np.pad(
+            protein.b_factors,
+            ((0, 0), (0, n - num_atoms)),
+            mode="constant",
+            constant_values=0.0,
+        )
+
+        return dict(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=protein.aatype,
+            residue_index=protein.residue_index,
+            chain_index=protein.chain_index,
+            b_factors=b_factors,
+            parents=protein.parents,
+            parents_chain_index=protein.parents_chain_index,
+            remark=protein.remark,
+        )
+
+    def _crop_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
+        # Trivially crop out the first n atoms
+        protein: _Protein = self.to_numpy()
+        atom_positions = protein.atom_positions[:, :n]
+        atom_mask = protein.atom_mask[:, :n]
+        b_factors = protein.b_factors[:, :n]
+
+        return dict(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=protein.aatype,
+            residue_index=protein.residue_index,
+            chain_index=protein.chain_index,
+            b_factors=b_factors,
+            parents=protein.parents,
+            parents_chain_index=protein.parents_chain_index,
+            remark=protein.remark,
+        )
+
+    def to_protein5(self) -> Protein5:
+        return Protein5(**self._crop_n_atoms(n=5))
+
+    def to_protein4(self) -> Protein4:
+        return Protein4(**self._crop_n_atoms(n=4))
+
+    def to_protein3(self) -> Protein3:
+        return Protein3(**self._crop_n_atoms(n=3))
 
 
-class Protein27(Protein):
-    VALID_ATOM_COUNTS = [27]
+class Protein37(_Protein):
+    VALID_ATOM_COUNTS = [37]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_pdb(self) -> str:
+        return self._to_pdb_from_atom37()
 
-class Protein14(Protein):
+    def to_modelcif(self) -> str:
+        return self._to_modelcif_from_atom37()
+
+    def to_protein14(self) -> Protein14:
+        mapping = residue_constants.restype_atom37_to_atom14
+        protein37: Protein37 = self.to_numpy()
+        # Get the indices of the atoms to keep from aatype
+        atom_indices = mapping[protein37.aatype]
+        atom14_mask = residue_constants.restype2atom_mask > 0
+
+        seq_len = protein37.aatype.shape[0]
+        row_indices = np.arange(seq_len)[:, None]
+
+        # Extract atoms from all relevant arrays
+        atom_positions = protein37.atom_positions[row_indices, atom_indices]
+        atom_mask = atom_mask[row_indices, atom_indices]
+        b_factors = protein37.b_factors[row_indices, atom_indices]
+
+        # Zero out the atoms that are not present in the new representation
+        atom_positions[~atom14_mask] = 0.0
+        atom_mask[~atom14_mask] = 0.0
+        b_factors[~atom14_mask] = 0.0
+
+        return Protein14(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=protein37.aatype,
+            residue_index=protein37.residue_index,
+            chain_index=protein37.chain_index,
+            b_factors=b_factors,
+            parents=protein37.parents,
+            parents_chain_index=protein37.parents_chain_index,
+            remark=protein37.remark,
+        )
+
+    def to_protein27(self) -> Protein27:
+        protein14: Protein14 = self.to_protein14()
+        return protein14.to_protein27()
+
+
+class Protein14(_Protein):
     VALID_ATOM_COUNTS = [14]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_protein37(self) -> Protein37:
+        mapping = residue_constants.restype_atom37_to_atom14
+        protein14: Protein14 = self.to_numpy()
+        # Get the indices of the atoms to keep from aatype
+        atom_indices = mapping[protein14.aatype]
+        atom37_mask = residue_constants.STANDARD_ATOM_MASK > 0
 
-class Protein5(Protein):
+        seq_len = protein14.aatype.shape[0]
+        row_indices = np.arange(seq_len)[:, None]
+
+        # Extract atoms from all relevant arrays
+        atom_positions = protein14.atom_positions[row_indices, atom_indices]
+        atom_mask = atom_mask[row_indices, atom_indices]
+        b_factors = protein14.b_factors[row_indices, atom_indices]
+
+        # Zero out the atoms that are not present in the new representation
+        atom_positions[~atom37_mask] = 0.0
+        atom_mask[~atom37_mask] = 0.0
+        b_factors[~atom37_mask] = 0.0
+
+        return Protein14(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=protein14.aatype,
+            residue_index=protein14.residue_index,
+            chain_index=protein14.chain_index,
+            b_factors=b_factors,
+            parents=protein14.parents,
+            parents_chain_index=protein14.parents_chain_index,
+            remark=protein14.remark,
+        )
+
+    def to_protein27(self) -> Protein27:
+        protein14: Protein14 = self.to_numpy()
+        return Protein27(**self._pad_to_n_atoms(n=27))
+
+    def to_pdb(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_pdb()
+
+    def to_modelcif(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_modelcif()
+
+
+class Protein27(_Protein):
+    VALID_ATOM_COUNTS = [27]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def to_protein14(self) -> Protein14:
+        # Trivially crop out the first 14 atoms
+        return Protein14(**self._crop_n_atoms(n=14))
+
+    def to_protein37(self) -> Protein37:
+        protein14 = self.to_protein14()
+        return protein14.to_protein37()
+
+    def to_pdb(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_pdb()
+
+    def to_modelcif(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_modelcif()
+
+
+class Protein5(_Protein):
     VALID_ATOM_COUNTS = [5]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_protein14(self) -> Protein14:
+        # Trivially pad such that relevant arrays have 14 atoms
+        return Protein14(**self._pad_to_n_atoms(n=14))
 
-class Protein4(Protein):
+    def to_protein27(self) -> Protein27:
+        # Trivially pad such that relevant arrays have 27 atoms
+        return Protein27(**self._pad_to_n_atoms(n=27))
+
+    def to_protein37(self) -> Protein37:
+        # Trivially pad such that relevant arrays have 37 atoms
+        return Protein27(**self._pad_to_n_atoms(n=37))
+
+    def to_pdb(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_pdb()
+
+    def to_modelcif(self) -> str:
+        protein37 = self.to_protein37()
+        return protein37.to_modelcif()
+
+
+class Protein4(Protein5):
     VALID_ATOM_COUNTS = [4]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-class Protein3(Protein):
+class Protein3(Protein5):
     VALID_ATOM_COUNTS = [3]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-class ProteinCATrace(Protein):
+class ProteinCATrace(_Protein):
     VALID_ATOM_COUNTS = [1]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_protein3(self):
+        # The CA atom is the second of 3 atoms so we
+        # need to pad with a zero first atom and zero last
+        # atom
+        protein_ca: ProteinCATrace = self.to_numpy()
+        atom_positions = np.pad(
+            protein_ca.atom_positions,
+            ((0, 0), (1, 1), (0, 0)),
+            mode="constant",
+            constant_values=0.0,
+        )
+        atom_mask = np.pad(
+            protein_ca.atom_mask,
+            ((0, 0), (1, 1)),
+            mode="constant",
+            constant_values=0.0,
+        )
+        b_factors = np.pad(
+            protein_ca.b_factors,
+            ((0, 0), (1, 1)),
+            mode="constant",
+            constant_values=0.0,
+        )
+        return Protein3(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=protein_ca.aatype,
+            residue_index=protein_ca.residue_index,
+            chain_index=protein_ca.chain_index,
+            b_factors=b_factors,
+            parents=protein_ca.parents,
+            parents_chain_index=protein_ca.parents_chain_index,
+            remark=protein_ca.remark,
+        )
 
-def pad_protein_14_to_27(prot: Protein, atom_pos_pad_value: float = 0.0) -> Protein:
-    prot_dict = dataclasses.asdict(prot)
-    prot_dict["atom_positions"] = np.pad(
-        prot.atom_positions,
-        ((0, 0), (0, 13), (0, 0)),
-        constant_values=atom_pos_pad_value,
-    )
-    prot_dict["atom_mask"] = np.pad(
-        prot.atom_mask, ((0, 0), (0, 13)), constant_values=0
-    )
-    prot_dict["b_factors"] = np.pad(prot.b_factors, ((0, 0), (0, 13)))
-    prot_27_padded = Protein(**prot_dict)
+    def to_pdb(self) -> str:
+        protein3 = self.to_protein3()
+        return protein3.to_pdb()
 
-    return prot_27_padded
+    def to_modelcif(self) -> str:
+        protein3 = self.to_protein3()
+        return protein3.to_modelcif()
 
+    def to_protein14(self) -> Protein14:
+        protein3 = self.to_protein3()
+        return protein3.to_protein14()
 
-def to_ca_only_protein(protein: Protein) -> Protein:
-    """
-    Strip out all atoms except CA
-    """
-    atom_indices = [residue_constants.atom_order["CA"]]
-    return Protein(
-        atom_positions=protein.atom_positions[:, atom_indices],
-        atom_mask=protein.atom_mask[:, atom_indices],
-        aatype=protein.aatype,
-        residue_index=protein.residue_index,
-        chain_index=protein.chain_index,
-        b_factors=protein.b_factors[:, atom_indices],
-        parents=protein.parents,
-        parents_chain_index=protein.parents_chain_index,
-    )
+    def to_protein27(self) -> Protein27:
+        protein3 = self.to_protein3()
+        return protein3.to_protein27()
+
+    def to_protein37(self) -> Protein37:
+        protein3 = self.to_protein3()
+        return protein3.to_protein37()
+
+    def to_protein5(self) -> Protein5:
+        protein3 = self.to_protein3()
+        return protein3.to_protein5()
+
+    def to_protein4(self) -> Protein4:
+        protein3 = self.to_protein3()
+        return protein3.to_protein4()
 
 
-def to_backbone_only_protein(protein: Protein) -> Protein:
-    """
-    Strip out all atoms except those in the backbone [N, CA, C, O]
-    """
-    atom_indices = [
-        residue_constants.atom_order[atom] for atom in ["N", "CA", "C", "O"]
-    ]
-    return Protein(
-        atom_positions=protein.atom_positions[:, atom_indices],
-        atom_mask=protein.atom_mask[:, atom_indices],
-        aatype=protein.aatype,
-        residue_index=protein.residue_index,
-        chain_index=protein.chain_index,
-        b_factors=protein.b_factors[:, atom_indices],
-        parents=protein.parents,
-        parents_chain_index=protein.parents_chain_index,
-    )
-
-
-def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
+def add_pdb_headers(prot: _Protein, pdb_str: str) -> str:
     """Add pdb headers to an existing PDB string. Useful during multi-chain
     recycling
     """
@@ -793,7 +1028,7 @@ def add_pdb_headers(prot: Protein, pdb_str: str) -> str:
     return "\n".join(out_pdb_lines)
 
 
-def ideal_atom_mask(prot: Protein) -> np.ndarray:
+def ideal_atom_mask(prot: _Protein) -> np.ndarray:
     """Computes an ideal atom mask.
 
     `Protein.atom_mask` typically is defined according to the atoms that are
