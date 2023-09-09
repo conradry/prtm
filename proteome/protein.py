@@ -50,6 +50,11 @@ of them. Trytophan has the most with 27.
 acids excluding hydrogens. In this case the positions of the atoms are not fixed in the
 array. For example, in ILE, the CD1 atom is at index 7, but in LEU it's at index 6.
 - The 27 atom representation covers all atoms including hydrogens for each residue.
+NOTE: The parser currently ignore hydrogen atoms in the PDB file so this representation
+is currently always equivalent to the 14 atom representation but with zero padding. Actually
+the order won't match the convention for hydrogens in the PDB format so be careful with defining
+this one. It may be better to pad Protein14 to shape 27 while ignoring the hydrogens or to
+create a new atom ordering that includes the hydrogens after all other atoms.
 - The 5 atom representation covers the backbone (N, CA, C) plus O and CB.
 - The 4 atom representation covers the backbone (N, CA, C) plus O.
 - The 3 atom representation covers the backbone (N, CA, C).
@@ -644,6 +649,10 @@ class _Protein:
         pose_from_pdbstring(pose, pdb_str)
         return pose
 
+    def to_dict(self):
+        # Export all the fields into a dict
+        return {field: getattr(self, field) for field in self.fields}
+
     @classmethod
     def from_pdb_string(
         cls,
@@ -651,19 +660,7 @@ class _Protein:
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
     ) -> _Protein:
-        """Converts a PDB string to a protein.
-
-        Args:
-            pdb_str: The contents of the pdb file
-            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
-            is parsed.
-            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
-
-        Returns:
-            A `Protein` instance.
-        """
-        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
-        return cls(**prot_dict)
+        raise NotImplementedError
 
     @classmethod
     def from_rosetta_pose(cls, pose):  # can't type hint conditional import
@@ -764,7 +761,6 @@ class _Protein:
         return "".join(residue_constants.restypes[a] for a in self.aatype)
 
 
-
 class Protein37(_Protein):
     VALID_ATOM_COUNTS = [37]
 
@@ -813,6 +809,27 @@ class Protein37(_Protein):
     def to_protein27(self) -> Protein27:
         protein14: Protein14 = self.to_protein14()
         return protein14.to_protein27()
+
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> _Protein:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        return cls(**prot_dict)
 
 
 class Protein14(_Protein):
@@ -865,6 +882,28 @@ class Protein14(_Protein):
         protein37 = self.to_protein37()
         return protein37.to_modelcif()
 
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> _Protein:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_protein14()
+
 
 class Protein27(_Protein):
     VALID_ATOM_COUNTS = [27]
@@ -887,6 +926,28 @@ class Protein27(_Protein):
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
         return protein37.to_modelcif()
+
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> _Protein:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_protein27()
 
 
 class Protein5(_Protein):
@@ -914,6 +975,28 @@ class Protein5(_Protein):
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
         return protein37.to_modelcif()
+
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> _Protein:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_protein5()
 
 
 class Protein4(Protein5):
@@ -998,6 +1081,28 @@ class ProteinCATrace(_Protein):
     def to_protein4(self) -> Protein4:
         protein3 = self.to_protein3()
         return protein3.to_protein4()
+
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = False,
+    ) -> _Protein:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_ca_trace()
 
 
 def add_pdb_headers(prot: _Protein, pdb_str: str) -> str:
