@@ -113,7 +113,7 @@ class DMPFoldForFolding:
 
     def fold(
         self, sequence: str, max_msas: int = 1000
-    ) -> Tuple[protein.Protein, float]:
+    ) -> Tuple[protein.Protein5, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -132,12 +132,13 @@ class DMPFoldForFolding:
         xyz = xyz.view(-1, L, 5, 3)[0].cpu().numpy()
         confs = confs[0].cpu().numpy()
 
-        predicted_protein = protein.Protein(
+        predicted_protein = protein.Protein5(
             atom_positions=xyz,
             aatype=feature_dict["msa"][0].cpu().numpy(),
             atom_mask=np.ones_like(xyz)[..., 0],
             residue_index=np.arange(L) + 1,
             b_factors=np.zeros_like(xyz)[..., 0],  # no b_factors
+            chain_index=np.zeros(L, dtype=np.int32),
         )
         confidence = float(confs.mean())
 
