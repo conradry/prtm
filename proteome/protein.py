@@ -196,7 +196,7 @@ def parse_pdb_string(
     return protein_dict
 
 
-class _Protein:
+class ProteinBase:
     VALID_ATOM_COUNTS = [1, 3, 4, 5, 14, 27, 37]
 
     def __init__(
@@ -301,7 +301,7 @@ class _Protein:
 
         assert self.chain_index.max() < PDB_MAX_CHAINS, "Chain index must be < 62"
 
-    def to_torch(self) -> _Protein:
+    def to_torch(self) -> ProteinBase:
         """Converts a `Protein` instance to torch tensors."""
         prot_dict = {}
         for field in self.fields:
@@ -320,7 +320,7 @@ class _Protein:
 
         return type(self)(**prot_dict)
 
-    def to_numpy(self) -> _Protein:
+    def to_numpy(self) -> ProteinBase:
         """Converts a `Protein` instance to numpy arrays."""
         prot_dict = {}
         for field in self.fields:
@@ -659,7 +659,7 @@ class _Protein:
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         raise NotImplementedError
 
     @classmethod
@@ -676,7 +676,7 @@ class _Protein:
 
     def _pad_to_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
         # Trivially pad such that relevant arrays have n atoms
-        protein: _Protein = self.to_numpy()
+        protein: ProteinBase = self.to_numpy()
         num_atoms = protein.atom_positions.shape[1]
         atom_positions = np.pad(
             protein.atom_positions,
@@ -711,7 +711,7 @@ class _Protein:
 
     def _crop_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
         # Trivially crop out the first n atoms
-        protein: _Protein = self.to_numpy()
+        protein: ProteinBase = self.to_numpy()
         atom_positions = protein.atom_positions[:, :n]
         atom_mask = protein.atom_mask[:, :n]
         b_factors = protein.b_factors[:, :n]
@@ -761,7 +761,7 @@ class _Protein:
         return "".join(residue_constants.restypes[a] for a in self.aatype)
 
 
-class Protein37(_Protein):
+class Protein37(ProteinBase):
     VALID_ATOM_COUNTS = [37]
 
     def __init__(self, *args, **kwargs):
@@ -810,13 +810,16 @@ class Protein37(_Protein):
         protein14: Protein14 = self.to_protein14()
         return protein14.to_protein27()
 
+    def to_protein37(self) -> Protein37:
+        return self
+
     @classmethod
     def from_pdb_string(
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
         Args:
@@ -832,7 +835,7 @@ class Protein37(_Protein):
         return cls(**prot_dict)
 
 
-class Protein14(_Protein):
+class Protein14(ProteinBase):
     VALID_ATOM_COUNTS = [14]
 
     def __init__(self, *args, **kwargs):
@@ -874,6 +877,9 @@ class Protein14(_Protein):
     def to_protein27(self) -> Protein27:
         return Protein27(**self._pad_to_n_atoms(n=27))
 
+    def to_protein14(self) -> Protein14:
+        return self
+
     def to_pdb(self) -> str:
         protein37 = self.to_protein37()
         return protein37.to_pdb()
@@ -888,7 +894,7 @@ class Protein14(_Protein):
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
         Args:
@@ -905,7 +911,7 @@ class Protein14(_Protein):
         return protein37.to_protein14()
 
 
-class Protein27(_Protein):
+class Protein27(ProteinBase):
     VALID_ATOM_COUNTS = [27]
 
     def __init__(self, *args, **kwargs):
@@ -918,6 +924,9 @@ class Protein27(_Protein):
     def to_protein37(self) -> Protein37:
         protein14 = self.to_protein14()
         return protein14.to_protein37()
+
+    def to_protein27(self) -> Protein27:
+        return self
 
     def to_pdb(self) -> str:
         protein37 = self.to_protein37()
@@ -933,7 +942,7 @@ class Protein27(_Protein):
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
         Args:
@@ -950,7 +959,7 @@ class Protein27(_Protein):
         return protein37.to_protein27()
 
 
-class Protein5(_Protein):
+class Protein5(ProteinBase):
     VALID_ATOM_COUNTS = [5]
 
     def __init__(self, *args, **kwargs):
@@ -968,6 +977,9 @@ class Protein5(_Protein):
         # Trivially pad such that relevant arrays have 37 atoms
         return Protein37(**self._pad_to_n_atoms(n=37))
 
+    def to_protein5(self) -> Protein5:
+        return self
+
     def to_pdb(self) -> str:
         protein37 = self.to_protein37()
         return protein37.to_pdb()
@@ -982,7 +994,7 @@ class Protein5(_Protein):
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
         Args:
@@ -1005,6 +1017,9 @@ class Protein4(Protein5):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_protein4(self) -> Protein4:
+        return self
+
 
 class Protein3(Protein5):
     VALID_ATOM_COUNTS = [3]
@@ -1012,8 +1027,11 @@ class Protein3(Protein5):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def to_protein3(self) -> Protein3:
+        return self
 
-class ProteinCATrace(_Protein):
+
+class ProteinCATrace(ProteinBase):
     VALID_ATOM_COUNTS = [1]
 
     def __init__(self, *args, **kwargs):
@@ -1082,13 +1100,16 @@ class ProteinCATrace(_Protein):
         protein3 = self.to_protein3()
         return protein3.to_protein4()
 
+    def to_ca_trace(self) -> ProteinCATrace:
+        return self
+
     @classmethod
     def from_pdb_string(
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> _Protein:
+    ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
         Args:
@@ -1105,7 +1126,7 @@ class ProteinCATrace(_Protein):
         return protein37.to_ca_trace()
 
 
-def add_pdb_headers(prot: _Protein, pdb_str: str) -> str:
+def add_pdb_headers(prot: ProteinBase, pdb_str: str) -> str:
     """Add pdb headers to an existing PDB string. Useful during multi-chain
     recycling
     """
@@ -1155,7 +1176,7 @@ def add_pdb_headers(prot: _Protein, pdb_str: str) -> str:
     return "\n".join(out_pdb_lines)
 
 
-def ideal_atom_mask(prot: _Protein) -> np.ndarray:
+def ideal_atom_mask(prot: ProteinBase) -> np.ndarray:
     """Computes an ideal atom mask.
 
     `Protein.atom_mask` typically is defined according to the atoms that are

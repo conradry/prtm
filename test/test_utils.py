@@ -5,8 +5,8 @@ from proteome import protein
 
 
 def _compare_structures(
-    pred_structure: protein._Protein,
-    gt_structure: protein._Protein,
+    pred_structure: protein.ProteinBase,
+    gt_structure: protein.ProteinBase,
     atol: float = 0.1,
 ):
     for field in pred_structure.fields:

@@ -14,9 +14,10 @@ from proteome.models.esm import config
 from proteome.models.esm.categorical_mixture import categorical_lddt
 from proteome.models.esm.data import Alphabet
 from proteome.models.esm.esm2 import ESM2
-from proteome.models.esm.misc import (batch_encode_sequences,
-                                              collate_dense_tensors,
-                                              output_to_pdb)
+from proteome.models.esm.misc import (
+    batch_encode_sequences,
+    collate_dense_tensors,
+)
 from proteome.models.esm.trunk import FoldingTrunk
 from proteome.models.openfold.data.data_transforms import \
     make_atom14_masks
@@ -314,19 +315,6 @@ class ESMFold(nn.Module):
         output["chain_index"] = chain_index
 
         return output
-
-    def output_to_pdb(self, output: T.Dict) -> T.List[str]:
-        """Returns the pbd (file) string from the model given the model output."""
-        return output_to_pdb(output)
-
-    def infer_pdbs(self, seqs: T.List[str], *args, **kwargs) -> T.List[str]:
-        """Returns list of pdb (files) strings from the model given a list of input sequences."""
-        output = self.infer(seqs, *args, **kwargs)
-        return self.output_to_pdb(output)
-
-    def infer_pdb(self, sequence: str, *args, **kwargs) -> str:
-        """Returns the pdb (file) string from the model given an input sequence."""
-        return self.infer_pdbs([sequence], *args, **kwargs)[0]
 
     def set_chunk_size(self, chunk_size: T.Optional[int]):
         # This parameter means the axial attention will be computed

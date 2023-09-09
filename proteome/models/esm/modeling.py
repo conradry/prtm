@@ -9,7 +9,6 @@ from proteome import protein
 from proteome.models.esm import config
 from proteome.models.esm.esmfold import ESMFold
 from proteome.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
-from proteome.models.esm.inverse_folding.util import score_sequence
 from proteome.models.openfold.utils.feats import atom14_to_atom37
 
 ESM_MODEL_URLS = {
@@ -120,7 +119,7 @@ class ESMForFolding:
             )
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> Tuple[protein.Protein, float]:
+    def fold(self, sequence: str) -> Tuple[protein.Protein37, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -138,7 +137,7 @@ class ESMForFolding:
         for k, v in output.items():
             output[k] = v.squeeze()
 
-        predicted_protein = protein.Protein(
+        predicted_protein = protein.Protein37(
             aatype=output["aatype"],
             atom_positions=final_atom_positions.squeeze(),
             atom_mask=final_atom_mask.squeeze(),
@@ -203,13 +202,14 @@ class ESMForInverseFolding:
     @torch.no_grad()
     def design_sequence(
         self, 
-        structure: protein.Protein, 
+        structure: protein.ProteinBase, 
         design_params: config.DesignParams = config.DesignParams(),
         temperature: float = 1.0,
     ) -> Tuple[str, float]:
         """Design a protein sequence for a given structure."""
-
-        coords = torch.tensor(structure.atom_positions[:, :3]).float().to(self.device)
+        # Expects 3 atom protein structure
+        structure = structure.to_protein3()
+        coords = torch.tensor(structure.atom_positions).float().to(self.device)
         if design_params.confidence is not None:
             confidence = torch.tensor(design_params.confidence).float().to(self.device)
         else:

@@ -22,14 +22,14 @@ def test_esmfold_models(model_name: str):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein37.from_pdb_string(gt_pdb_str)
 
     folder = modeling.ESMForFolding(model_name=model_name, chunk_size=512)
     pred_structure, mean_plddt = folder.fold(sequence)
 
     # Write to pdb and convert back to ignore atom masking, etc.
-    pred_pdb_str = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb_str)
+    pred_pdb_str = pred_structure.to_pdb()
+    pred_structure = protein.Protein37.from_pdb_string(pred_pdb_str)
 
     _compare_structures(pred_structure, gt_structure)
 
@@ -39,7 +39,7 @@ def test_esmif_models():
     with open(target_pdb_file, "r") as f:
         target_pdb_str = f.read()
 
-    target_structure = protein.from_pdb_string(target_pdb_str)
+    target_structure = protein.Protein3.from_pdb_string(target_pdb_str)
     expected_sequences = {
         "esm_if1_gvp4_t16_142M_UR50": "DQQALIHHHEQEAAQKQALAAKYLDKSKLFSSQGEDTDSAEFAKRAEGESKQAQSHAALAAEGQRLFEQPPPP"
     }
