@@ -166,7 +166,7 @@ def _aatype_to_str_sequence(aatype):
 
 
 def make_protein_features(
-    protein_object: protein.Protein,
+    protein_object: protein.ProteinBase,
     description: str,
     _is_distillation: bool = False,
 ) -> FeatureDict:
@@ -196,7 +196,7 @@ def make_protein_features(
 
 
 def make_pdb_features(
-    protein_object: protein.Protein,
+    protein_object: protein.ProteinBase,
     description: str,
     is_distillation: bool = True,
     confidence_threshold: float = 50.0,

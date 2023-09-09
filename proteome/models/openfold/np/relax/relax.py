@@ -60,7 +60,7 @@ class AmberRelaxation(object):
         self._use_gpu = use_gpu
 
     def process(
-        self, *, prot: protein.Protein, cif_output: bool
+        self, *, prot: protein.Protein37, cif_output: bool
     ) -> Tuple[str, Dict[str, Any], np.ndarray]:
         """Runs Amber relax on a prediction, adds hydrogens, returns PDB string."""
         out = amber_minimize.run_pipeline(
@@ -85,7 +85,7 @@ class AmberRelaxation(object):
         min_pdb = utils.overwrite_pdb_coordinates(pdb_str, min_pos)
         min_pdb = utils.overwrite_b_factors(min_pdb, prot.b_factors)
         utils.assert_equal_nonterminal_atom_types(
-            protein.from_pdb_string(min_pdb).atom_mask, prot.atom_mask
+            protein.Protein37.from_pdb_string(min_pdb).atom_mask, prot.atom_mask
         )
         violations = out["structural_violations"]["total_per_residue_violations_mask"]
 
@@ -94,7 +94,7 @@ class AmberRelaxation(object):
         if cif_output:
             # TODO the model cif will be missing some metadata like headers (PARENTs and
             #      REMARK with some details of the run, like num of recycles)
-            final_prot = protein.from_pdb_string(min_pdb)
-            output_str = protein.to_modelcif(final_prot)
+            final_prot = protein.Protein37.from_pdb_string(min_pdb)
+            output_str = final_prot.to_modelcif()
 
         return output_str, debug_data, violations

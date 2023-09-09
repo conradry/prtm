@@ -13,18 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 from typing import Dict
 
-import numpy as np
 import torch
 import torch.nn as nn
 
-from proteome import protein
 from proteome.constants import residue_constants as rc
 from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.openfold.utils.tensor_utils import (
-    batched_gather, one_hot, tensor_tree_map, tree_map)
+from proteome.models.openfold.utils.tensor_utils import batched_gather
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
