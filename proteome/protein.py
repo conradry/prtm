@@ -49,6 +49,8 @@ of them. Trytophan has the most with 27.
 - The 14 atom representation covers all atoms in the backbone and sidechain of all amino
 acids excluding hydrogens. In this case the positions of the atoms are not fixed in the
 array. For example, in ILE, the CD1 atom is at index 7, but in LEU it's at index 6.
+TODO: Add validation to check that the atom mask for this representation is a subset of
+the ideal_atom_mask. If it's not that means there is some funny business.
 - The 27 atom representation covers all atoms including hydrogens for each residue.
 NOTE: The parser currently ignore hydrogen atoms in the PDB file so this representation
 is currently always equivalent to the 14 atom representation but with zero padding. Actually

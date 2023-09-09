@@ -17,13 +17,13 @@ def test_eigenfold_for_fold_sampling(model_name):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.ProteinCATrace.from_pdb_string(gt_pdb_str)
 
     sequence = (
         "MAAHKGAEHHHKAAEHHEQAAKHHHAAAEHHEKGEHEQAAHHADTAYAHHKHAEEHAAQAAKHDAEHHAPKPH"
     )
     pred_structure, elbo = folder.sample_fold(sequence)
-    pred_pdb = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb)
+    pred_pdb = pred_structure.to_pdb()
+    pred_structure = protein.ProteinCATrace.from_pdb_string(pred_pdb)
 
     _compare_structures(pred_structure, gt_structure, atol=0.01)

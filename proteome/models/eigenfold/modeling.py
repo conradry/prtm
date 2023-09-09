@@ -134,7 +134,7 @@ class EigenFoldForFoldSampling:
         self,
         sequence: str,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.Protein, float]:
+    ) -> Tuple[protein.ProteinCATrace, float]:
         """Design a random protein structure."""
         seqlen = len(sequence)
         if sequence in self.cache:
@@ -181,18 +181,13 @@ class EigenFoldForFoldSampling:
             else np.nan
         )
 
-        coords = np.zeros((seqlen, 4, 3))
-        coords[:, 1, :] = data.Y
-        atom_mask = np.zeros((seqlen, 4))
-        atom_mask[:, 1] = 1
-
-        n = len(coords)
-        structure = protein.Protein(
-            atom_positions=coords,
+        n = len(data.Y)
+        structure = protein.ProteinCATrace(
+            atom_positions=data.Y.reshape((n, 1, 3)),
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=atom_mask,
+            atom_mask=np.ones((seqlen, 1)),
             residue_index=np.arange(0, n) + 1,
-            b_factors=np.zeros((n, 4)),
+            b_factors=np.zeros((n, 1)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 
