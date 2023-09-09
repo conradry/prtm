@@ -1,5 +1,3 @@
-from dataclasses import asdict
-
 import pytest
 import numpy as np
 
@@ -7,17 +5,17 @@ from proteome import protein
 
 
 def _compare_structures(
-    pred_structure: protein.Protein,
-    gt_structure: protein.Protein,
+    pred_structure: protein._Protein,
+    gt_structure: protein._Protein,
     atol: float = 0.1,
 ):
-    pred_structure_dict = asdict(pred_structure)
-    gt_structure_dict = asdict(gt_structure)
-    for k in pred_structure_dict:
-        if isinstance(pred_structure_dict[k], np.ndarray):
-            assert np.allclose(pred_structure_dict[k], gt_structure_dict[k], atol=atol)
+    for field in pred_structure.fields:
+        if isinstance(getattr(pred_structure, field), np.ndarray):
+            assert np.allclose(
+                getattr(pred_structure, field), getattr(gt_structure, field), atol=atol
+            )
         else:
-            assert pred_structure_dict[k] == gt_structure_dict[k]
+            assert getattr(pred_structure, field) == getattr(gt_structure, field)
 
 
 def pyrosetta_is_installed():

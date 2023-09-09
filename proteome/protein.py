@@ -16,10 +16,9 @@
 
 from __future__ import annotations
 
-import dataclasses
 import io
 import string
-from typing import Any, Dict, List, Mapping, Optional, Self, Sequence, Union
+from typing import Any, Dict, Mapping, Optional, Sequence, Union
 
 import modelcif
 import modelcif.alignment
@@ -295,11 +294,9 @@ class _Protein:
             if arr is not None:
                 assert arr.shape[1] == num_atom_type
 
-        # Validate that the residue index is 1-indexed
-        assert self.residue_index.min() == 1, "Residue index must be 1-indexed"
         assert self.chain_index.max() < PDB_MAX_CHAINS, "Chain index must be < 62"
 
-    def to_torch(self) -> Self:
+    def to_torch(self) -> _Protein:
         """Converts a `Protein` instance to torch tensors."""
         prot_dict = {}
         for field in self.fields:
@@ -318,7 +315,7 @@ class _Protein:
 
         return type(self)(**prot_dict)
 
-    def to_numpy(self) -> Self:
+    def to_numpy(self) -> _Protein:
         """Converts a `Protein` instance to numpy arrays."""
         prot_dict = {}
         for field in self.fields:
@@ -653,7 +650,7 @@ class _Protein:
         pdb_str: str,
         chain_id: Optional[str] = None,
         parse_hetatom: bool = False,
-    ) -> Self:
+    ) -> _Protein:
         """Converts a PDB string to a protein.
 
         Args:
@@ -743,6 +740,30 @@ class _Protein:
     def to_protein3(self) -> Protein3:
         return Protein3(**self._crop_n_atoms(n=3))
 
+    def to_ca_trace(self) -> ProteinCATrace:
+        # Trim out the second atom which is CA
+        atom_positions = self.atom_positions[:, [1]]
+        atom_mask = self.atom_mask[:, [1]]
+        b_factors = self.b_factors[:, [1]]
+
+        return ProteinCATrace(
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            aatype=self.aatype,
+            residue_index=self.residue_index,
+            chain_index=self.chain_index,
+            b_factors=b_factors,
+            parents=self.parents,
+            parents_chain_index=self.parents_chain_index,
+            remark=self.remark,
+        )
+
+    @property
+    def sequence(self) -> str:
+        # Decode the aatype sequence to a string
+        return "".join(residue_constants.restypes[a] for a in self.aatype)
+
+
 
 class Protein37(_Protein):
     VALID_ATOM_COUNTS = [37]
@@ -757,24 +778,25 @@ class Protein37(_Protein):
         return self._to_modelcif_from_atom37()
 
     def to_protein14(self) -> Protein14:
-        mapping = residue_constants.restype_atom37_to_atom14
+        mapping = residue_constants.restype_atom14_to_atom37
         protein37: Protein37 = self.to_numpy()
         # Get the indices of the atoms to keep from aatype
         atom_indices = mapping[protein37.aatype]
-        atom14_mask = residue_constants.restype2atom_mask > 0
+        residue_mask = ~(residue_constants.restype2atom_mask > 0)
+        atom14_mask = residue_mask[protein37.aatype]
 
         seq_len = protein37.aatype.shape[0]
         row_indices = np.arange(seq_len)[:, None]
 
         # Extract atoms from all relevant arrays
         atom_positions = protein37.atom_positions[row_indices, atom_indices]
-        atom_mask = atom_mask[row_indices, atom_indices]
+        atom_mask = protein37.atom_mask[row_indices, atom_indices]
         b_factors = protein37.b_factors[row_indices, atom_indices]
 
         # Zero out the atoms that are not present in the new representation
-        atom_positions[~atom14_mask] = 0.0
-        atom_mask[~atom14_mask] = 0.0
-        b_factors[~atom14_mask] = 0.0
+        atom_positions[atom14_mask] = 0.0
+        atom_mask[atom14_mask] = 0.0
+        b_factors[atom14_mask] = 0.0
 
         return Protein14(
             atom_positions=atom_positions,
@@ -804,22 +826,23 @@ class Protein14(_Protein):
         protein14: Protein14 = self.to_numpy()
         # Get the indices of the atoms to keep from aatype
         atom_indices = mapping[protein14.aatype]
-        atom37_mask = residue_constants.STANDARD_ATOM_MASK > 0
+        residue_mask = ~(residue_constants.STANDARD_ATOM_MASK > 0)
+        atom37_mask = residue_mask[protein14.aatype]
 
         seq_len = protein14.aatype.shape[0]
         row_indices = np.arange(seq_len)[:, None]
 
         # Extract atoms from all relevant arrays
         atom_positions = protein14.atom_positions[row_indices, atom_indices]
-        atom_mask = atom_mask[row_indices, atom_indices]
+        atom_mask = protein14.atom_mask[row_indices, atom_indices]
         b_factors = protein14.b_factors[row_indices, atom_indices]
 
         # Zero out the atoms that are not present in the new representation
-        atom_positions[~atom37_mask] = 0.0
-        atom_mask[~atom37_mask] = 0.0
-        b_factors[~atom37_mask] = 0.0
+        atom_positions[atom37_mask] = 0.0
+        atom_mask[atom37_mask] = 0.0
+        b_factors[atom37_mask] = 0.0
 
-        return Protein14(
+        return Protein37(
             atom_positions=atom_positions,
             atom_mask=atom_mask,
             aatype=protein14.aatype,
@@ -832,7 +855,6 @@ class Protein14(_Protein):
         )
 
     def to_protein27(self) -> Protein27:
-        protein14: Protein14 = self.to_numpy()
         return Protein27(**self._pad_to_n_atoms(n=27))
 
     def to_pdb(self) -> str:
@@ -883,7 +905,7 @@ class Protein5(_Protein):
 
     def to_protein37(self) -> Protein37:
         # Trivially pad such that relevant arrays have 37 atoms
-        return Protein27(**self._pad_to_n_atoms(n=37))
+        return Protein37(**self._pad_to_n_atoms(n=37))
 
     def to_pdb(self) -> str:
         protein37 = self.to_protein37()
