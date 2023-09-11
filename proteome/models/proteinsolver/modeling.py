@@ -62,15 +62,16 @@ class ProteinSolverForSequenceDesign:
     @torch.no_grad()
     def design_sequence(
         self,
-        structure: protein.Protein,
+        structure: protein.Protein27,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[str, float]:
         """Design a protein sequence for a given structure."""
+        structure = structure.to_protein27()
         # The model needs a very particular structure to run correctly
         # first we need to convert our protein into a pdb file, then
         # cleanup the file by adding missing atoms and hydrogens
         # before finally converting it to the structure the model expects.
-        pdb_str = protein.to_pdb(structure)
+        pdb_str = structure.to_pdb()
         pdb_file = io.StringIO(pdb_str)
         fixed_pdb = cleanup.fix_pdb(pdb_file, {})
 
