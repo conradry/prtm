@@ -843,6 +843,34 @@ restype_name_to_atom14_names = {
 }
 # pylint: enable=line-too-long
 # pylint: enable=bad-whitespace
+restype_name_to_hydrogen_atom_names = {
+    "ALA": ["H","HA","1HB","2HB","3HB",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "ARG": ["H","HA","1HB","2HB","1HG","2HG","1HD","2HD","HE","1HH1","2HH1","1HH2","2HH2"],
+    "ASN": ["H","HA","1HB","2HB","1HD2","2HD2",  "",  "",  "",  "",  "",  "",  ""],
+    "ASP": ["H","HA","1HB","2HB",  "",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "CYS": ["H","HA","1HB","2HB","HG",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "GLN": ["H","HA","1HB","2HB","1HG","2HG","1HE2","2HE2",  "",  "",  "",  "",  ""],
+    "GLU": ["H","HA","1HB","2HB","1HG","2HG",  "",  "",  "",  "",  "",  "",  ""],
+    "GLY": ["H","1HA","2HA",  "",  "",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "HIS": ["H","HA","1HB","2HB","HD2","HE1","HE2",  "",  "",  "",  "",  "",  ""],
+    "ILE": ["H","HA","HB","1HG2","2HG2","3HG2","1HG1","2HG1","1HD1","2HD1","3HD1",  "",  ""],
+    "LEU": ["H","HA","1HB","2HB","HG","1HD1","2HD1","3HD1","1HD2","2HD2","3HD2",  "",  ""],
+    "LYS": ["H","HA","1HB","2HB","1HG","2HG","1HD","2HD","1HE","2HE","1HZ","2HZ","3HZ"],
+    "MET": ["H","HA","1HB","2HB","1HG","2HG","1HE","2HE","3HE",  "",  "",  "",  ""],
+    "PHE": ["H","HA","1HB","2HB","HD1","HD2","HE1","HE2","HZ",  "",  "",  "",  ""],
+    "PRO": ["HA","1HB","2HB","1HG","2HG","1HD","2HD",  "",  "",  "",  "",  "",  ""],
+    "SER": ["H","HG","HA","1HB","2HB",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "THR": ["H","HG1","HA","HB","1HG2","2HG2","3HG2",  "",  "",  "",  "",  "",  ""],
+    "TRP": ["H","HA","1HB","2HB","HD1","HE1","HZ2","HH2","HZ3","HE3",  "",  "",  ""],
+    "TYR": ["H","HA","1HB","2HB","HD1","HE1","HE2","HD2","HH",  "",  "",  "",  ""],
+    "VAL": ["H","HA","HB","1HG1","2HG1","3HG1","1HG2","2HG2","3HG2",  "",  "",  "",  ""],
+    "UNK": ["H","HA","1HB","2HB","3HB",  "",  "",  "",  "",  "",  "",  "",  ""],
+}
+
+restype_name_to_atom27_names = {
+    aa: atom_names + restype_name_to_hydrogen_atom_names[aa]
+    for aa, atom_names in restype_name_to_atom14_names.items()
+}
 
 
 # This is the standard residue order when coding AA type as a number.
@@ -955,12 +983,16 @@ restype_1to3 = {
 # many more, and less common, three letter names as keys and maps many of these
 # to the same one letter name (including 'X' and 'U' which we don't use here).
 restype_3to1 = {v: k for k, v in restype_1to3.items()}
-restype2atom_mask = np.zeros([len(restypes_with_x), 14])
 
-restype2atom_mask = np.zeros([len(restypes_with_x), 14])
+restype2atom14_mask = np.zeros([len(restypes_with_x), 14])
 for k, v in restype_name_to_atom14_names.items():
     for i, atom in enumerate(v):
-        restype2atom_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
+        restype2atom14_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
+
+restype2atom27_mask = np.zeros([len(restypes_with_x), 27])
+for k, v in restype_name_to_atom27_names.items():
+    for i, atom in enumerate(v):
+        restype2atom27_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
 
 restype_rigidgroup_mask = np.zeros([21, 8], dtype=np.float32)
 restype_rigidgroup_mask[:, 0] = 1

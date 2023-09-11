@@ -730,6 +730,15 @@ class ProteinBase:
             remark=protein.remark,
         )
 
+    def to_protein37(self) -> Protein37:
+        raise NotImplementedError
+    
+    def to_protein27(self) -> Protein27:
+        raise NotImplementedError
+
+    def to_protein14(self) -> Protein14:
+        raise NotImplementedError
+
     def to_protein5(self) -> Protein5:
         return Protein5(**self._crop_n_atoms(n=5))
 
@@ -757,10 +766,11 @@ class ProteinBase:
             remark=self.remark,
         )
 
-    @property
-    def sequence(self) -> str:
+    def sequence(self, chain_id: str) -> str:
         # Decode the aatype sequence to a string
-        return "".join(residue_constants.restypes[a] for a in self.aatype)
+        assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
+        chain_aatype = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
+        return "".join(residue_constants.restypes[a] for a in chain_aatype)
 
 
 class Protein37(ProteinBase):
@@ -780,7 +790,7 @@ class Protein37(ProteinBase):
         protein37: Protein37 = self.to_numpy()
         # Get the indices of the atoms to keep from aatype
         atom_indices = mapping[protein37.aatype]
-        residue_mask = ~(residue_constants.restype2atom_mask > 0)
+        residue_mask = ~(residue_constants.restype2atom14_mask > 0)
         atom14_mask = residue_mask[protein37.aatype]
 
         seq_len = protein37.aatype.shape[0]
@@ -1178,7 +1188,7 @@ def add_pdb_headers(prot: ProteinBase, pdb_str: str) -> str:
     return "\n".join(out_pdb_lines)
 
 
-def ideal_atom_mask(prot: ProteinBase) -> np.ndarray:
+def ideal_atom37_mask(aatype: np.ndarray) -> np.ndarray:
     """Computes an ideal atom mask.
 
     `Protein.atom_mask` typically is defined according to the atoms that are
@@ -1191,7 +1201,39 @@ def ideal_atom_mask(prot: ProteinBase) -> np.ndarray:
     Returns:
       An ideal atom mask.
     """
-    return residue_constants.STANDARD_ATOM_MASK[prot.aatype]
+    return residue_constants.STANDARD_ATOM_MASK[aatype]
+
+
+def ideal_atom27_mask(aatype: np.ndarray) -> np.ndarray:
+    """Computes an ideal atom mask.
+
+    `Protein.atom_mask` typically is defined according to the atoms that are
+    reported in the PDB. This function computes a mask according to heavy atoms
+    that should be present in the given sequence of amino acids.
+
+    Args:
+      prot: `Protein` whose fields are `numpy.ndarray` objects.
+
+    Returns:
+      An ideal atom mask.
+    """
+    return residue_constants.restype2atom27_mask[aatype]
+
+
+def ideal_atom14_mask(aatype: np.ndarray) -> np.ndarray:
+    """Computes an ideal atom mask.
+
+    `Protein.atom_mask` typically is defined according to the atoms that are
+    reported in the PDB. This function computes a mask according to heavy atoms
+    that should be present in the given sequence of amino acids.
+
+    Args:
+      prot: `Protein` whose fields are `numpy.ndarray` objects.
+
+    Returns:
+      An ideal atom mask.
+    """
+    return residue_constants.restype2atom14_mask[aatype]
 
 
 def add_oxygen_to_atom_positions(atom_positions: np.ndarray) -> np.ndarray:

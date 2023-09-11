@@ -221,7 +221,7 @@ class ContigMap:
 
     def __init__(
         self,
-        structure: protein.Protein,
+        structure: protein.ProteinBase,
         contigs=None,
         inpaint_seq=None,
         inpaint_str=None,
@@ -234,6 +234,7 @@ class ContigMap:
         topo=False,
         provide_seq=None,
     ):
+        structure = structure.to_protein27()
         # sanity checks
         if contigs is None and ref_idx is None:
             raise Exception("Must either specify a contig string or precise mapping")

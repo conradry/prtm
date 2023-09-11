@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -58,9 +58,9 @@ class InferenceConfig:
 @dataclass(frozen=True, kw_only=True)
 class DesignParams:
     """Design parameters for ProteinMPNN."""
-    
-    # Binary float mask to indicate designable positions. 1.0 if a position is
-    # designable and 0.0 if not.
+
+    # Binary float mask to indicate designable positions. 0.0 if a position is
+    # designable and -1.0 if not.
     design_mask: np.ndarray  # [num_res]
 
     # Binary mask to indicate amino acids that are designable
@@ -71,12 +71,21 @@ class DesignParams:
     pssm_log_odds: np.ndarray  # [num_res, num_aatype]
 
     bias_per_residue: np.ndarray  # [num_res, num_aatype]
-    tied_positions: Optional[List[Dict[int, List[int]]]] = None
+    tied_positions: Optional[List[Dict[int, List[int]]]] = None 
 
 
-@dataclass(frozen=True, kw_only=True)
-class DesignableProtein(protein.Protein, DesignParams):
+class DesignableProtein:
     """Protein structure definition with design parameters for ProteinMPNN."""
+    def __init__(
+        self, 
+        structure: protein.ProteinBase, 
+        design_params: DesignParams,
+    ):
+        for k,v in structure.to_dict().items():
+            setattr(self, k, v)
+
+        for k,v in asdict(design_params).items():
+            setattr(self, k, v)
 
 
 @dataclass

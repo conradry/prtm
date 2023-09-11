@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from proteome import protein
 from proteome.models.protein_generator import config
 from proteome.models.protein_generator.modeling import (
@@ -17,7 +15,7 @@ def test_unconditional_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -25,8 +23,8 @@ def test_unconditional_design():
             contigmap_params=config.ContigMap(contigs=["100"]),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -38,7 +36,7 @@ def test_weighted_sequence_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -50,25 +48,25 @@ def test_weighted_sequence_design():
             ),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
 
 
 def test_binder_design():
-    expected_sequence = "SLLELTLSVKGETYKLRMQKSANGTVSVTILNSRGEPLAQPVSVAVTFIMLKIQAYFNETADLPCQFANSQNQSLSELVVFWQDQENLVLNEVYLGKEKFDSVHSKYMGRTSFDSDSWTLRLHNLQIKDKGLYQCIIHHKKPTGMIRIHQMNSELSVLA"
+    expected_sequence = "SLLEQTLSVKGKTYKLRMQKSENGTYSWTRLSPRGEPLAQPVSVAPTFIMLKIQAYFNETADLPCQFANSQNQSLSELVVFWQDQENLVLNEVYLGKEKFDSVHSKYMGRTSFDSDSWTLRLHNLQIKDKGLYQCIIHHKKPTGMIRIHQMNSELSVLA"
     gt_pdb_file = Path(__file__).parents[0] / f"reference_binder.pdb"
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     with open(Path(__file__).parents[0] / "cd86.pdb", mode="r") as f:
         reference_pdb_str = f.read()
 
-    reference_structure = protein.from_pdb_string(reference_pdb_str)
+    reference_structure = protein.Protein27.from_pdb_string(reference_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -80,25 +78,25 @@ def test_binder_design():
             ),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
 
 
 def test_motif_scaffolding_design():
-    expected_sequence = "SRPERVIRITPEEVNKIKSALLSTNKAVVSLDGKTIEIDRTDVIKDGEIIIDPNRTIKK"
+    expected_sequence = "SRPERVIRITPEEVNKIKSALLSTNKAVVSLNGKTIEIDRNDVIKDGEIIIDPNRKIKK"
     gt_pdb_file = Path(__file__).parents[0] / f"reference_motif_scaffolding.pdb"
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     with open(Path(__file__).parents[0] / "rsv5_5tpn.pdb", mode="r") as f:
         reference_pdb_str = f.read()
 
-    reference_structure = protein.from_pdb_string(reference_pdb_str)
+    reference_structure = protein.Protein27.from_pdb_string(reference_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -107,8 +105,8 @@ def test_motif_scaffolding_design():
             contigmap_params=config.ContigMap(contigs=["0-25/A163-181/25-30"]),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -120,13 +118,12 @@ def test_partial_diffusion_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     with open(Path(__file__).parents[0] / "design_000000.pdb", mode="r") as f:
         reference_pdb_str = f.read()
 
-    reference_structure = protein.from_pdb_string(reference_pdb_str)
-    reference_structure = protein.crop_protein_37_to_27(reference_structure)
+    reference_structure = protein.Protein27.from_pdb_string(reference_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -137,8 +134,8 @@ def test_partial_diffusion_design():
             sampling_temp=0.3,
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -150,7 +147,7 @@ def test_secondary_structure_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     secondary_structure_str = "XXXXXHHHHXXXLLLXXXXXXXXXXHHHHXXXLLLXXXXXXXXXXHHHHXXXLLLXXXXXXXXXXHHHHXXXLLLXXXXXXXXXXHHHHXXXLLLXXXXX"
 
@@ -163,8 +160,8 @@ def test_secondary_structure_design():
             ),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -176,7 +173,7 @@ def test_secondary_structure_bias_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -187,8 +184,8 @@ def test_secondary_structure_bias_design():
             ),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -202,12 +199,12 @@ def test_secondary_structure_from_pdb_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     with open(Path(__file__).parents[0] / "cd86.pdb", mode="r") as f:
         dssp_pdb_str = f.read()
 
-    dssp_structure = protein.from_pdb_string(dssp_pdb_str)
+    dssp_structure = protein.Protein27.from_pdb_string(dssp_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -218,8 +215,8 @@ def test_secondary_structure_from_pdb_design():
             ),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -231,7 +228,7 @@ def test_sequence_conditioning_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -240,8 +237,8 @@ def test_sequence_conditioning_design():
             contigmap_params=config.ContigMap(),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -255,7 +252,7 @@ def test_sequence_partial_diffusion_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -266,8 +263,8 @@ def test_sequence_partial_diffusion_design():
             sampling_temp=0.3,
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)
@@ -281,7 +278,7 @@ def test_symmetric_design():
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein27.from_pdb_string(gt_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
     designed_structure, designed_sequence = designer.design_structure_and_sequence(
@@ -291,8 +288,8 @@ def test_symmetric_design():
             symmetry_params=config.SymmetryParams(symmetry=3),
         ),
     )
-    designed_pdb = protein.to_pdb(designed_structure)
-    pred_structure = protein.from_pdb_string(designed_pdb)
+    designed_pdb = designed_structure.to_pdb()
+    pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 
     assert designed_sequence == expected_sequence
     _compare_structures(pred_structure, gt_structure, atol=0.01)

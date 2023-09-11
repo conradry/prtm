@@ -240,7 +240,7 @@ class SeqDiffSampler:
             ), f"You must specify a pdb if attempting to use contigs with partial diffusion, else partially diffuse sequence input"
 
             if self.cfg.reference_structure == None:
-                reference_structure = protein.Protein(
+                reference_structure = protein.Protein27(
                     atom_positions=np.zeros((1, 27, 3)),
                     aatype=np.zeros((1,), dtype=np.int32),
                     atom_mask=np.zeros((1, 27)),

@@ -21,7 +21,7 @@ class Sampler(object):
     def __init__(
         self,
         cfg: config.SamplerConfig,
-        structure: protein.Protein,
+        structure: protein.Protein14,
         models: List[torch.nn.Module],
         init_model: torch.nn.Module,
     ):
@@ -100,7 +100,7 @@ class Sampler(object):
         # initialize sampler
         self.init_rosetta_filters()
         # score starting (ground-truth) pdb, get gt energies
-        self.gt_pose = protein.to_rosetta_pose(self.structure)
+        self.gt_pose = self.structure.to_rosetta_pose()
         self.gt_seq = self.gt_pose.sequence()
         (
             _,
@@ -167,7 +167,7 @@ class Sampler(object):
 
         # get gt data -- monitor distance to initial sequence
         # Write the structure to a PDB file
-        chain_structures = {"A": protein.to_biopdb_structure(self.structure)}
+        chain_structures = {"A": self.structure.to_biopdb_structure()}
         (
             self.gt_atom_coords,
             self.gt_atom_data,
@@ -185,7 +185,7 @@ class Sampler(object):
         # initialize starting sequence
 
         # random/poly-alanine/poly-valine initialize sequence, pack rotamers
-        self.pose = protein.to_rosetta_pose(self.structure)
+        self.pose = self.structure.to_rosetta_pose()
         if self.cfg.randomize:
             if (not self.no_init_model) and not (self.cfg.ala or self.cfg.val):
                 # get features --> BB only

@@ -74,11 +74,13 @@ class ProteinSeqDesForSequenceDesign:
     @torch.no_grad()
     def design_sequence(
         self,
-        structure: protein.Protein,
+        structure: protein.ProteinBase,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[str, float]:
         """Design a protein sequence for a given structure."""
         # Can accept a list of models for ensembling, we only use 1 for now
+        # Use atom 14 for compactness, 37 is fine too
+        structure = structure.to_protein14()  
         design_sampler = sampler.Sampler(
             inference_config.sampler_config,
             structure,

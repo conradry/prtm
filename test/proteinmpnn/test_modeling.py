@@ -28,9 +28,7 @@ def test_protein_seq_des_models(model_name: str):
     inverse_folder = modeling.ProteinMPNNForSequenceDesign(
         model_name=model_name, random_seed=0
     )
-    target_protein = protein.from_pdb_string(
-        target_pdb_str, ca_only=inverse_folder.ca_only, backbone_only=(not inverse_folder.ca_only)
-    )
+    target_protein = protein.Protein4.from_pdb_string(target_pdb_str)
     sequence, score = inverse_folder.design_sequence(target_protein)
 
     assert sequence == exp_sequence

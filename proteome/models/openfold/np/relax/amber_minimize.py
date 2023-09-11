@@ -156,10 +156,10 @@ def _check_residues_are_well_defined(prot: protein.ProteinBase):
         )
 
 
-def _check_atom_mask_is_ideal(prot):
+def _check_atom_mask_is_ideal(prot: protein.ProteinBase):
     """Sanity-check the atom mask is ideal, up to a possible OXT."""
     atom_mask = prot.atom_mask
-    ideal_atom_mask = protein.ideal_atom_mask(prot)
+    ideal_atom_mask = protein.ideal_atom37_mask(prot.aatype)
     utils.assert_equal_nonterminal_atom_types(atom_mask, ideal_atom_mask)
 
 
