@@ -25,7 +25,7 @@ def test_protein_seq_des_models(model_name: str):
 
 
     exp_sequence = EXPECTED_SEQUENCES[model_name]
-    inverse_folder = modeling.ProteinMPNNForSequenceDesign(
+    inverse_folder = modeling.ProteinMPNNForInverseFolding(
         model_name=model_name, random_seed=0
     )
     target_protein = protein.Protein4.from_pdb_string(target_pdb_str)

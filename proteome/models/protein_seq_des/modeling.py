@@ -31,7 +31,7 @@ def _get_model_config(model_name: str) -> config.BaselineModelConfig:
     return PSD_MODEL_CONFIGS[model_name]
 
 
-class ProteinSeqDesForSequenceDesign:
+class ProteinSeqDesForInverseFolding:
     def __init__(
         self,
         model_name: str = "conditional_model_0",

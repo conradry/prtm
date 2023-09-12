@@ -45,7 +45,7 @@ def _get_default_design_params(sequence_length: int) -> config.DesignParams:
     return design_params
 
 
-class ProteinMPNNForSequenceDesign:
+class ProteinMPNNForInverseFolding:
     def __init__(
         self,
         model_name: str = "vanilla_model-30",

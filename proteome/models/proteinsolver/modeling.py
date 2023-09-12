@@ -27,7 +27,7 @@ def _get_model_config(model_name: str) -> config.ProteinNetConfig:
     return PS_MODEL_CONFIGS[model_name]
 
 
-class ProteinSolverForSequenceDesign:
+class ProteinSolverForInverseFolding:
     def __init__(
         self,
         model_name: str = "model_0",
