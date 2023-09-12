@@ -1,5 +1,6 @@
 import random
 import sys
+from typing import Optional
 
 import numpy as np
 import torch
@@ -221,7 +222,7 @@ class ContigMap:
 
     def __init__(
         self,
-        structure: protein.Protein,
+        structure: Optional[protein.ProteinBase] = None,
         contigs=None,
         inpaint_seq=None,
         inpaint_str=None,
@@ -234,6 +235,9 @@ class ContigMap:
         topo=False,
         provide_seq=None,
     ):
+        if structure is not None:
+            structure = structure.to_protein27()
+
         # sanity checks
         if contigs is None and ref_idx is None:
             raise Exception("Must either specify a contig string or precise mapping")

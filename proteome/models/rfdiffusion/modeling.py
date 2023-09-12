@@ -153,7 +153,7 @@ class RFDiffusionForStructureDesign:
         sampler_config: config.SamplerConfigType,
         diffuser_config_override: Optional[config.DiffuserConfig] = None,
         preprocess_config_override: Optional[config.PreprocessConfig] = None,
-    ) -> protein.Protein:
+    ) -> protein.Protein14:
         """Design a protein structure."""
         if self.model_name == "auto":
             self._set_model(_select_model_from_config(sampler_config))
@@ -216,7 +216,7 @@ class RFDiffusionForStructureDesign:
         # make bfact=0 for diffused coordinates
         bfacts[torch.where(torch.argmax(seq_init, dim=-1) == 21, True, False)] = 0
 
-        return protein.Protein(
+        return protein.Protein14(
             atom_positions=denoised_xyz_stack[-1].numpy(),
             aatype=final_seq.numpy(),
             atom_mask=np.ones(denoised_xyz_stack[-1].shape[:2], dtype=np.bool_),

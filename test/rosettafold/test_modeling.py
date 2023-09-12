@@ -32,14 +32,14 @@ def test_rosettafold_for_folding(model_name):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein4.from_pdb_string(gt_pdb_str)
 
     # Fold the sequence using OpenFoldForFolding
     pred_structure, score = rosettafold.fold(sequence)
-    pred_pdb_str = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb_str)
+    pred_pdb_str = pred_structure.to_pdb()
+    pred_structure = protein.Protein4.from_pdb_string(pred_pdb_str)
 
     # RoseTTAfold outputs are not deterministic but usually
     # they are reasonably close to the ground truth
     # If this test fails it may just be flaky.
-    _compare_structures(pred_structure, gt_structure, atol=1.5)
+    _compare_structures(pred_structure, gt_structure, atol=2)

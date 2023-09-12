@@ -3,7 +3,6 @@ from typing import Any, List, Optional
 
 import numpy as np
 
-from proteome import protein
 from proteome.models.esm.data import Alphabet
 
 
@@ -113,7 +112,7 @@ class ESMIFConfig:
 
 @dataclass(frozen=True, kw_only=True)
 class DesignParams:
-    """Design parameters for ProteinMPNN."""
+    """Design parameters for ESM-IF."""
     
     # Binary float mask to indicate designable positions. 1.0 if a position is
     # designable and 0.0 if not.
@@ -134,8 +133,3 @@ class DesignParams:
             self.partial_seq_list = [  #  type: ignore
                 "<mask>" if c == "-" else c for c in self.partial_seq
             ]
-
-
-@dataclass(frozen=True, kw_only=True)
-class DesignableProtein(protein.Protein, DesignParams):
-    """Protein structure definition with design parameters for ProteinMPNN."""

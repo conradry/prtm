@@ -112,7 +112,7 @@ class RoseTTAFoldForFolding:
 
     def fold(
         self, sequence: str, max_msas: int = 1000
-    ) -> Tuple[protein.Protein, float]:
+    ) -> Tuple[protein.Protein4, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -137,12 +137,14 @@ class RoseTTAFoldForFolding:
         xyz = xyz.detach().cpu().numpy()
 
         xyzo = protein.add_oxygen_to_atom_positions(xyz)
-        predicted_protein = protein.Protein(
+        seqlen = len(sequence)
+        predicted_protein = protein.Protein4(
             atom_positions=xyzo,
             aatype=feature_dict["seq"][0].cpu().numpy(),
             atom_mask=np.ones_like(xyzo)[..., 0],
             residue_index=feature_dict["idx"][0].cpu().numpy() + 1,
             b_factors=lddt[0].cpu().numpy()[:, None].repeat(4, axis=1),
+            chain_index=np.zeros((seqlen,), dtype=np.int32),
         )
         mean_plddt = float(lddt.mean())
 

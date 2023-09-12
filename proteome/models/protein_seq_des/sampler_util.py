@@ -293,8 +293,8 @@ def get_energy(
         ) = data.get_pdb_data({chain_id: chain})
     else:
         assert pose is not None, "need to specify pose to calc energy"
-        protein_chain = protein.from_rosetta_pose(pose)
-        biopdb_chain = protein.to_biopdb_structure(protein_chain)
+        protein_chain = protein.Protein14.from_rosetta_pose(pose)
+        biopdb_chain = protein_chain.to_biopdb_structure()
         (
             atom_coords,
             atom_data,

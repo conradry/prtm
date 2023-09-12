@@ -194,8 +194,8 @@ class ContigMap:
 
 @dataclass
 class ScaffoldGuidedParams:
-    target_structure: Optional[protein.Protein] = None
-    scaffold_structure_list: List[protein.Protein] = None
+    target_structure: Optional[protein.Protein14] = None
+    scaffold_structure_list: List[protein.Protein14] = None
     sampled_insertion: int = 0
     sampled_N: int = 0
     sampled_C: int = 0
@@ -206,13 +206,25 @@ class ScaffoldGuidedParams:
     mask_loops: bool = True
     contig_crop: Optional[List[str]] = None
 
+    def __post_init__(self):
+        if self.target_structure is not None:
+            self.target_structure = self.target_structure.to_protein14()
+        if self.scaffold_structure_list is not None:
+            self.scaffold_structure_list = [
+                s.to_protein14() for s in self.scaffold_structure_list
+            ]
+
 
 @dataclass
 class InferenceParams:
-    reference_structure: protein.Protein = None
+    reference_structure: protein.Protein14 = None
     num_designs: int = 1
     align_motif: bool = True
     final_step: int = 1
+
+    def __post_init__(self):
+        if self.reference_structure is not None:
+            self.reference_structure = self.reference_structure.to_protein14()
 
 
 @dataclass

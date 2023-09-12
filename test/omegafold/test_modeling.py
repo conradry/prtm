@@ -21,13 +21,13 @@ def test_omegafold_models(model_name: str):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein14.from_pdb_string(gt_pdb_str)
 
     folder = modeling.OmegaFoldForFolding(model_name=model_name)
     pred_structure, mean_plddt = folder.fold(sequence)
 
     # Write to pdb and convert back to ignore atom masking, etc.
-    pred_pdb_str = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb_str)
+    pred_pdb_str = pred_structure.to_pdb()
+    pred_structure = protein.Protein14.from_pdb_string(pred_pdb_str)
 
     _compare_structures(pred_structure, gt_structure, atol=0.1)

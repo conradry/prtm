@@ -512,48 +512,17 @@ class Denoise:
         return fullatom_next.squeeze()[:, :14, :], px0
 
 
-"""
-def process_target(target_struct: protein.Protein, center=True):
+def process_target(target_struct: protein.Protein14, center=True):
     # Zero-center positions
     ca_center = target_struct.atom_positions[:, :1, :].mean(axis=0, keepdims=True)
     if not center:
         ca_center = 0
 
-    xyz = torch.from_numpy(target_struct.atom_positions - ca_center)
-    seq_orig = torch.from_numpy(target_struct.aatype)
-    atom_mask = torch.from_numpy(target_struct.atom_mask)
-    seq_len = len(xyz)
+    protein_27 = target_struct.to_protein27()
+    protein_27.atom_positions -= ca_center
 
-    # Make 27 atom representation
-    xyz_27 = torch.full((seq_len, 27, 3), np.nan).float()
-    xyz_27[:, :14, :] = xyz[:, :14, :]
-
-    mask_27 = torch.full((seq_len, 27), False)
-    mask_27[:, :14] = atom_mask
-    out = {
-        "xyz_27": xyz_27,
-        "mask_27": mask_27,
-        "seq": seq_orig,
-    }
-    if target_struct.hetatom_names is not None:
-        out["xyz_het"] = target_struct.hetatom_positions
-        out["info_het"] = target_struct.hetatom_names
-
-    return out
-"""
-
-
-def process_target(target_struct: protein.Protein, center=True):
-    # Zero-center positions
-    ca_center = target_struct.atom_positions[:, :1, :].mean(axis=0, keepdims=True)
-    if not center:
-        ca_center = 0
-
-    target_struct_dict = asdict(target_struct)
-    target_struct_dict["atom_positions"] -= ca_center
-    protein_27 = protein.pad_protein_14_to_27(protein.Protein(**target_struct_dict))
-
-    return protein.to_torch(protein_27)
+    #return protein_27.to_torch().to_dict()
+    return protein_27.to_torch()
 
 
 def get_idx0_hotspots(mappings, ppi_conf, binderlen):
@@ -665,11 +634,11 @@ class BlockAdjacency:
         else:
             self.mask_loops = True
 
-    def get_ss_adj(self, structure14: protein.Protein):
+    def get_ss_adj(self, structure14: protein.Protein14):
         """
         Given at item, get the ss tensor and block adjacency matrix for that item
         """
-        structure27 = protein.pad_protein_14_to_27(structure14)
+        structure27 = structure14.to_protein27()
         ss, adj = make_ss_block_adj_from_structure(structure27)
 
         return ss, adj
@@ -813,7 +782,7 @@ class Target:
 
     def __init__(
         self,
-        target_struct: protein.Protein,
+        target_struct: protein.Protein14,
         contig_crop: Optional[List[str]],
         hotspots: Optional[List[str]],
     ):
@@ -892,7 +861,7 @@ class Target:
 
         # create new protein from the crop
         crop_or_none = lambda x: x[mask] if x is not None else None
-        self.target_struct = protein.Protein(
+        self.target_struct = protein.Protein14(
             atom_positions=crop_or_none(self.target_struct.atom_positions),
             aatype=crop_or_none(self.target_struct.aatype),
             atom_mask=crop_or_none(self.target_struct.atom_mask),

@@ -360,7 +360,7 @@ class RecycleEmbedder(modules.OFModule):
         Returns:
 
         """
-        atom_mask = torch.from_numpy(rc.restype2atom_mask).to(self.device)[fasta]
+        atom_mask = torch.from_numpy(rc.restype2atom14_mask).to(self.device)[fasta]
         prev_beta = utils.create_pseudo_beta(prev_x, atom_mask)
         d = utils.get_norm(prev_beta.unsqueeze(-2) - prev_beta.unsqueeze(-3))
         d = self.dgram(d)

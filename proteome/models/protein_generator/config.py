@@ -152,7 +152,7 @@ class SymmetryParams:
 
 @dataclass
 class SecondaryStructureParams:
-    dssp_structure: Optional[protein.Protein] = None
+    dssp_structure: Optional[protein.ProteinBase] = None
     secondary_structure: str = None
 
     def __post_init__(self):
@@ -180,7 +180,7 @@ class DiffuserParams:
 class InferenceConfig:
     contigmap_params: ContigMap
     sequence: Optional[str] = None
-    reference_structure: Optional[protein.Protein] = None
+    reference_structure: Optional[protein.Protein27] = None
 
     potentials_params: PotentialsParams = PotentialsParams()
     structure_bias_params: StructureBiasParams = StructureBiasParams()
@@ -197,3 +197,7 @@ class InferenceConfig:
     scheduled_str_cond: bool = False
     struc_cond_sc: bool = False
     tmpl_conf: float = 1
+
+    def __post_init__(self):
+        if self.reference_structure is not None:
+            self.reference_structure = self.reference_structure.to_protein27()

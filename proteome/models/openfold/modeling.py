@@ -117,7 +117,7 @@ class OpenFoldForFolding:
         return processed_feature_dict
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> Tuple[protein.Protein, float]:
+    def fold(self, sequence: str) -> Tuple[protein.Protein37, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -134,7 +134,7 @@ class OpenFoldForFolding:
         b_factors = res["plddt"][:, None] * res["final_atom_mask"]
         chain_index = np.zeros((len(sequence),), dtype=np.int32)
 
-        structure = protein.Protein(
+        structure = protein.Protein37(
             atom_positions=res["final_atom_positions"].cpu().numpy(),
             aatype=feature_dict["aatype"].cpu().numpy()[:, 0],
             atom_mask=res["final_atom_mask"].cpu().numpy(),

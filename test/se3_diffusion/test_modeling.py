@@ -14,7 +14,7 @@ def test_se3_diffusion_models(model_name: str):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.ProteinCATrace.from_pdb_string(gt_pdb_str)
 
     structure_designer = modeling.SE3DiffusionForStructureDesign(
         model_name=model_name, random_seed=0
@@ -24,7 +24,7 @@ def test_se3_diffusion_models(model_name: str):
     )
 
     # Write to pdb and convert back to ignore atom masking, etc.
-    pred_pdb_str = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb_str)
+    pred_pdb_str = pred_structure.to_pdb()
+    pred_structure = protein.ProteinCATrace.from_pdb_string(pred_pdb_str)
 
     _compare_structures(pred_structure, gt_structure)

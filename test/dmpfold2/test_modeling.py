@@ -33,12 +33,12 @@ def test_dmpfold2_for_folding(model_name):
     with open(gt_pdb_file, "r") as f:
         gt_pdb_str = f.read()
 
-    gt_structure = protein.from_pdb_string(gt_pdb_str)
+    gt_structure = protein.Protein5.from_pdb_string(gt_pdb_str)
 
     # Fold the sequence using OpenFoldForFolding
     pred_structure, score = folder.fold(sequence)
-    pred_pdb_str = protein.to_pdb(pred_structure)
-    pred_structure = protein.from_pdb_string(pred_pdb_str)
+    pred_pdb_str = pred_structure.to_pdb()
+    pred_structure = protein.Protein5.from_pdb_string(pred_pdb_str)
 
     # RoseTTAfold outputs are not deterministic but usually
     # they are reasonably close to the ground truth

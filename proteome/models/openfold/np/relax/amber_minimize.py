@@ -146,7 +146,7 @@ def _check_cleaned_atoms(pdb_cleaned_string: str, pdb_ref_string: str):
                         )
 
 
-def _check_residues_are_well_defined(prot: protein.Protein):
+def _check_residues_are_well_defined(prot: protein.ProteinBase):
     """Checks that all residues contain non-empty atom sets."""
     if (prot.atom_mask.sum(axis=-1) == 0).any():
         raise ValueError(
@@ -156,14 +156,14 @@ def _check_residues_are_well_defined(prot: protein.Protein):
         )
 
 
-def _check_atom_mask_is_ideal(prot):
+def _check_atom_mask_is_ideal(prot: protein.ProteinBase):
     """Sanity-check the atom mask is ideal, up to a possible OXT."""
     atom_mask = prot.atom_mask
-    ideal_atom_mask = protein.ideal_atom_mask(prot)
+    ideal_atom_mask = protein.ideal_atom37_mask(prot.aatype)
     utils.assert_equal_nonterminal_atom_types(atom_mask, ideal_atom_mask)
 
 
-def clean_protein(prot: protein.Protein, checks: bool = True):
+def clean_protein(prot: protein.ProteinBase, checks: bool = True):
     """Adds missing atoms to Protein instance.
 
     Args:
@@ -177,7 +177,7 @@ def clean_protein(prot: protein.Protein, checks: bool = True):
     _check_atom_mask_is_ideal(prot)
 
     # Clean pdb.
-    prot_pdb_string = protein.to_pdb(prot)
+    prot_pdb_string = prot.to_pdb()
     pdb_file = io.StringIO(prot_pdb_string)
     alterations_info = {}
     fixed_pdb = cleanup.fix_pdb(pdb_file, alterations_info)
@@ -193,7 +193,7 @@ def clean_protein(prot: protein.Protein, checks: bool = True):
     if checks:
         _check_cleaned_atoms(pdb_string, prot_pdb_string)
 
-    headers = protein.get_pdb_headers(prot)
+    headers = prot.get_pdb_headers()
     if len(headers) > 0:
         pdb_string = "\n".join(["\n".join(headers), pdb_string])
 
@@ -342,7 +342,7 @@ def make_atom14_positions(prot):
     return prot
 
 
-def find_violations(prot_np: protein.Protein):
+def find_violations(prot_np: protein.Protein37):
     """Analyzes a protein and returns structural violation information.
 
     Args:
@@ -379,7 +379,7 @@ def find_violations(prot_np: protein.Protein):
     return violations, violation_metrics
 
 
-def get_violation_metrics(prot: protein.Protein):
+def get_violation_metrics(prot: protein.Protein37):
     """Computes violation and alignment metrics."""
     structural_violations, struct_metrics = find_violations(prot)
     violation_idx = np.flatnonzero(
@@ -456,7 +456,7 @@ def _run_one_iteration(
 
 
 def run_pipeline(
-    prot: protein.Protein,
+    prot: protein.Protein37,
     stiffness: float,
     use_gpu: bool,
     max_outer_iterations: int = 1,
@@ -517,11 +517,11 @@ def run_pipeline(
             use_gpu=use_gpu,
         )
 
-        headers = protein.get_pdb_headers(prot)
+        headers = prot.get_pdb_headers()
         if len(headers) > 0:
             ret["min_pdb"] = "\n".join(["\n".join(headers), ret["min_pdb"]])
 
-        prot = protein.from_pdb_string(ret["min_pdb"])
+        prot = protein.Protein37.from_pdb_string(ret["min_pdb"])
         if place_hydrogens_every_iteration:
             pdb_string = clean_protein(prot, checks=True)
         else:

@@ -65,7 +65,7 @@ class GenieForStructureDesign:
     def design_structure(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> protein.Protein:
+    ) -> protein.ProteinCATrace:
         """Design a random protein structure."""
         seq_len = inference_config.seq_len
         batch_size = inference_config.batch_size
@@ -86,18 +86,13 @@ class GenieForStructureDesign:
             coords = ts[sample_idx].trans.detach().cpu().numpy()
             coords = coords[:seq_len]
 
-        coords_backbone = np.zeros((seq_len, 4, 3))
-        coords_backbone[:, 1] = coords
-        atom_mask = np.zeros((seq_len, 4))
-        atom_mask[:, 1] = 1
-
-        n = len(coords_backbone)
-        structure = protein.Protein(
-            atom_positions=coords_backbone,
+        n = len(coords)
+        structure = protein.ProteinCATrace(
+            atom_positions=coords.reshape((n, 1, 3)),
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=atom_mask,
+            atom_mask=np.ones((n, 1)),
             residue_index=np.arange(0, n) + 1,
-            b_factors=np.zeros((n, 4)),
+            b_factors=np.zeros((n, 1)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 

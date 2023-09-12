@@ -1,6 +1,6 @@
 import random
 from dataclasses import asdict
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -92,7 +92,7 @@ class ProteinMPNNForSequenceDesign:
     @torch.no_grad()
     def design_sequence(
         self,
-        structure: protein.Protein,
+        structure: Union[protein.ProteinCATrace, protein.Protein4],
         design_params: Optional[config.DesignParams] = None,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[str, float]:
@@ -100,21 +100,17 @@ class ProteinMPNNForSequenceDesign:
         # Quick check to make sure the structure has the right number
         # of atoms for the chosen model
         if self.ca_only:
-            assert structure.atom_positions.shape[1] == 1, "CA only models require 1 atom per residue"
+            structure = structure.to_ca_trace()
         else:
-            assert structure.atom_positions.shape[1] == 4, "Vanilla models require 4 atoms per residue"
+            structure = structure.to_protein4()
 
         # Add design params to structure if provided
         # otherwise use the default design params
         if design_params is None:
             design_params = _get_default_design_params(len(structure.aatype))
 
-        structure = config.DesignableProtein(
-            **asdict(structure),
-            **asdict(design_params),
-        )
-
-        tied_featurize_output = self._featurize_input(structure)
+        designable_structure = config.DesignableProtein(structure, design_params)
+        tied_featurize_output = self._featurize_input(designable_structure)
 
         # Create a random noise for generator
         noise_vec = torch.randn(tied_featurize_output.chain_M.shape, device=self.device)  # type: ignore

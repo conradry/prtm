@@ -119,7 +119,7 @@ class OmegaFoldForFolding:
         self,
         sequence: str,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.Protein, float]:
+    ) -> Tuple[protein.Protein14, float]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -133,16 +133,17 @@ class OmegaFoldForFolding:
             fwd_cfg=inference_config,
         )
 
-        predicted_protein = protein.Protein(
+        predicted_protein = protein.Protein14(
             atom_positions=res["final_atom_positions"].cpu().numpy(),
             aatype=list_of_feature_dict[0]["p_msa"][0]
             .cpu()
             .numpy(),  # first msa is sequence
             atom_mask=res["final_atom_mask"].cpu().numpy(),
-            residue_index=np.arange(len(sequence)),
+            residue_index=np.arange(len(sequence)) + 1,
             b_factors=np.zeros(
                 tuple(res["final_atom_positions"].shape[:2])
             ),  # no lddt predicted
+            chain_index=np.zeros(len(sequence), dtype=np.int32),
         )
 
         return predicted_protein, res["confidence_overall"]

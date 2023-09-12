@@ -95,7 +95,7 @@ class ProteinGeneratorForJointDesign:
     def design_structure_and_sequence(
         self,
         inference_config: config.InferenceConfig,
-    ) -> Tuple[protein.Protein, str]:
+    ) -> Tuple[protein.Protein27, str]:
         """Design a protein structure."""
         if self.model_name == "auto":
             self.set_model(_select_model_from_config(inference_config))
@@ -114,11 +114,12 @@ class ProteinGeneratorForJointDesign:
         # Decode the sequence and make the structure
         L = len(features["best_seq"])
         num_atoms = features["best_xyz"].shape[2]
-        sequence = "".join([restypes[aa] for aa in features["best_seq"].cpu().numpy()])
-        structure = protein.Protein(
+        aatype = features["best_seq"].cpu().numpy()
+        sequence = "".join([restypes[aa] for aa in aatype])
+        structure = protein.Protein27(
             atom_positions=features["best_xyz"].squeeze().cpu().numpy(),
-            aatype=features["best_seq"].cpu().numpy(),
-            atom_mask=np.ones((L, num_atoms)),
+            aatype=aatype,
+            atom_mask=protein.ideal_atom27_mask(aatype),
             residue_index=np.array([t[1] for t in features["pdb_idx"]]),
             b_factors=features["best_pred_lddt"][0]
             .cpu()

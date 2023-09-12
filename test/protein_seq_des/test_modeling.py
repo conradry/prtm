@@ -22,7 +22,7 @@ def test_protein_seq_des_models(model_name: str):
     with open(target_pdb_file, "r") as f:
         target_pdb_str = f.read()
 
-    target_structure = protein.from_pdb_string(target_pdb_str)
+    target_structure = protein.Protein14.from_pdb_string(target_pdb_str)
 
     exp_sequence = EXPECTED_SEQUENCES[model_name]
     inverse_folder = modeling.ProteinSeqDesForSequenceDesign(
