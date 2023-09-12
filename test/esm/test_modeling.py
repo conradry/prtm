@@ -25,7 +25,7 @@ def test_esmfold_models(model_name: str):
     gt_structure = protein.Protein37.from_pdb_string(gt_pdb_str)
 
     folder = modeling.ESMForFolding(model_name=model_name, chunk_size=512)
-    pred_structure, mean_plddt = folder.fold(sequence)
+    pred_structure = folder(sequence)[0]
 
     # Write to pdb and convert back to ignore atom masking, etc.
     pred_pdb_str = pred_structure.to_pdb()
@@ -52,5 +52,5 @@ def test_esmif_models():
         inverse_folder = modeling.ESMForInverseFolding(
             model_name=model_name, random_seed=0
         )
-        sequence, score = inverse_folder.design_sequence(target_structure)
+        sequence = inverse_folder(target_structure)[0]
         assert sequence == exp_sequence

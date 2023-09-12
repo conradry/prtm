@@ -67,7 +67,7 @@ class GenieForStructureDesign:
         self.model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_structure(
+    def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:

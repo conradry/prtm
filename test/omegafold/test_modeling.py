@@ -24,7 +24,7 @@ def test_omegafold_models(model_name: str):
     gt_structure = protein.Protein14.from_pdb_string(gt_pdb_str)
 
     folder = modeling.OmegaFoldForFolding(model_name=model_name)
-    pred_structure, mean_plddt = folder.fold(sequence)
+    pred_structure = folder(sequence)[0]
 
     # Write to pdb and convert back to ignore atom masking, etc.
     pred_pdb_str = pred_structure.to_pdb()

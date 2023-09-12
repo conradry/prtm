@@ -126,14 +126,14 @@ def test_partial_diffusion_design():
     reference_structure = protein.Protein27.from_pdb_string(reference_pdb_str)
 
     designer = ProteinGeneratorForJointDesign(model_name="auto", random_seed=0)
-    designed_structure, designed_sequence = designer.design_structure_and_sequence(
+    designed_structure, designed_sequence = designer(
         config.InferenceConfig(
             reference_structure=reference_structure,
             diffuser_params=config.DiffuserParams(T=50),
             contigmap_params=config.ContigMap(contigs=["38"]),
             sampling_temp=0.3,
         ),
-    )
+    )[:2]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein27.from_pdb_string(designed_pdb)
 

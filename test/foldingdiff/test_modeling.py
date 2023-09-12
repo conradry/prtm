@@ -21,7 +21,7 @@ def test_foldingdiff_for_design(model_name):
 
     gt_structure = protein.Protein3.from_pdb_string(gt_pdb_str)
 
-    generated_structure = designer.design_structure()
+    generated_structure = designer()[0]
     generated_pdb = generated_structure.to_pdb()
     generated_structure = protein.Protein3.from_pdb_string(generated_pdb)
 

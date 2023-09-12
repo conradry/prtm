@@ -29,6 +29,6 @@ def test_protein_seq_des_models(model_name: str):
         model_name=model_name, random_seed=0
     )
     target_protein = protein.Protein4.from_pdb_string(target_pdb_str)
-    sequence, score = inverse_folder.design_sequence(target_protein)
+    sequence = inverse_folder(target_protein)[0]
 
     assert sequence == exp_sequence

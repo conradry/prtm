@@ -23,5 +23,5 @@ def test_protein_seq_des_models(model_name: str):
     inverse_folder = modeling.ProteinSolverForInverseFolding(
         model_name=model_name, random_seed=0
     )
-    sequence, score = inverse_folder.design_sequence(target_structure)
+    sequence = inverse_folder(target_structure)[0]
     assert sequence == exp_sequence
