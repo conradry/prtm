@@ -1,6 +1,6 @@
 import random
 from copy import deepcopy
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -78,6 +78,11 @@ class EigenFoldForFoldSampling:
 
         self.cache = {}
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
@@ -130,11 +135,11 @@ class EigenFoldForFoldSampling:
         )
 
     @torch.no_grad()
-    def sample_fold(
+    def __call__(
         self,
         sequence: str,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.ProteinCATrace, float]:
+    ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:
         """Design a random protein structure."""
         seqlen = len(sequence)
         if sequence in self.cache:
@@ -191,4 +196,4 @@ class EigenFoldForFoldSampling:
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 
-        return structure, data.elbo_Y
+        return structure, {"elbo": data.elbo_Y}

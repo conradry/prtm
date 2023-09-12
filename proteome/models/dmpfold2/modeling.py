@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -15,6 +15,10 @@ DMPFOLD_MODEL_URLS = {
 }
 DMPFOLD_MODEL_CONFIGS = {
     "base": config.DMPFold2Config(),
+    "base1": config.DMPFold2Config(),
+    "base2": config.DMPFold2Config(),
+    "base3": config.DMPFold2Config(),
+    "base4": config.DMPFold2Config(),
 }
 
 
@@ -49,11 +53,22 @@ class DMPFoldForFolding:
         self.recycling_iters = recycling_iters
         self.refinement_steps = refinement_steps
 
+    @classmethod
+    @property
+    def available_models(cls) -> List[str]:
+        """Get the available model names."""
+        return list(DMPFOLD_MODEL_URLS.keys())
+
     def load_weights(self, weights_urls: Tuple[str, str]):
         """Load weights from shards defined at weights urls."""
         state_dict = {}
         for url in weights_urls:
-            state_dict.update(torch.hub.load_state_dict_from_url(url))
+            name = url.split("/")[-1]
+            state_dict.update(
+                torch.hub.load_state_dict_from_url(
+                    url, file_name=f"dmpfold2_{name}.pt"
+                )
+            )
         msg = self.model.load_state_dict(state_dict, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
@@ -111,9 +126,9 @@ class DMPFoldForFolding:
 
         return {"msa": msa_tensor, "cov": cov_tensor}
 
-    def fold(
+    def __call__(
         self, sequence: str, max_msas: int = 1000
-    ) -> Tuple[protein.Protein5, float]:
+    ) -> Tuple[protein.Protein5, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -142,4 +157,4 @@ class DMPFoldForFolding:
         )
         confidence = float(confs.mean())
 
-        return predicted_protein, confidence
+        return predicted_protein, {"confidence": confidence}

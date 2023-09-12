@@ -78,6 +78,7 @@ def load_state_dict_from_s3_url(
     s3_url: str,
     model_dir: Optional[str] = None,
     map_location: MAP_LOCATION = None,
+    name_prefix: Optional[str] = None,
     boto_client_config: Config = Config(signature_version=UNSIGNED),
 ) -> Dict[str, Any]:
     r"""Loads the Torch serialized object at the given S3 URL.
@@ -110,7 +111,11 @@ def load_state_dict_from_s3_url(
 
     os.makedirs(model_dir, exist_ok=True)
 
-    cached_file = os.path.join(model_dir, os.path.basename(s3_url))
+    fname = os.path.basename(s3_url)
+    if name_prefix is not None:
+        fname = f"{name_prefix}_{fname}"
+
+    cached_file = os.path.join(model_dir, fname)
     if not os.path.exists(cached_file):
         print(f"Downloading model from {s3_url}...")
         download_s3_url_to_file(
@@ -173,6 +178,7 @@ def load_state_dict_from_gdrive_zip(
     url: str,
     extract_member: str,
     model_dir: Optional[str] = None,
+    name_prefix: Optional[str] = None,
     map_location: MAP_LOCATION = None,
 ) -> Dict[str, Any]:
     r"""Loads the Torch serialized object at the given S3 URL.
@@ -207,7 +213,10 @@ def load_state_dict_from_gdrive_zip(
 
     file_id = url.split("id=")[-1]
     model_name = os.path.basename(extract_member)
-    cached_file = os.path.join(model_dir, f"{file_id}_{model_name}")
+    if name_prefix is not None:
+        model_name = f"{name_prefix}_{model_name}"
+
+    cached_file = os.path.join(model_dir, model_name)
     if not os.path.exists(cached_file):
         print(f"Downloading model from {url}...")
         outzip = gdown.cached_download(

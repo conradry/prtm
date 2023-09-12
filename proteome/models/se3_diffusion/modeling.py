@@ -1,5 +1,5 @@
 import random
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -52,6 +52,11 @@ class SE3DiffusionForStructureDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(SE3_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
@@ -64,10 +69,10 @@ class SE3DiffusionForStructureDesign:
         self.model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_structure(
+    def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> protein.ProteinCATrace:
+    ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:
         """Design a random protein structure."""
         sampler = Sampler(self.model, self.diffuser, inference_config.diffusion_params)
         trajectory = sampler.sample(inference_config.length)
@@ -86,4 +91,4 @@ class SE3DiffusionForStructureDesign:
             chain_index=np.zeros((length,), dtype=np.int32),
         )
 
-        return structure
+        return structure, {}

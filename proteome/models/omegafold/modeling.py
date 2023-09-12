@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -91,10 +91,17 @@ class OmegaFoldForFolding:
             pseudo_msa_mask_rate=pseudo_msa_mask_rate,
         )
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(OMEGAFOLD_MODEL_URLS.keys())
+
     def load_weights(self, weights_url):
         """Load weights from a weights url."""
         # Need to explicitly map to cpu for these weights.
-        weights = torch.hub.load_state_dict_from_url(weights_url, map_location="cpu")
+        weights = torch.hub.load_state_dict_from_url(
+            weights_url, map_location="cpu", file_name=f"omegafold_{self.model_name}.pt"
+        )
         msg = self.model.load_state_dict(weights, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
@@ -115,11 +122,11 @@ class OmegaFoldForFolding:
         return list_of_feature_dict
 
     @torch.no_grad()
-    def fold(
+    def __call__(
         self,
         sequence: str,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.Protein14, float]:
+    ) -> Tuple[protein.Protein14, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -146,4 +153,4 @@ class OmegaFoldForFolding:
             chain_index=np.zeros(len(sequence), dtype=np.int32),
         )
 
-        return predicted_protein, res["confidence_overall"]
+        return predicted_protein, {"confidence": res["confidence_overall"]}

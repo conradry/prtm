@@ -1,6 +1,6 @@
 import random
 import re
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -68,6 +68,11 @@ class ESMForFolding:
         self.model = self.model.to(self.device)
         self.num_recycles = num_recycles
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(ESMFOLD_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         fold_model_state = torch.hub.load_state_dict_from_url(
@@ -119,7 +124,7 @@ class ESMForFolding:
             )
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> Tuple[protein.Protein37, float]:
+    def __call__(self, sequence: str) -> Tuple[protein.Protein37, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -146,7 +151,7 @@ class ESMForFolding:
             chain_index=output["chain_index"] if "chain_index" in output else None,
         )
 
-        return predicted_protein, float(output["mean_plddt"])
+        return predicted_protein, {"mean_plddt": float(output["mean_plddt"])}
 
 
 class ESMForInverseFolding:
@@ -171,6 +176,11 @@ class ESMForInverseFolding:
             torch.manual_seed(random_seed)
             random.seed(random_seed)
             np.random.seed(random_seed)
+
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(ESMIF_MODEL_CONFIGS.keys())
 
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
@@ -198,14 +208,13 @@ class ESMForInverseFolding:
         }
         msg = self.model.load_state_dict(model_state, strict=False)
 
-
     @torch.no_grad()
-    def design_sequence(
+    def __call__(
         self, 
         structure: protein.ProteinBase, 
         design_params: config.DesignParams = config.DesignParams(),
         temperature: float = 1.0,
-    ) -> Tuple[str, float]:
+    ) -> Tuple[str, Dict[str, Any]]:
         """Design a protein sequence for a given structure."""
         # Expects 3 atom protein structure
         structure = structure.to_protein3()
@@ -221,4 +230,4 @@ class ESMForInverseFolding:
             confidence=confidence,
             partial_seq=design_params.partial_seq_list,
         )
-        return sequence, avg_prob
+        return sequence, {"avg_prob": avg_prob}

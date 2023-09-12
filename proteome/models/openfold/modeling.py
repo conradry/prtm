@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -78,9 +78,14 @@ class OpenFoldForFolding:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(OPENFOLD_MODEL_URLS.keys())
+
     def load_weights(self, weights_url):
         """Load weights from a weights url."""
-        weights = hub_utils.load_state_dict_from_s3_url(weights_url)
+        weights = hub_utils.load_state_dict_from_s3_url(weights_url, name_prefix="openfold")
         msg = self.model.load_state_dict(weights, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
@@ -117,7 +122,7 @@ class OpenFoldForFolding:
         return processed_feature_dict
 
     @torch.no_grad()
-    def fold(self, sequence: str) -> Tuple[protein.Protein37, float]:
+    def __call__(self, sequence: str) -> Tuple[protein.Protein37, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -143,4 +148,4 @@ class OpenFoldForFolding:
             chain_index=chain_index,
         )
 
-        return structure, mean_plddt
+        return structure, {"mean_plddt": mean_plddt}

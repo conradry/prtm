@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -49,6 +49,11 @@ class RoseTTAFoldForFolding:
             torch.manual_seed(random_seed)
             random.seed(random_seed)
             np.random.seed(random_seed)
+
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(ROSETTAFOLD_MODEL_URLS.keys())
 
     def load_weights(self, weights_url: str, zip_path: str):
         """Load weights from a weights url."""
@@ -110,9 +115,9 @@ class RoseTTAFoldForFolding:
 
         return {"msa": msa_tensor, "seq": seq, "idx": idx_pdb, "t1d": t1d, "t2d": t2d}
 
-    def fold(
+    def __call__(
         self, sequence: str, max_msas: int = 1000
-    ) -> Tuple[protein.Protein4, float]:
+    ) -> Tuple[protein.Protein4, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -148,4 +153,4 @@ class RoseTTAFoldForFolding:
         )
         mean_plddt = float(lddt.mean())
 
-        return predicted_protein, mean_plddt
+        return predicted_protein, {"mean_plddt": mean_plddt}

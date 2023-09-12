@@ -1,5 +1,5 @@
 import random
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -51,6 +51,11 @@ class FoldingDiffForStructureDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(FOLDINGDIFF_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
@@ -62,10 +67,10 @@ class FoldingDiffForStructureDesign:
         self.model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_structure(
+    def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> protein.Protein3:
+    ) -> Tuple[protein.Protein3, Dict[str, Any]]:
         """Design a random protein structure."""
         placeholder_dset = AnglesEmptyDataset(
             feature_set_key=inference_config.dataset_config.angles_definitions,
@@ -111,4 +116,4 @@ class FoldingDiffForStructureDesign:
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 
-        return structure
+        return structure, {}

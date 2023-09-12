@@ -1,6 +1,6 @@
 import random
 from dataclasses import asdict
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -120,6 +120,11 @@ class RFDiffusionForStructureDesign:
         if model_name != "auto":
             self._set_model(model_name)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(RFD_MODEL_URLS.keys())
+
     def load_weights(self, model_name: str, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
@@ -148,12 +153,12 @@ class RFDiffusionForStructureDesign:
         self.model = self.model.to(self.device)
         self.loaded_model_name = model_name
 
-    def design_structure(
+    def __call__(
         self,
         sampler_config: config.SamplerConfigType,
         diffuser_config_override: Optional[config.DiffuserConfig] = None,
         preprocess_config_override: Optional[config.PreprocessConfig] = None,
-    ) -> protein.Protein14:
+    ) -> Tuple[protein.Protein14, Dict[str, Any]]:
         """Design a protein structure."""
         if self.model_name == "auto":
             self._set_model(_select_model_from_config(sampler_config))
@@ -216,7 +221,7 @@ class RFDiffusionForStructureDesign:
         # make bfact=0 for diffused coordinates
         bfacts[torch.where(torch.argmax(seq_init, dim=-1) == 21, True, False)] = 0
 
-        return protein.Protein14(
+        result = protein.Protein14(
             atom_positions=denoised_xyz_stack[-1].numpy(),
             aatype=final_seq.numpy(),
             atom_mask=np.ones(denoised_xyz_stack[-1].shape[:2], dtype=np.bool_),
@@ -226,3 +231,4 @@ class RFDiffusionForStructureDesign:
                 [protein.PDB_CHAIN_IDS.index(char) for char in sampler.chain_idx]
             ),
         )
+        return result, {}
