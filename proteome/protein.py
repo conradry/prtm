@@ -316,7 +316,7 @@ class ProteinBase:
                     prot_dict[field] = torch.from_numpy(v).long()
                 elif np.issubdtype(v.dtype, np.bool_):
                     prot_dict[field] = torch.from_numpy(v).bool()
-            elif isinstance(v, torch.tensor):
+            elif isinstance(v, torch.Tensor):
                 # If already a tensor, do nothing
                 prot_dict[field] = v
 

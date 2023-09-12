@@ -39,7 +39,7 @@ def stdout_redirected(to=os.devnull):
             _redirect_stdout(to=old_stdout)
 
 
-def extract_secstruc(structure: protein.Protein):
+def extract_secstruc(structure: protein.ProteinBase):
     idx = structure.residue_index
     if APPROX:
         aa_sequence = structure.aatype
@@ -47,7 +47,7 @@ def extract_secstruc(structure: protein.Protein):
     else:
         # with stdout_redirected():
         dssp = pyrosetta.rosetta.core.scoring.dssp
-        pose = protein.to_rosetta_pose(structure)
+        pose = structure.to_rosetta_pose()
         dssp.Dssp(pose).insert_ss_into_pose(pose, True)
         aa_sequence = pose.sequence()
         secstruct = pose.secstruct()
@@ -403,7 +403,7 @@ def get_sse(ca_coord):
     return sse
 
 
-def make_ss_block_adj_from_structure(structure: protein.Protein):
+def make_ss_block_adj_from_structure(structure: protein.ProteinBase):
     secstruc_dict = extract_secstruc(structure)
     ss, idx = ss_to_tensor(secstruc_dict)
     block_adj = construct_block_adj_matrix(
