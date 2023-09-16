@@ -147,9 +147,7 @@ class OmegaFoldForFolding:
             .numpy(),  # first msa is sequence
             atom_mask=res["final_atom_mask"].cpu().numpy(),
             residue_index=np.arange(len(sequence)) + 1,
-            b_factors=np.zeros(
-                tuple(res["final_atom_positions"].shape[:2])
-            ),  # no lddt predicted
+            b_factors=100 * res["confidence"].cpu().numpy()[:, None].repeat(14, axis=1),
             chain_index=np.zeros(len(sequence), dtype=np.int32),
         )
 

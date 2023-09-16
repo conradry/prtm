@@ -211,22 +211,25 @@ class RFDiffusionForStructureDesign:
 
         # Get the output structure
         final_seq = seq_stack[-1]
-
+        final_plddt = plddt_stack[-1]
         # Output glycines, except for motif region
         final_seq = torch.where(
             torch.argmax(seq_init, dim=-1) == 21, 7, torch.argmax(seq_init, dim=-1)
         )  # 7 is glycine
 
-        bfacts = torch.ones_like(final_seq.squeeze())
-        # make bfact=0 for diffused coordinates
-        bfacts[torch.where(torch.argmax(seq_init, dim=-1) == 21, True, False)] = 0
+        # b_factors will be 100 for all residues that were not diffused
+        bfacts = 100 * np.ones((len(final_seq),))
+        diffused_mask = (
+            torch.where(torch.argmax(seq_init, dim=-1) != 21, False, True).cpu().numpy()
+        )
+        bfacts[diffused_mask] = 100 * final_plddt.cpu().numpy()[diffused_mask]
 
         result = protein.Protein14(
             atom_positions=denoised_xyz_stack[-1].numpy(),
             aatype=final_seq.numpy(),
-            atom_mask=np.ones(denoised_xyz_stack[-1].shape[:2], dtype=np.bool_),
+            atom_mask=protein.ideal_atom14_mask(final_seq.numpy()),
             residue_index=np.arange(1, len(final_seq) + 1, dtype=np.int32),
-            b_factors=bfacts[:, None].numpy().repeat(14, axis=-1),
+            b_factors=bfacts[:, None].repeat(14, axis=-1),
             chain_index=np.array(
                 [protein.PDB_CHAIN_IDS.index(char) for char in sampler.chain_idx]
             ),

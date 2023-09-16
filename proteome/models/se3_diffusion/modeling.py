@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.se3_diffusion import config
@@ -87,7 +88,7 @@ class SE3DiffusionForStructureDesign:
             aatype=np.array(length * [residue_constants.restype_order_with_x["G"]]),
             atom_mask=np.ones((length, num_atoms)),
             residue_index=np.arange(0, length),
-            b_factors=np.ones((length, num_atoms)),
+            b_factors=np.zeros((length, num_atoms)),
             chain_index=np.zeros((length,), dtype=np.int32),
         )
 

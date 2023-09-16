@@ -148,7 +148,7 @@ class RoseTTAFoldForFolding:
             aatype=feature_dict["seq"][0].cpu().numpy(),
             atom_mask=np.ones_like(xyzo)[..., 0],
             residue_index=feature_dict["idx"][0].cpu().numpy() + 1,
-            b_factors=lddt[0].cpu().numpy()[:, None].repeat(4, axis=1),
+            b_factors=100 * lddt[0].cpu().numpy()[:, None].repeat(4, axis=1),
             chain_index=np.zeros((seqlen,), dtype=np.int32),
         )
         mean_plddt = float(lddt.mean())

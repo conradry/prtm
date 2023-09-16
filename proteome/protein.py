@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import io
 import string
+from collections import namedtuple
 from typing import Any, Dict, Mapping, Optional, Sequence, Union
 
 import modelcif
@@ -33,6 +34,16 @@ from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
 
 from proteome.constants import residue_constants
+from proteome.visual import view_protein_with_bfactors
+
+try:
+    import pyrosetta
+    from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
+    from pyrosetta.rosetta.core.pose import Pose
+
+    pyrosetta.init(silent=True, extra_options="-mute all")
+except:
+    pass
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
@@ -316,6 +327,8 @@ class ProteinBase:
                     prot_dict[field] = torch.from_numpy(v).long()
                 elif np.issubdtype(v.dtype, np.bool_):
                     prot_dict[field] = torch.from_numpy(v).bool()
+                else:
+                    prot_dict[field] = v
             elif isinstance(v, torch.Tensor):
                 # If already a tensor, do nothing
                 prot_dict[field] = v
@@ -640,11 +653,8 @@ class ProteinBase:
 
     def to_rosetta_pose(self):  # can't type hint conditional import
         """Converts a protein to a PyRosetta pose."""
-        try:
-            from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
-            from pyrosetta.rosetta.core.pose import Pose
-        except:
-            raise ImportError("PyRosetta is not installed")
+        if "pyrosetta" not in globals():
+            raise Exception("PyRosetta is not imported.")
 
         pose = Pose()
         pdb_str = self.to_pdb()
@@ -709,6 +719,8 @@ class ProteinBase:
             parents=protein.parents,
             parents_chain_index=protein.parents_chain_index,
             remark=protein.remark,
+            hetatom_positions=protein.hetatom_positions,
+            hetatom_names=protein.hetatom_names,
         )
 
     def _crop_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
@@ -728,11 +740,13 @@ class ProteinBase:
             parents=protein.parents,
             parents_chain_index=protein.parents_chain_index,
             remark=protein.remark,
+            hetatom_positions=protein.hetatom_positions,
+            hetatom_names=protein.hetatom_names,
         )
 
     def to_protein37(self) -> Protein37:
         raise NotImplementedError
-    
+
     def to_protein27(self) -> Protein27:
         raise NotImplementedError
 
@@ -764,6 +778,29 @@ class ProteinBase:
             parents=self.parents,
             parents_chain_index=self.parents_chain_index,
             remark=self.remark,
+            hetatom_positions=self.hetatom_positions,
+            hetatom_names=self.hetatom_names,
+        )
+
+    def get_chain(self, chain_id: str) -> ProteinBase:
+        assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
+        chain_index = PDB_CHAIN_IDS.index(chain_id)
+        # Get the mask for indices in this chain
+        chain_mask = self.chain_index == chain_index
+        # Create a new Protein instance that only includes the
+        # relevant chain
+        return type(self)(
+            atom_positions=self.atom_positions[chain_mask],
+            atom_mask=self.atom_mask[chain_mask],
+            aatype=self.aatype[chain_mask],
+            residue_index=self.residue_index[chain_mask],
+            chain_index=self.chain_index[chain_mask],
+            b_factors=self.b_factors[chain_mask],
+            parents=self.parents,
+            parents_chain_index=self.parents_chain_index,
+            remark=self.remark,
+            hetatom_positions=self.hetatom_positions,
+            hetatom_names=self.hetatom_names,
         )
 
     def sequence(self, chain_id: str) -> str:
@@ -771,6 +808,23 @@ class ProteinBase:
         assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
         chain_aatype = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
         return "".join(residue_constants.restypes[a] for a in chain_aatype)
+
+    def show(self, cmap: str = "viridis", show_sidechains: bool = True):
+        return view_protein_with_bfactors(
+            self, cmap=cmap, show_sidechains=show_sidechains
+        )
+
+    @property
+    def shape(self):
+        # Get the shape as a named tuple of (num_residues, num_atoms, num_chains)
+        shape_tuple = namedtuple(
+            "ProteinShape", ["num_residues", "num_atoms", "num_chains"]
+        )
+        return shape_tuple(
+            num_residues=self.aatype.shape[0],
+            num_atoms=self.atom_positions.shape[1],
+            num_chains=len(np.unique(self.chain_index)),
+        )
 
 
 class Protein37(ProteinBase):
@@ -816,6 +870,8 @@ class Protein37(ProteinBase):
             parents=protein37.parents,
             parents_chain_index=protein37.parents_chain_index,
             remark=protein37.remark,
+            hetatom_positions=protein37.hetatom_positions,
+            hetatom_names=protein37.hetatom_names,
         )
 
     def to_protein27(self) -> Protein27:
@@ -884,6 +940,8 @@ class Protein14(ProteinBase):
             parents=protein14.parents,
             parents_chain_index=protein14.parents_chain_index,
             remark=protein14.remark,
+            hetatom_positions=protein14.hetatom_positions,
+            hetatom_names=protein14.hetatom_names,
         )
 
     def to_protein27(self) -> Protein27:
@@ -1082,6 +1140,8 @@ class ProteinCATrace(ProteinBase):
             parents=protein_ca.parents,
             parents_chain_index=protein_ca.parents_chain_index,
             remark=protein_ca.remark,
+            hetatom_positions=protein_ca.hetatom_positions,
+            hetatom_names=protein_ca.hetatom_names,
         )
 
     def to_pdb(self) -> str:

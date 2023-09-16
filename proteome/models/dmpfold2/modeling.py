@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
+
 from proteome import protein
 from proteome.models.dmpfold2 import config, model, utils
 from proteome.query.pipeline import QueryPipelines
@@ -65,9 +66,7 @@ class DMPFoldForFolding:
         for url in weights_urls:
             name = url.split("/")[-1]
             state_dict.update(
-                torch.hub.load_state_dict_from_url(
-                    url, file_name=f"dmpfold2_{name}.pt"
-                )
+                torch.hub.load_state_dict_from_url(url, file_name=f"dmpfold2_{name}.pt")
             )
         msg = self.model.load_state_dict(state_dict, strict=True)
 
@@ -145,14 +144,14 @@ class DMPFoldForFolding:
             )
 
         xyz = xyz.view(-1, L, 5, 3)[0].cpu().numpy()
-        confs = confs[0].cpu().numpy()
+        confs = 100 * confs[0].cpu().numpy()
 
         predicted_protein = protein.Protein5(
             atom_positions=xyz,
             aatype=feature_dict["msa"][0].cpu().numpy(),
             atom_mask=np.ones_like(xyz)[..., 0],
             residue_index=np.arange(L) + 1,
-            b_factors=np.zeros_like(xyz)[..., 0],  # no b_factors
+            b_factors=confs[:, None].repeat(5, axis=1),
             chain_index=np.zeros(L, dtype=np.int32),
         )
         confidence = float(confs.mean())
