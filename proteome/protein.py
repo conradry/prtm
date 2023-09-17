@@ -30,6 +30,7 @@ import modelcif.qa_metric
 import modelcif.reference
 import numpy as np
 import torch
+from Bio import PDB
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
 
@@ -207,6 +208,51 @@ def parse_pdb_string(
     )
 
     return protein_dict
+
+
+def superimpose_structures(
+    target_structure: ProteinBase,
+    moving_structure: ProteinBase,
+):
+    """Superimpose two structures using the CA atoms.
+
+    Args:
+        target_structure: The structure to superimpose onto.
+        moving_structure: The structure to superimpose onto the target structure.
+
+    Returns:
+        A new `Protein` instance with the moving structure superimposed onto the
+        target structure.
+    """
+    # Must have the same sequence in order to superimpose
+    assert (
+        target_structure.sequence() == moving_structure.sequence()
+    ), "Sequences must be the same to superimpose structures."
+
+    # Only 1 model per protein by construction
+    target_model = target_structure.to_biopdb_structure()[0]
+    moving_model = moving_structure.to_biopdb_structure()[0]
+
+    # Get lists of all the CA atoms
+    target_atoms = []
+    moving_atoms = []
+    for target_chain, moving_chain in zip(target_model, moving_model):
+        for target_res, moving_res in zip(target_chain, moving_chain):
+            target_atoms.append(target_res['CA'])                
+            moving_atoms.append(moving_res['CA'])
+
+    super_imposer = PDB.Superimposer()
+    super_imposer.set_atoms(target_atoms, moving_atoms)
+    super_imposer.apply(moving_model.get_atoms())
+
+    pdb_io = PDB.PDBIO()
+    pdb_io.set_structure(moving_model) 
+
+    # Write the pdb str to an io string
+    pdb_fh = io.StringIO()
+    pdb_io.save(pdb_fh)
+    
+    return type(moving_structure).from_pdb_string(pdb_fh.getvalue())
 
 
 class ProteinBase:
@@ -803,11 +849,15 @@ class ProteinBase:
             hetatom_names=self.hetatom_names,
         )
 
-    def sequence(self, chain_id: str) -> str:
+    def sequence(self, chain_id: Optional[str] = None) -> str:
         # Decode the aatype sequence to a string
-        assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
-        chain_aatype = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
-        return "".join(residue_constants.restypes[a] for a in chain_aatype)
+        if chain_id is not None:
+            assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
+            aatypes = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
+        else:
+            aatypes = self.aatype
+
+        return "".join(residue_constants.restypes[a] for a in aatypes)
 
     def show(self, cmap: str = "viridis", show_sidechains: bool = True):
         return view_protein_with_bfactors(
@@ -825,6 +875,10 @@ class ProteinBase:
             num_atoms=self.atom_positions.shape[1],
             num_chains=len(np.unique(self.chain_index)),
         )
+
+    def superimpose(self, other: ProteinBase) -> ProteinBase:
+        """Superimposes another protein onto this protein."""
+        return superimpose_structures(self, other)
 
 
 class Protein37(ProteinBase):
