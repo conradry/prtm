@@ -1,6 +1,6 @@
 import random
 from dataclasses import asdict
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -45,7 +45,7 @@ def _get_default_design_params(sequence_length: int) -> config.DesignParams:
     return design_params
 
 
-class ProteinMPNNForSequenceDesign:
+class ProteinMPNNForInverseFolding:
     def __init__(
         self,
         model_name: str = "vanilla_model-30",
@@ -71,11 +71,16 @@ class ProteinMPNNForSequenceDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(PROTEINMPNN_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
             weights_url, 
-            file_name=f"{self.model_name}.pt",
+            file_name=f"proteinmpnn_{self.model_name}.pt",
             progress=True, 
             map_location="cpu",
         )["model_state_dict"]
@@ -90,12 +95,12 @@ class ProteinMPNNForSequenceDesign:
         )
 
     @torch.no_grad()
-    def design_sequence(
+    def __call__(
         self,
         structure: Union[protein.ProteinCATrace, protein.Protein4],
         design_params: Optional[config.DesignParams] = None,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[str, float]:
+    ) -> Tuple[str, Dict[str, Any]]:
         """Design a protein sequence for a given structure."""
         # Quick check to make sure the structure has the right number
         # of atoms for the chosen model
@@ -140,4 +145,4 @@ class ProteinMPNNForSequenceDesign:
 
         seq = decode_sequence(sampled_sequence[0], tied_featurize_output.chain_M[0])
 
-        return seq, global_score 
+        return seq, {"global_score": global_score}

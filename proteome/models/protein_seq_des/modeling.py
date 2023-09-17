@@ -1,5 +1,5 @@
 import random
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -31,7 +31,7 @@ def _get_model_config(model_name: str) -> config.BaselineModelConfig:
     return PSD_MODEL_CONFIGS[model_name]
 
 
-class ProteinSeqDesForSequenceDesign:
+class ProteinSeqDesForInverseFolding:
     def __init__(
         self,
         model_name: str = "conditional_model_0",
@@ -62,21 +62,27 @@ class ProteinSeqDesForSequenceDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(PSD_MODEL_CONFIGS.keys())
+
     def load_weights(self, model, model_name, weights_url: str):
         """Load weights from a weights url."""
         state_dict = load_state_dict_from_gdrive_zip(
             weights_url,
             extract_member=f"models/{model_name}.pt",
+            name_prefix="protein_seq_des",
             map_location="cpu",
         )
         msg = model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_sequence(
+    def __call__(
         self,
         structure: protein.ProteinBase,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[str, float]:
+    ) -> Tuple[str, Dict[str, Any]]:
         """Design a protein sequence for a given structure."""
         # Can accept a list of models for ensembling, we only use 1 for now
         # Use atom 14 for compactness, 37 is fine too
@@ -104,4 +110,4 @@ class ProteinSeqDesForSequenceDesign:
         # Get the best sequence
         sequence = best_pose.sequence()
 
-        return sequence, best_energy
+        return sequence, {"best_energy": best_energy}

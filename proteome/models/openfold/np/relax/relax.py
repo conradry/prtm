@@ -20,6 +20,7 @@ import numpy as np
 
 from proteome import protein
 from proteome.models.openfold.np.relax import amber_minimize, utils
+from proteome.pdb_utils import overwrite_b_factors, overwrite_pdb_coordinates
 
 
 class AmberRelaxation(object):
@@ -82,8 +83,8 @@ class AmberRelaxation(object):
             "rmsd": rmsd,
         }
         pdb_str = amber_minimize.clean_protein(prot)
-        min_pdb = utils.overwrite_pdb_coordinates(pdb_str, min_pos)
-        min_pdb = utils.overwrite_b_factors(min_pdb, prot.b_factors)
+        min_pdb = overwrite_pdb_coordinates(pdb_str, min_pos)
+        min_pdb = overwrite_b_factors(min_pdb, prot.b_factors)
         utils.assert_equal_nonterminal_atom_types(
             protein.Protein37.from_pdb_string(min_pdb).atom_mask, prot.atom_mask
         )

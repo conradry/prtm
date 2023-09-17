@@ -1,8 +1,9 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+
 from proteome import protein
 from proteome.models.dmpfold2 import config, model, utils
 from proteome.query.pipeline import QueryPipelines
@@ -15,6 +16,10 @@ DMPFOLD_MODEL_URLS = {
 }
 DMPFOLD_MODEL_CONFIGS = {
     "base": config.DMPFold2Config(),
+    "base1": config.DMPFold2Config(),
+    "base2": config.DMPFold2Config(),
+    "base3": config.DMPFold2Config(),
+    "base4": config.DMPFold2Config(),
 }
 
 
@@ -49,11 +54,20 @@ class DMPFoldForFolding:
         self.recycling_iters = recycling_iters
         self.refinement_steps = refinement_steps
 
+    @classmethod
+    @property
+    def available_models(cls) -> List[str]:
+        """Get the available model names."""
+        return list(DMPFOLD_MODEL_URLS.keys())
+
     def load_weights(self, weights_urls: Tuple[str, str]):
         """Load weights from shards defined at weights urls."""
         state_dict = {}
         for url in weights_urls:
-            state_dict.update(torch.hub.load_state_dict_from_url(url))
+            name = url.split("/")[-1]
+            state_dict.update(
+                torch.hub.load_state_dict_from_url(url, file_name=f"dmpfold2_{name}.pt")
+            )
         msg = self.model.load_state_dict(state_dict, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
@@ -111,9 +125,9 @@ class DMPFoldForFolding:
 
         return {"msa": msa_tensor, "cov": cov_tensor}
 
-    def fold(
+    def __call__(
         self, sequence: str, max_msas: int = 1000
-    ) -> Tuple[protein.Protein5, float]:
+    ) -> Tuple[protein.Protein5, Dict[str, Any]]:
         """Fold a protein sequence."""
         self._validate_input_sequence(sequence)
 
@@ -130,16 +144,16 @@ class DMPFoldForFolding:
             )
 
         xyz = xyz.view(-1, L, 5, 3)[0].cpu().numpy()
-        confs = confs[0].cpu().numpy()
+        confs = 100 * confs[0].cpu().numpy()
 
         predicted_protein = protein.Protein5(
             atom_positions=xyz,
             aatype=feature_dict["msa"][0].cpu().numpy(),
             atom_mask=np.ones_like(xyz)[..., 0],
             residue_index=np.arange(L) + 1,
-            b_factors=np.zeros_like(xyz)[..., 0],  # no b_factors
+            b_factors=confs[:, None].repeat(5, axis=1),
             chain_index=np.zeros(L, dtype=np.int32),
         )
         confidence = float(confs.mean())
 
-        return predicted_protein, confidence
+        return predicted_protein, {"confidence": confidence}

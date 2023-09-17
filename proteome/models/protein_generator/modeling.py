@@ -1,6 +1,6 @@
 import random
 from dataclasses import asdict
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -69,11 +69,16 @@ class ProteinGeneratorForJointDesign:
         if model_name != "auto":
             self.set_model(model_name)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(PROTGEN_MODEL_URLS.keys())
+
     def load_weights(self, model_name: str, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
             weights_url,
-            file_name=f"{model_name}.pt",
+            file_name=f"protein_generator_{model_name}.pt",
             progress=True,
             map_location="cpu",
         )["model_state_dict"]
@@ -92,10 +97,10 @@ class ProteinGeneratorForJointDesign:
         self.model = self.model.to(self.device)
         self.loaded_model_name = model_name
 
-    def design_structure_and_sequence(
+    def __call__(
         self,
         inference_config: config.InferenceConfig,
-    ) -> Tuple[protein.Protein27, str]:
+    ) -> Tuple[protein.Protein27, str, Dict[str, Any]]:
         """Design a protein structure."""
         if self.model_name == "auto":
             self.set_model(_select_model_from_config(inference_config))
@@ -130,4 +135,4 @@ class ProteinGeneratorForJointDesign:
             ),
         )
 
-        return structure, sequence
+        return structure, sequence, {}

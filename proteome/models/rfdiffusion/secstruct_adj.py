@@ -1,7 +1,4 @@
-import os
 import random
-import sys
-from contextlib import contextmanager
 
 import numpy as np
 import torch
@@ -11,32 +8,11 @@ from proteome import protein
 try:
     import pyrosetta
 
-    pyrosetta.init()
+    pyrosetta.init(silent=True, extra_options="-mute all")
     APPROX = False
 except:
     print("WARNING: pyRosetta not found, will use an approximate SSE calculation")
     APPROX = True
-
-
-@contextmanager
-def stdout_redirected(to=os.devnull):
-    """
-    Helper to prevent pyrosetta from over-printing.
-    """
-    fd = sys.stdout.fileno()
-
-    def _redirect_stdout(to):
-        sys.stdout.close()
-        os.dup2(to.fileno(), fd)
-        sys.stdout = os.fdopen(fd, "w")
-
-    with os.fdopen(os.dup(fd), "w") as old_stdout:
-        with open(to, "w") as file:
-            _redirect_stdout(to=file)
-        try:
-            yield
-        finally:
-            _redirect_stdout(to=old_stdout)
 
 
 def extract_secstruc(structure: protein.ProteinBase):
@@ -45,7 +21,6 @@ def extract_secstruc(structure: protein.ProteinBase):
         aa_sequence = structure.aatype
         secstruct = get_sse(structure.atom_positions[:, 1])
     else:
-        # with stdout_redirected():
         dssp = pyrosetta.rosetta.core.scoring.dssp
         pose = structure.to_rosetta_pose()
         dssp.Dssp(pose).insert_ss_into_pose(pose, True)

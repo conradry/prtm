@@ -1,8 +1,9 @@
 import random
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.se3_diffusion import config
@@ -52,6 +53,11 @@ class SE3DiffusionForStructureDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(SE3_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
@@ -64,10 +70,10 @@ class SE3DiffusionForStructureDesign:
         self.model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_structure(
+    def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> protein.ProteinCATrace:
+    ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:
         """Design a random protein structure."""
         sampler = Sampler(self.model, self.diffuser, inference_config.diffusion_params)
         trajectory = sampler.sample(inference_config.length)
@@ -82,8 +88,8 @@ class SE3DiffusionForStructureDesign:
             aatype=np.array(length * [residue_constants.restype_order_with_x["G"]]),
             atom_mask=np.ones((length, num_atoms)),
             residue_index=np.arange(0, length),
-            b_factors=np.ones((length, num_atoms)),
+            b_factors=np.zeros((length, num_atoms)),
             chain_index=np.zeros((length,), dtype=np.int32),
         )
 
-        return structure
+        return structure, {}

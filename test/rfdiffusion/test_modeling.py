@@ -22,7 +22,7 @@ def test_random_length_design():
     sampler_config = config.UnconditionalSamplerConfig(
         contigmap_params=config.ContigMap(contigs=["100-200"]),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -45,7 +45,7 @@ def test_monomer_rog_design():
             guide_decay="quadratic",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -66,7 +66,7 @@ def test_contact_potential_design():
             guiding_potentials=["type:monomer_contacts,weight:0.05"]
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -92,7 +92,7 @@ def test_tetrahedral_oligos_design():
             guide_decay="quadratic",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -118,7 +118,7 @@ def test_cyclic_oligos_design():
             guide_decay="quadratic",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -144,7 +144,7 @@ def test_dihedral_oligos_design():
             guide_decay="quadratic",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -172,7 +172,7 @@ def test_motif_scaffolding_design():
         ),
         contigmap_params=config.ContigMap(contigs=["10-40/A163-181/10-40"]),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -204,7 +204,7 @@ def test_motif_scaffolding_with_target_design():
             contigs=["A25-109/0 0-70/B17-29/0-70"], length="70-120"
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -242,7 +242,7 @@ def test_enzyme_design():
             substrate="LLK",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -280,7 +280,7 @@ def test_nickel_motif_design():
             guide_decay="quadratic",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -310,7 +310,7 @@ def test_insulin_ppi_design():
         ppi_params=config.PPIParams(hotspot_res=["A59", "A83", "A91"]),
         denoiser_params=config.DenoiserParams(noise_scale_ca=0, noise_scale_frame=0),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -340,7 +340,7 @@ def test_insulin_ppi_beta_design():
         ppi_params=config.PPIParams(hotspot_res=["A59", "A83", "A91"]),
         denoiser_params=config.DenoiserParams(noise_scale_ca=0, noise_scale_frame=0),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -370,7 +370,7 @@ def test_sequence_inpainting():
             contigs=["10-40/A163-181/10-40"], inpaint_seq=["A163-168/A170-171/A179"]
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -401,9 +401,9 @@ def test_partial_diffusion_without_sequence_design():
         ),
         contigmap_params=config.ContigMap(contigs=["79-79"]),
     )
-    designed_structure = designer.design_structure(
+    designed_structure = designer(
         sampler_config, diffuser_config_override=diffuser_config_override
-    )
+    )[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -436,9 +436,9 @@ def test_partial_diffusion_with_sequence_design():
             contigs=["172-172/0 34-34"], provide_seq=["172-205"]
         ),
     )
-    designed_structure = designer.design_structure(
+    designed_structure = designer(
         sampler_config, diffuser_config_override=diffuser_config_override
-    )
+    )[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -471,9 +471,9 @@ def test_partial_diffusion_with_multisequence_design():
             contigs=["172-172/0 34-34"], provide_seq=["172-177,200-205"]
         ),
     )
-    designed_structure = designer.design_structure(
+    designed_structure = designer(
         sampler_config, diffuser_config_override=diffuser_config_override
-    )
+    )[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -520,7 +520,7 @@ def test_scaffoldguided_tim_barrel_design():
             sampled_C="0-5",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 
@@ -573,7 +573,7 @@ def test_scaffoldguided_ppi_design():
             sampled_C="0-5",
         ),
     )
-    designed_structure = designer.design_structure(sampler_config)
+    designed_structure = designer(sampler_config)[0]
     designed_pdb = designed_structure.to_pdb()
     pred_structure = protein.Protein14.from_pdb_string(designed_pdb)
 

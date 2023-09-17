@@ -36,7 +36,7 @@ def test_openfold_for_folding(model_name):
     gt_structure = protein.Protein37.from_pdb_string(gt_pdb_str)
 
     # Fold the sequence using OpenFoldForFolding
-    pred_structure, score = openfold.fold(sequence)
+    pred_structure = openfold(sequence)[0]
     pred_pdb_str = pred_structure.to_pdb()
     pred_structure = protein.Protein37.from_pdb_string(pred_pdb_str)
 

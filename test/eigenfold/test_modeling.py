@@ -22,7 +22,7 @@ def test_eigenfold_for_fold_sampling(model_name):
     sequence = (
         "MAAHKGAEHHHKAAEHHEQAAKHHHAAAEHHEKGEHEQAAHHADTAYAHHKHAEEHAAQAAKHDAEHHAPKPH"
     )
-    pred_structure, elbo = folder.sample_fold(sequence)
+    pred_structure = folder(sequence)[0]
     pred_pdb = pred_structure.to_pdb()
     pred_structure = protein.ProteinCATrace.from_pdb_string(pred_pdb)
 

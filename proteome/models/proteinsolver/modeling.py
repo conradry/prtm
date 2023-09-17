@@ -1,6 +1,6 @@
 import io
 import random
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
@@ -27,7 +27,7 @@ def _get_model_config(model_name: str) -> config.ProteinNetConfig:
     return PS_MODEL_CONFIGS[model_name]
 
 
-class ProteinSolverForSequenceDesign:
+class ProteinSolverForInverseFolding:
     def __init__(
         self,
         model_name: str = "model_0",
@@ -50,21 +50,27 @@ class ProteinSolverForSequenceDesign:
             random.seed(random_seed)
             np.random.seed(random_seed)
 
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(PS_MODEL_URLS.keys())
+
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
             weights_url, 
             progress=True, 
+            file_name=f"proteinsolver_{self.model_name}.pt",
             map_location="cpu",
         )
         msg = self.model.load_state_dict(state_dict)
 
     @torch.no_grad()
-    def design_sequence(
+    def __call__(
         self,
         structure: protein.Protein27,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[str, float]:
+    ) -> Tuple[str, Dict[str, Any]]:
         """Design a protein sequence for a given structure."""
         structure = structure.to_protein27()
         # The model needs a very particular structure to run correctly
@@ -92,4 +98,4 @@ class ProteinSolverForSequenceDesign:
         )
         sequence = "".join([AMINO_ACIDS[i] for i in sequence_ids])
 
-        return sequence, mean_proba
+        return sequence, {"avg_prob": mean_proba}
