@@ -12,6 +12,8 @@ from proteome.models.rosettafold.trfold import TRFold
 from proteome.query.pipeline import QueryPipelines
 from proteome.utils import hub_utils
 
+__all__ = ["RoseTTAFoldForFolding"]
+
 ROSETTAFOLD_MODEL_URLS = {
     "rosettafold_end2end": (
         "https://files.ipd.uw.edu/pub/RoseTTAFold/weights.tar.gz",

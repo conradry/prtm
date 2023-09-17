@@ -1,3 +1,2 @@
-from proteome.models.openfold import model, np, utils
-
-__all__ = ["model", "utils", "np", "data"]
+import proteome.models.openfold.config as openfold_config
+from proteome.models.openfold.modeling import *

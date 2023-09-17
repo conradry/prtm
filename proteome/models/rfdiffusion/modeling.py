@@ -15,6 +15,8 @@ from proteome.models.rfdiffusion.samplers import (
     UnconditionalSampler,
 )
 
+__all__ = ["RFDiffusionForStructureDesign"]
+
 RFD_MODEL_URLS = {
     "base": "http://files.ipd.uw.edu/pub/RFdiffusion/6f5902ac237024bdd0c176cb93063dc4/Base_ckpt.pt",
     "complex_base": "http://files.ipd.uw.edu/pub/RFdiffusion/e29311f6f1bf1af907f9ef9f44b8328b/Complex_base_ckpt.pt",

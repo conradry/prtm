@@ -8,6 +8,10 @@ from proteome import protein
 from proteome.models.dmpfold2 import config, model, utils
 from proteome.query.pipeline import QueryPipelines
 
+__all__ = [
+    "DMPFoldForFolding",
+]
+
 DMPFOLD_MODEL_URLS = {
     "base": (
         "https://github.com/psipred/DMPfold2/raw/master/dmpfold/trained_model/FINAL_fullmap_e2e_model_part1.pt",

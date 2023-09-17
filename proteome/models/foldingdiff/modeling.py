@@ -4,14 +4,15 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
+
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.foldingdiff import config, sampling
-from proteome.models.foldingdiff.angles_and_coords import \
-    create_new_chain_nerf
-from proteome.models.foldingdiff.datasets import (AnglesEmptyDataset,
-                                                         NoisedAnglesDataset)
+from proteome.models.foldingdiff.angles_and_coords import create_new_chain_nerf
+from proteome.models.foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
 from proteome.models.foldingdiff.model import BertForDiffusionBase
+
+__all__ = ["FoldingDiffForStructureDesign"]
 
 FOLDINGDIFF_MODEL_URLS = {
     "foldingdiff_cath": "https://huggingface.co/wukevin/foldingdiff_cath/resolve/main/models/best_by_valid/epoch%3D1488-step%3D565820.ckpt",  # noqa: E501

@@ -3,11 +3,14 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+from tqdm import tqdm
+
 from proteome import protein
 from proteome.models.protein_seq_des import config, sampler
 from proteome.models.protein_seq_des.models import SeqPred
 from proteome.utils.hub_utils import load_state_dict_from_gdrive_zip
-from tqdm import tqdm
+
+__all__ = ["ProteinSeqDesForInverseFolding"]
 
 PSD_MODEL_URLS = {
     "conditional_model_0": "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt",
@@ -22,7 +25,9 @@ PSD_MODEL_CONFIGS = {
     "conditional_model_3": config.ConditionalModelConfig(),
 }
 
-BASELINE_MODEL_URL = "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt"
+BASELINE_MODEL_URL = (
+    "https://drive.google.com/u/0/uc?id=1X66RLbaA2-qTlJLlG9TI53cao8gaKnEt"
+)
 BASELINE_MODEL_CONFIG = config.BaselineModelConfig()
 
 
@@ -45,9 +50,7 @@ class ProteinSeqDesForInverseFolding:
 
         init_cfg = BASELINE_MODEL_CONFIG
         self.init_model = SeqPred(cfg=init_cfg)
-        self.load_weights(
-            self.init_model, "baseline_model", BASELINE_MODEL_URL
-        )
+        self.load_weights(self.init_model, "baseline_model", BASELINE_MODEL_URL)
         self.init_model.eval()
 
         if torch.cuda.is_available():
@@ -86,7 +89,7 @@ class ProteinSeqDesForInverseFolding:
         """Design a protein sequence for a given structure."""
         # Can accept a list of models for ensembling, we only use 1 for now
         # Use atom 14 for compactness, 37 is fine too
-        structure = structure.to_protein14()  
+        structure = structure.to_protein14()
         design_sampler = sampler.Sampler(
             inference_config.sampler_config,
             structure,

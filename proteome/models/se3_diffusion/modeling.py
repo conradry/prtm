@@ -11,6 +11,8 @@ from proteome.models.se3_diffusion.sampler import Sampler
 from proteome.models.se3_diffusion.score_network import ScoreNetwork
 from proteome.models.se3_diffusion.se3_diffuser import SE3Diffuser
 
+__all__ = ["SE3DiffusionForStructureDesign"]
+
 SE3_MODEL_URLS = {
     "best": "https://github.com/jasonkyuyim/se3_diffusion/raw/master/weights/best_weights.pth",
     "paper": "https://github.com/jasonkyuyim/se3_diffusion/raw/master/weights/paper_weights.pth",

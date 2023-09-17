@@ -11,6 +11,8 @@ from proteome.models.protein_generator import config
 from proteome.models.protein_generator.rosettafold_model import RoseTTAFoldModule
 from proteome.models.protein_generator.sampler import SeqDiffSampler
 
+__all__ = ["ProteinGeneratorForJointDesign"]
+
 PROTGEN_MODEL_URLS = {
     "default": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt",
     "t1d_29": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_230205_dssp_hotspots_25mask_EQtasks_mod30.pt",
