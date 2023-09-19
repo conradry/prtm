@@ -2,7 +2,7 @@ from proteome.models.protein_seq_des import atoms
 from pyrosetta import *
 from pyrosetta.rosetta import *
 
-init("-mute basic -mute core -mute protocols  -ex1 -ex2 -constant_seed")
+init("-mute all -ex1 -ex2 -constant_seed")
 
 from pyrosetta.rosetta.core import conformation
 from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
