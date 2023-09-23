@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
+import nglview as nv
 import numpy as np
 import py3Dmol
 from matplotlib import colormaps, colors
@@ -157,4 +158,39 @@ def view_superimposed_structures(
     view.setStyle({"model": 0}, style1)
     view.setStyle({"model": 1}, style2)
     view.zoomTo()
+    return view
+
+
+def view_ca_trace(
+    structure: "protein.ProteinCATrace", color: str = "red"
+) -> nv.NGLWidget:
+    """Renders a protein CA trace with a specified color."""
+    view = nv.NGLWidget()
+    view.add_structure(nv.BiopythonStructure(structure.to_biopdb_structure()))
+    view.clear()
+    view.add_cartoon(selection="protein", color=color)
+    view.center()
+    return view
+
+
+def view_superimposed_ca_traces(
+    structures: List["protein.ProteinCATrace"], 
+) -> nv.NGLWidget:
+    """Renders superimposed protein CA traces with default colors.
+    """
+    # Make sure the all structures have the same sequence
+    assert (
+        len(set([s.sequence() for s in structures])) == 1
+    ), "All structures must have the same sequence to be aligned!"
+
+    # Align the structures to the first one in the list
+    view = nv.NGLWidget()
+    ref_structure = structures[0]
+    view.add_structure(nv.BiopythonStructure(ref_structure.to_biopdb_structure()))
+    for i, mov_structure in enumerate(structures[1:], 1):
+        aligned_structure = ref_structure.superimpose(mov_structure)
+        view.add_structure(nv.BiopythonStructure(aligned_structure.to_biopdb_structure()))
+
+    view.center()
+
     return view

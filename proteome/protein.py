@@ -35,7 +35,7 @@ from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
 
 from proteome.constants import residue_constants
-from proteome.visual import view_protein_with_bfactors
+from proteome.visual import view_protein_with_bfactors, view_ca_trace
 
 try:
     import pyrosetta
@@ -1250,6 +1250,9 @@ class ProteinCATrace(ProteinBase):
         prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
         protein37 = Protein37(**prot_dict)
         return protein37.to_ca_trace()
+
+    def show(self, cmap: str = "blue", show_sidechains: bool = False):
+        return view_ca_trace(self, color=cmap)
 
 
 def add_pdb_headers(prot: ProteinBase, pdb_str: str) -> str:
