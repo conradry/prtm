@@ -155,4 +155,4 @@ class RoseTTAFoldForFolding:
         )
         mean_plddt = float(lddt.mean())
 
-        return predicted_protein, {"mean_plddt": mean_plddt}
+        return predicted_protein, {"mean_plddt": 100 * mean_plddt}

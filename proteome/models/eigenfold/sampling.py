@@ -57,7 +57,7 @@ def reverse_sample(
 
 
 @torch.no_grad()
-def logp(Y, score_fn, sde, sched, device, progress=True, seed=None):
+def logp(Y, score_fn, sde, sched, device, progress=False, seed=None):
     sde = copy.deepcopy(sde)
     sde.to(device)
     Y = torch.tensor(Y).float().to(device)

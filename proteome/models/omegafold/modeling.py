@@ -153,4 +153,4 @@ class OmegaFoldForFolding:
             chain_index=np.zeros(len(sequence), dtype=np.int32),
         )
 
-        return predicted_protein, {"confidence": res["confidence_overall"]}
+        return predicted_protein, {"confidence": 100 * res["confidence_overall"]}
