@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import io
+import os
 import string
 from collections import namedtuple
 from typing import Any, Dict, Mapping, Optional, Sequence, Union
@@ -82,6 +83,19 @@ def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
         f"{chain_end:<6}{atom_index:>5}      {end_resname:>3} "
         f"{chain_name:>1}{residue_index:>4}"
     )
+
+
+def get_structure_from_pdb(pdb_id: str) -> str:
+    """Downloads and reads a pdb file from the RCSB database."""
+    pdb_path = os.path.expanduser("~/.proteome/pdb_downloads/")
+    _ = PDB.PDBList().retrieve_pdb_file(
+        pdb_code=pdb_id, pdir=pdb_path, file_format="pdb"
+    )
+    file_path = os.path.join(pdb_path, f"pdb{pdb_id.lower()}.ent")
+    with open(file_path, mode="r") as f:
+        pdb_str = f.read()
+
+    return pdb_str
 
 
 def parse_pdb_string(
@@ -859,9 +873,17 @@ class ProteinBase:
 
         return "".join(residue_constants.restypes[a] for a in aatypes)
 
-    def show(self, cmap: str = "viridis", show_sidechains: bool = True):
+    def show(
+        self, 
+        cmap: str = "viridis",
+        bfactor_is_confidence: bool = True,
+        show_sidechains: bool = True,
+    ):
         return view_protein_with_bfactors(
-            self, cmap=cmap, show_sidechains=show_sidechains
+            self, 
+            cmap=cmap, 
+            bfactor_is_confidence=bfactor_is_confidence, 
+            show_sidechains=show_sidechains,
         )
 
     @property
@@ -875,6 +897,11 @@ class ProteinBase:
             num_atoms=self.atom_positions.shape[1],
             num_chains=len(np.unique(self.chain_index)),
         )
+
+    @property
+    def chains(self):
+        """Returns a string with all available chains."""
+        return "".join(PDB_CHAIN_IDS[i] for i in np.unique(self.chain_index))
 
     def superimpose(self, other: ProteinBase) -> ProteinBase:
         """Superimposes another protein onto this protein."""
@@ -1251,7 +1278,12 @@ class ProteinCATrace(ProteinBase):
         protein37 = Protein37(**prot_dict)
         return protein37.to_ca_trace()
 
-    def show(self, cmap: str = "blue", show_sidechains: bool = False):
+    def show(
+        self, 
+        cmap: str = "blue", 
+        bfactor_is_confidence: bool = True,
+        show_sidechains: bool = False
+    ):
         return view_ca_trace(self, color=cmap)
 
 

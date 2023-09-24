@@ -12,18 +12,23 @@ from proteome.pdb_utils import overwrite_b_factors
 def make_visualization_pdb(
     structure: "protein.ProteinBase",
     cmap: str,
+    bfactor_is_confidence: bool = False,
 ) -> Tuple[str, Dict[int, str]]:
     """Creates a PDB string with b-factors mapped to a color scheme.
 
     Args:
         structure: The protein structure to render.
+        bfactor_is_confidence: Whether to treat the b-factors as confidence scores.
         cmap: The name of the matplotlib colormap to use.
 
     Returns:
         pdb_str: A PDB string with b-factors mapped to a color scheme.
         color_map: A dictionary mapping band indices to hex colors.
     """
-    band_edges = np.arange(50, 110, step=10)
+    if bfactor_is_confidence:
+        band_edges = np.arange(50, 110, step=10)
+    else:
+        band_edges = np.linspace(0, structure.b_factors.max(), num=10)
 
     # Must be a 37 atom protein
     structure = structure.to_protein37()
@@ -60,6 +65,7 @@ def make_visualization_pdb(
 def view_protein_with_bfactors(
     structure: "protein.ProteinBase",
     cmap: str,
+    bfactor_is_confidence: bool = False,
     show_sidechains: bool = True,
 ) -> py3Dmol.view:
     """Renders a protein structure with b-factors mapped to a color scheme.
@@ -67,6 +73,7 @@ def view_protein_with_bfactors(
     Args:
         structure: The protein structure to render.
         cmap: The name of the matplotlib colormap to use.
+        bfactor_is_confidence: Whether to treat the b-factors as confidence scores.
         show_sidechains: Whether to show the sidechains of the protein.
         Ignored if the protein has no sidechains.
     
@@ -74,7 +81,9 @@ def view_protein_with_bfactors(
         A py3Dmol.view object with the protein rendered.
     """
 
-    to_visualize_pdb, color_map = make_visualization_pdb(structure, cmap)
+    to_visualize_pdb, color_map = make_visualization_pdb(
+        structure, cmap, bfactor_is_confidence
+    )
 
     view = py3Dmol.view(width=800, height=600)
     view.addModelsAsFrames(to_visualize_pdb)
@@ -92,6 +101,7 @@ def view_aligned_structures_grid(
     structures: List["protein.ProteinBase"],
     cmap: str = "viridis",
     max_grid_cols: int = 5,
+    bfactor_is_confidence: bool = False,
     show_sidechains: bool = True,
 ):
     # Make sure the all structures have the same sequence
@@ -121,7 +131,9 @@ def view_aligned_structures_grid(
                 break
 
             structure = aligned_structures[i]
-            to_visualize_pdb, color_map = make_visualization_pdb(structure, cmap)
+            to_visualize_pdb, color_map = make_visualization_pdb(
+                structure, cmap, bfactor_is_confidence
+            )
 
             view.addModelsAsFrames(to_visualize_pdb, viewer=(y, x))
             style = {"cartoon": {"colorscheme": {"prop": "b", "map": color_map}}}
