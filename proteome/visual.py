@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple, Optional
+
+from typing import Dict, List, Optional, Tuple
 
 import nglview as nv
 import numpy as np
@@ -69,14 +70,14 @@ def view_protein_with_bfactors(
     show_sidechains: bool = True,
 ) -> py3Dmol.view:
     """Renders a protein structure with b-factors mapped to a color scheme.
-    
+
     Args:
         structure: The protein structure to render.
         cmap: The name of the matplotlib colormap to use.
         bfactor_is_confidence: Whether to treat the b-factors as confidence scores.
         show_sidechains: Whether to show the sidechains of the protein.
         Ignored if the protein has no sidechains.
-    
+
     Returns:
         A py3Dmol.view object with the protein rendered.
     """
@@ -104,22 +105,20 @@ def view_aligned_structures_grid(
     bfactor_is_confidence: bool = False,
     show_sidechains: bool = True,
 ):
-    # Make sure the all structures have the same sequence
+    # Make sure the all structures have the same sequence length
     assert (
-        len(set([s.sequence() for s in structures])) == 1
+        len(set([len(s.sequence()) for s in structures])) == 1
     ), "All structures must have the same sequence to be aligned!"
 
     # Align all structures to the first one
     aligned_structures = [structures[0]]
     for structure in structures[1:]:
-        aligned_structures.append(
-            aligned_structures[0].superimpose(structure)
-        )
+        aligned_structures.append(aligned_structures[0].superimpose(structure))
 
     # Figure out the grid shape to fit everything
     n_structures = len(structures)
     grid_shape = (
-        1 + (n_structures // max_grid_cols), 
+        1 + (n_structures // max_grid_cols),
         min(n_structures, max_grid_cols),
     )
     view = py3Dmol.view(width=800, height=600, linked=True, viewergrid=grid_shape)
@@ -154,8 +153,8 @@ def view_superimposed_structures(
     color2: str = "blue",
 ):
     # Make sure the all structures have the same sequence
-    assert (
-        structure1.sequence() == structure2.sequence()
+    assert len(structure1.sequence()) == len(
+        structure2.sequence()
     ), "Both structures must have the same sequence to be aligned!"
 
     structure2 = structure1.superimpose(structure2)
@@ -186,10 +185,9 @@ def view_ca_trace(
 
 
 def view_superimposed_ca_traces(
-    structures: List["protein.ProteinCATrace"], 
+    structures: List["protein.ProteinCATrace"],
 ) -> nv.NGLWidget:
-    """Renders superimposed protein CA traces with default colors.
-    """
+    """Renders superimposed protein CA traces with default colors."""
     # Make sure the all structures have the same sequence
     assert (
         len(set([s.sequence() for s in structures])) == 1
@@ -201,7 +199,9 @@ def view_superimposed_ca_traces(
     view.add_structure(nv.BiopythonStructure(ref_structure.to_biopdb_structure()))
     for i, mov_structure in enumerate(structures[1:], 1):
         aligned_structure = ref_structure.superimpose(mov_structure)
-        view.add_structure(nv.BiopythonStructure(aligned_structure.to_biopdb_structure()))
+        view.add_structure(
+            nv.BiopythonStructure(aligned_structure.to_biopdb_structure())
+        )
 
     view.center()
 

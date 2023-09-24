@@ -103,4 +103,4 @@ class ProteinSolverForInverseFolding:
         )
         sequence = "".join([AMINO_ACIDS[i] for i in sequence_ids])
 
-        return sequence, {"avg_prob": mean_proba}
+        return sequence, {"avg_prob": mean_proba.item()}

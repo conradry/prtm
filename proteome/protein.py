@@ -36,7 +36,7 @@ from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
 
 from proteome.constants import residue_constants
-from proteome.visual import view_protein_with_bfactors, view_ca_trace
+from proteome.visual import view_ca_trace, view_protein_with_bfactors
 
 try:
     import pyrosetta
@@ -101,7 +101,7 @@ def get_structure_from_pdb(pdb_id: str) -> str:
 def parse_pdb_string(
     pdb_str: str,
     chain_id: Optional[str] = None,
-    parse_hetatom: bool = False,
+    parse_hetatom: bool = True,
 ) -> Dict[str, np.ndarray]:
     """Takes a PDB string and parses it into arrays.
 
@@ -158,6 +158,9 @@ def parse_pdb_string(
                     for atom in res:
                         hetatom_positions.append(atom.coord)
                         hetatom_names.append(res.id[0].lstrip("H_"))
+                    continue
+            else:
+                if len(res.id[0].strip()) > 0:
                     continue
 
             atom_count = residue_constants.atom_type_num
@@ -239,8 +242,8 @@ def superimpose_structures(
         target structure.
     """
     # Must have the same sequence in order to superimpose
-    assert (
-        target_structure.sequence() == moving_structure.sequence()
+    assert len(target_structure.sequence()) == len(
+        moving_structure.sequence()
     ), "Sequences must be the same to superimpose structures."
 
     # Only 1 model per protein by construction
@@ -252,20 +255,20 @@ def superimpose_structures(
     moving_atoms = []
     for target_chain, moving_chain in zip(target_model, moving_model):
         for target_res, moving_res in zip(target_chain, moving_chain):
-            target_atoms.append(target_res['CA'])                
-            moving_atoms.append(moving_res['CA'])
+            target_atoms.append(target_res["CA"])
+            moving_atoms.append(moving_res["CA"])
 
     super_imposer = PDB.Superimposer()
     super_imposer.set_atoms(target_atoms, moving_atoms)
     super_imposer.apply(moving_model.get_atoms())
 
     pdb_io = PDB.PDBIO()
-    pdb_io.set_structure(moving_model) 
+    pdb_io.set_structure(moving_model)
 
     # Write the pdb str to an io string
     pdb_fh = io.StringIO()
     pdb_io.save(pdb_fh)
-    
+
     return type(moving_structure).from_pdb_string(pdb_fh.getvalue())
 
 
@@ -730,7 +733,7 @@ class ProteinBase:
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         raise NotImplementedError
 
@@ -874,15 +877,15 @@ class ProteinBase:
         return "".join(residue_constants.restypes[a] for a in aatypes)
 
     def show(
-        self, 
+        self,
         cmap: str = "viridis",
         bfactor_is_confidence: bool = True,
         show_sidechains: bool = True,
     ):
         return view_protein_with_bfactors(
-            self, 
-            cmap=cmap, 
-            bfactor_is_confidence=bfactor_is_confidence, 
+            self,
+            cmap=cmap,
+            bfactor_is_confidence=bfactor_is_confidence,
             show_sidechains=show_sidechains,
         )
 
@@ -967,7 +970,7 @@ class Protein37(ProteinBase):
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
@@ -1044,7 +1047,7 @@ class Protein14(ProteinBase):
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
@@ -1092,7 +1095,7 @@ class Protein27(ProteinBase):
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
@@ -1144,7 +1147,7 @@ class Protein5(ProteinBase):
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
@@ -1261,7 +1264,7 @@ class ProteinCATrace(ProteinBase):
         cls,
         pdb_str: str,
         chain_id: Optional[str] = None,
-        parse_hetatom: bool = False,
+        parse_hetatom: bool = True,
     ) -> ProteinBase:
         """Converts a PDB string to a protein.
 
@@ -1279,10 +1282,10 @@ class ProteinCATrace(ProteinBase):
         return protein37.to_ca_trace()
 
     def show(
-        self, 
-        cmap: str = "blue", 
+        self,
+        cmap: str = "blue",
         bfactor_is_confidence: bool = True,
-        show_sidechains: bool = False
+        show_sidechains: bool = False,
     ):
         return view_ca_trace(self, color=cmap)
 
