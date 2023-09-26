@@ -190,7 +190,7 @@ def view_superimposed_ca_traces(
     """Renders superimposed protein CA traces with default colors."""
     # Make sure the all structures have the same sequence
     assert (
-        len(set([s.sequence() for s in structures])) == 1
+        len(set([len(s.sequence()) for s in structures])) == 1
     ), "All structures must have the same sequence to be aligned!"
 
     # Align the structures to the first one in the list

@@ -71,7 +71,7 @@ class FoldingDiffForStructureDesign:
     def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.Protein3, Dict[str, Any]]:
+    ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:
         """Design a random protein structure."""
         placeholder_dset = AnglesEmptyDataset(
             feature_set_key=inference_config.dataset_config.angles_definitions,
@@ -108,12 +108,12 @@ class FoldingDiffForStructureDesign:
 
         # All residues are glycine
         n = len(coords)
-        structure = protein.Protein3(
-            atom_positions=coords,
+        structure = protein.ProteinCATrace(
+            atom_positions=coords[:, [1]],
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=np.ones((n, 3)),
+            atom_mask=np.ones((n, 1)),
             residue_index=np.arange(0, n) + 1,
-            b_factors=np.zeros((n, 3)),
+            b_factors=np.zeros((n, 1)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 
