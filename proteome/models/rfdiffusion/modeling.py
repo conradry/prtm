@@ -155,6 +155,14 @@ class RFDiffusionForStructureDesign:
         self.model = self.model.to(self.device)
         self.loaded_model_name = model_name
 
+    def set_model(self, model_name: str):
+        """Set the model to use for structure design."""
+        self.model_name = model_name
+        if model_name != "auto":
+            self._set_model(model_name)
+        else:
+            self.loaded_model_name = None
+
     def __call__(
         self,
         sampler_config: config.SamplerConfigType,
