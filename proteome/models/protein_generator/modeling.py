@@ -123,15 +123,14 @@ class ProteinGeneratorForJointDesign:
         num_atoms = features["best_xyz"].shape[2]
         aatype = features["best_seq"].cpu().numpy()
         sequence = "".join([restypes[aa] for aa in aatype])
+        bfactors = features["best_pred_lddt"][0].cpu().numpy()
+        bfactors = bfactors[..., None].repeat(num_atoms, axis=1)
         structure = protein.Protein27(
             atom_positions=features["best_xyz"].squeeze().cpu().numpy(),
             aatype=aatype,
             atom_mask=protein.ideal_atom27_mask(aatype),
             residue_index=np.array([t[1] for t in features["pdb_idx"]]),
-            b_factors=features["best_pred_lddt"][0]
-            .cpu()
-            .numpy()[..., None]
-            .repeat(num_atoms, axis=1),
+            b_factors=100 * bfactors,
             chain_index=np.array(
                 [protein.PDB_CHAIN_IDS.index(t[0]) for t in features["pdb_idx"]]
             ),
