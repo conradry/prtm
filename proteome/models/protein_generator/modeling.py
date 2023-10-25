@@ -11,6 +11,8 @@ from proteome.models.protein_generator import config
 from proteome.models.protein_generator.rosettafold_model import RoseTTAFoldModule
 from proteome.models.protein_generator.sampler import SeqDiffSampler
 
+__all__ = ["ProteinGeneratorForJointDesign"]
+
 PROTGEN_MODEL_URLS = {
     "default": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_221219_equalTASKS_nostrSELFCOND_mod30.pt",
     "t1d_29": "http://files.ipd.uw.edu/pub/sequence_diffusion/checkpoints/SEQDIFF_230205_dssp_hotspots_25mask_EQtasks_mod30.pt",
@@ -121,15 +123,14 @@ class ProteinGeneratorForJointDesign:
         num_atoms = features["best_xyz"].shape[2]
         aatype = features["best_seq"].cpu().numpy()
         sequence = "".join([restypes[aa] for aa in aatype])
+        bfactors = features["best_pred_lddt"][0].cpu().numpy()
+        bfactors = bfactors[..., None].repeat(num_atoms, axis=1)
         structure = protein.Protein27(
             atom_positions=features["best_xyz"].squeeze().cpu().numpy(),
             aatype=aatype,
             atom_mask=protein.ideal_atom27_mask(aatype),
             residue_index=np.array([t[1] for t in features["pdb_idx"]]),
-            b_factors=features["best_pred_lddt"][0]
-            .cpu()
-            .numpy()[..., None]
-            .repeat(num_atoms, axis=1),
+            b_factors=100 * bfactors,
             chain_index=np.array(
                 [protein.PDB_CHAIN_IDS.index(t[0]) for t in features["pdb_idx"]]
             ),

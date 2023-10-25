@@ -1,6 +1,8 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple
 
+from typing import Dict, List, Optional, Tuple
+
+import nglview as nv
 import numpy as np
 import py3Dmol
 from matplotlib import colormaps, colors
@@ -11,18 +13,23 @@ from proteome.pdb_utils import overwrite_b_factors
 def make_visualization_pdb(
     structure: "protein.ProteinBase",
     cmap: str,
+    bfactor_is_confidence: bool = False,
 ) -> Tuple[str, Dict[int, str]]:
     """Creates a PDB string with b-factors mapped to a color scheme.
 
     Args:
         structure: The protein structure to render.
+        bfactor_is_confidence: Whether to treat the b-factors as confidence scores.
         cmap: The name of the matplotlib colormap to use.
 
     Returns:
         pdb_str: A PDB string with b-factors mapped to a color scheme.
         color_map: A dictionary mapping band indices to hex colors.
     """
-    band_edges = np.arange(50, 110, step=10)
+    if bfactor_is_confidence:
+        band_edges = np.arange(50, 110, step=10)
+    else:
+        band_edges = np.linspace(0, structure.b_factors.max(), num=10)
 
     # Must be a 37 atom protein
     structure = structure.to_protein37()
@@ -59,21 +66,25 @@ def make_visualization_pdb(
 def view_protein_with_bfactors(
     structure: "protein.ProteinBase",
     cmap: str,
+    bfactor_is_confidence: bool = False,
     show_sidechains: bool = True,
 ) -> py3Dmol.view:
     """Renders a protein structure with b-factors mapped to a color scheme.
-    
+
     Args:
         structure: The protein structure to render.
         cmap: The name of the matplotlib colormap to use.
+        bfactor_is_confidence: Whether to treat the b-factors as confidence scores.
         show_sidechains: Whether to show the sidechains of the protein.
         Ignored if the protein has no sidechains.
-    
+
     Returns:
         A py3Dmol.view object with the protein rendered.
     """
 
-    to_visualize_pdb, color_map = make_visualization_pdb(structure, cmap)
+    to_visualize_pdb, color_map = make_visualization_pdb(
+        structure, cmap, bfactor_is_confidence
+    )
 
     view = py3Dmol.view(width=800, height=600)
     view.addModelsAsFrames(to_visualize_pdb)
@@ -91,24 +102,23 @@ def view_aligned_structures_grid(
     structures: List["protein.ProteinBase"],
     cmap: str = "viridis",
     max_grid_cols: int = 5,
+    bfactor_is_confidence: bool = False,
     show_sidechains: bool = True,
 ):
-    # Make sure the all structures have the same sequence
+    # Make sure the all structures have the same sequence length
     assert (
-        len(set([s.sequence() for s in structures])) == 1
+        len(set([len(s.sequence()) for s in structures])) == 1
     ), "All structures must have the same sequence to be aligned!"
 
     # Align all structures to the first one
     aligned_structures = [structures[0]]
     for structure in structures[1:]:
-        aligned_structures.append(
-            aligned_structures[0].superimpose(structure)
-        )
+        aligned_structures.append(aligned_structures[0].superimpose(structure))
 
     # Figure out the grid shape to fit everything
     n_structures = len(structures)
     grid_shape = (
-        1 + (n_structures // max_grid_cols), 
+        1 + (n_structures // max_grid_cols),
         min(n_structures, max_grid_cols),
     )
     view = py3Dmol.view(width=800, height=600, linked=True, viewergrid=grid_shape)
@@ -120,7 +130,9 @@ def view_aligned_structures_grid(
                 break
 
             structure = aligned_structures[i]
-            to_visualize_pdb, color_map = make_visualization_pdb(structure, cmap)
+            to_visualize_pdb, color_map = make_visualization_pdb(
+                structure, cmap, bfactor_is_confidence
+            )
 
             view.addModelsAsFrames(to_visualize_pdb, viewer=(y, x))
             style = {"cartoon": {"colorscheme": {"prop": "b", "map": color_map}}}
@@ -141,8 +153,8 @@ def view_superimposed_structures(
     color2: str = "blue",
 ):
     # Make sure the all structures have the same sequence
-    assert (
-        structure1.sequence() == structure2.sequence()
+    assert len(structure1.sequence()) == len(
+        structure2.sequence()
     ), "Both structures must have the same sequence to be aligned!"
 
     structure2 = structure1.superimpose(structure2)
@@ -157,4 +169,40 @@ def view_superimposed_structures(
     view.setStyle({"model": 0}, style1)
     view.setStyle({"model": 1}, style2)
     view.zoomTo()
+    return view
+
+
+def view_ca_trace(
+    structure: "protein.ProteinCATrace", color: str = "red"
+) -> nv.NGLWidget:
+    """Renders a protein CA trace with a specified color."""
+    view = nv.NGLWidget()
+    view.add_structure(nv.BiopythonStructure(structure.to_biopdb_structure()))
+    view.clear()
+    view.add_cartoon(selection="protein", color=color)
+    view.center()
+    return view
+
+
+def view_superimposed_ca_traces(
+    structures: List["protein.ProteinCATrace"],
+) -> nv.NGLWidget:
+    """Renders superimposed protein CA traces with default colors."""
+    # Make sure the all structures have the same sequence
+    assert (
+        len(set([len(s.sequence()) for s in structures])) == 1
+    ), "All structures must have the same sequence to be aligned!"
+
+    # Align the structures to the first one in the list
+    view = nv.NGLWidget()
+    ref_structure = structures[0]
+    view.add_structure(nv.BiopythonStructure(ref_structure.to_biopdb_structure()))
+    for i, mov_structure in enumerate(structures[1:], 1):
+        aligned_structure = ref_structure.superimpose(mov_structure)
+        view.add_structure(
+            nv.BiopythonStructure(aligned_structure.to_biopdb_structure())
+        )
+
+    view.center()
+
     return view

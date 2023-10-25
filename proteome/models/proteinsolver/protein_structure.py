@@ -8,12 +8,8 @@ import torch
 from numba import njit
 from scipy.spatial import cKDTree
 from torch_geometric.data import Data
-from proteome.models.proteinsolver.type_definitions import (
-    Chain,
-    Model,
-    Structure,
-)
 
+from proteome.models.proteinsolver.type_definitions import Chain, Model, Structure
 
 AMINO_ACIDS: List[str] = [
     "G",
@@ -534,7 +530,7 @@ def row_to_data(tup, add_reversed_edges=True) -> Data:
     data = Data(x=seq, edge_index=edge_index, edge_attr=edge_attr)
     data = data.coalesce()
 
-    assert not data.contains_self_loops()
+    assert not data.has_self_loops()
     assert data.is_coalesced()
     assert data.is_undirected()
 
@@ -560,4 +556,3 @@ def _to_torch(data_array):
         return torch.from_numpy(data_array)
     else:
         return torch.tensor(data_array)
-

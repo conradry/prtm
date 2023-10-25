@@ -4,15 +4,20 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
+
 from proteome import protein
-from proteome.models.proteinsolver import config
-from proteome.models.proteinsolver.proteinnet import ProteinNet
-from proteome.models.proteinsolver.protein_structure import (
-    AMINO_ACIDS, extract_seq_and_adj, row_to_data, transform_edge_attr
-)
-from proteome.models.proteinsolver import protein_design
 from proteome.models.openfold.np.relax import cleanup
+from proteome.models.proteinsolver import config, protein_design
 from proteome.models.proteinsolver.parser import Parser
+from proteome.models.proteinsolver.protein_structure import (
+    AMINO_ACIDS,
+    extract_seq_and_adj,
+    row_to_data,
+    transform_edge_attr,
+)
+from proteome.models.proteinsolver.proteinnet import ProteinNet
+
+__all__ = ["ProteinSolverForInverseFolding"]
 
 PS_MODEL_URLS = {
     "model_0": "https://models.proteinsolver.org/v0.1/notebooks/protein_4xEdgeConv_bs4/e12-s1652709-d6610836.state",  # noqa: E501
@@ -58,8 +63,8 @@ class ProteinSolverForInverseFolding:
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
-            weights_url, 
-            progress=True, 
+            weights_url,
+            progress=True,
             file_name=f"proteinsolver_{self.model_name}.pt",
             map_location="cpu",
         )
@@ -82,20 +87,20 @@ class ProteinSolverForInverseFolding:
         fixed_pdb = cleanup.fix_pdb(pdb_file, {})
 
         ps_structure = Parser().get_structure(fixed_pdb.split("\n"))
-        adj_data = extract_seq_and_adj(ps_structure, 'A')
+        adj_data = extract_seq_and_adj(ps_structure, "A")
         data = row_to_data(adj_data)
         data = transform_edge_attr(data)
         data.y = data.x
         x_placeholder = torch.ones_like(data.x) * 20
 
         sequence_ids, mean_proba = protein_design.design_protein(
-            self.model, 
-            x_placeholder.to(self.device), 
-            data.edge_index.to(self.device), 
-            data.edge_attr.to(self.device), 
+            self.model,
+            x_placeholder.to(self.device),
+            data.edge_index.to(self.device),
+            data.edge_attr.to(self.device),
             cutoff=inference_config.log_prob_cutoff,
             max_sequences=inference_config.max_sequences,
         )
         sequence = "".join([AMINO_ACIDS[i] for i in sequence_ids])
 
-        return sequence, {"avg_prob": mean_proba}
+        return sequence, {"avg_prob": mean_proba.item()}

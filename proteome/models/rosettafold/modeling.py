@@ -12,6 +12,8 @@ from proteome.models.rosettafold.trfold import TRFold
 from proteome.query.pipeline import QueryPipelines
 from proteome.utils import hub_utils
 
+__all__ = ["RoseTTAFoldForFolding"]
+
 ROSETTAFOLD_MODEL_URLS = {
     "rosettafold_end2end": (
         "https://files.ipd.uw.edu/pub/RoseTTAFold/weights.tar.gz",
@@ -153,4 +155,4 @@ class RoseTTAFoldForFolding:
         )
         mean_plddt = float(lddt.mean())
 
-        return predicted_protein, {"mean_plddt": mean_plddt}
+        return predicted_protein, {"mean_plddt": 100 * mean_plddt}

@@ -8,8 +8,14 @@ import torch
 from proteome import protein
 from proteome.constants.residue_constants import proteinmppn_restypes
 from proteome.models.proteinmpnn import config
-from proteome.models.proteinmpnn.featurizer import tied_featurize, get_sequence_scores, decode_sequence
+from proteome.models.proteinmpnn.featurizer import (
+    decode_sequence,
+    get_sequence_scores,
+    tied_featurize,
+)
 from proteome.models.proteinmpnn.model import ProteinMPNN
+
+__all__ = ["ProteinMPNNForInverseFolding"]
 
 PROTEINMPNN_MODEL_URLS = {
     "vanilla_model-2": "https://github.com/dauparas/ProteinMPNN/raw/main/vanilla_model_weights/v_48_002.pt",
@@ -79,14 +85,16 @@ class ProteinMPNNForInverseFolding:
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = torch.hub.load_state_dict_from_url(
-            weights_url, 
+            weights_url,
             file_name=f"proteinmpnn_{self.model_name}.pt",
-            progress=True, 
+            progress=True,
             map_location="cpu",
         )["model_state_dict"]
         msg = self.model.load_state_dict(state_dict)
 
-    def _featurize_input(self, structure: config.DesignableProtein) -> config.TiedFeaturizeOutput:
+    def _featurize_input(
+        self, structure: config.DesignableProtein
+    ) -> config.TiedFeaturizeOutput:
         return tied_featurize(
             [structure],
             self.device,
@@ -140,7 +148,9 @@ class ProteinMPNNForInverseFolding:
             use_input_decoding_order=True,
             decoding_order=sample_dict["decoding_order"],
         )
-        global_scores = get_sequence_scores(sampled_sequence, log_probs, tied_featurize_output.mask)
+        global_scores = get_sequence_scores(
+            sampled_sequence, log_probs, tied_featurize_output.mask
+        )
         global_score = global_scores.cpu().data.numpy()[0]
 
         seq = decode_sequence(sampled_sequence[0], tied_featurize_output.chain_M[0])

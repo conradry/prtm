@@ -111,6 +111,8 @@ def cache_query(hash_func_kwargs, hash_class_attrs):
                 result = func(*args, **kwargs)
                 insert_result_in_cache(hash, result)
                 cached_result = result
+            else:
+                print("Loaded result from cache.")
 
             return cached_result
         return get_cached

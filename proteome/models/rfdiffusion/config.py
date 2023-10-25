@@ -218,13 +218,14 @@ class ScaffoldGuidedParams:
 @dataclass
 class InferenceParams:
     reference_structure: protein.Protein14 = None
-    num_designs: int = 1
     align_motif: bool = True
     final_step: int = 1
 
     def __post_init__(self):
         if self.reference_structure is not None:
             self.reference_structure = self.reference_structure.to_protein14()
+
+        self.num_designs = 1
 
 
 @dataclass

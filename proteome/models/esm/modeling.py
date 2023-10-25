@@ -11,6 +11,8 @@ from proteome.models.esm.esmfold import ESMFold
 from proteome.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
 from proteome.models.openfold.utils.feats import atom14_to_atom37
 
+__all__ = ["ESMForFolding", "ESMForInverseFolding"]
+
 ESM_MODEL_URLS = {
     "esm2_3B": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t36_3B_UR50D.pt",
 }
@@ -156,7 +158,7 @@ class ESMForFolding:
 
 class ESMForInverseFolding:
     def __init__(
-        self, 
+        self,
         model_name: str = "esm_if1_gvp4_t16_142M_UR50",
         random_seed: Optional[int] = None,
     ):
@@ -210,8 +212,8 @@ class ESMForInverseFolding:
 
     @torch.no_grad()
     def __call__(
-        self, 
-        structure: protein.ProteinBase, 
+        self,
+        structure: protein.ProteinBase,
         design_params: config.DesignParams = config.DesignParams(),
         temperature: float = 1.0,
     ) -> Tuple[str, Dict[str, Any]]:

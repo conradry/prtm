@@ -3,16 +3,18 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.genie import config
 from proteome.models.genie.diffusion import Genie
 
+__all__ = ["GenieForStructureDesign"]
+
 GENIE_MODEL_URLS = {
     "genie_l_128": "https://github.com/aqlaboratory/genie/raw/main/weights/scope_l_128/epoch%3D49999.ckpt",
     "genie_l_256": "https://github.com/aqlaboratory/genie/raw/main/weights/scope_l_256/epoch%3D29999.ckpt",
     "genie_l_256_swissprot": "https://github.com/aqlaboratory/genie/raw/main/weights/swissprot_l_256/epoch%3D99.ckpt",
-
 }
 GENIE_MODEL_CONFIGS = {
     "genie_l_128": config.Genie128Config(),

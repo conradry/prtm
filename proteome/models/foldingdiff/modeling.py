@@ -4,14 +4,15 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
+
 from proteome import protein
 from proteome.constants import residue_constants
 from proteome.models.foldingdiff import config, sampling
-from proteome.models.foldingdiff.angles_and_coords import \
-    create_new_chain_nerf
-from proteome.models.foldingdiff.datasets import (AnglesEmptyDataset,
-                                                         NoisedAnglesDataset)
+from proteome.models.foldingdiff.angles_and_coords import create_new_chain_nerf
+from proteome.models.foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
 from proteome.models.foldingdiff.model import BertForDiffusionBase
+
+__all__ = ["FoldingDiffForStructureDesign"]
 
 FOLDINGDIFF_MODEL_URLS = {
     "foldingdiff_cath": "https://huggingface.co/wukevin/foldingdiff_cath/resolve/main/models/best_by_valid/epoch%3D1488-step%3D565820.ckpt",  # noqa: E501
@@ -70,7 +71,7 @@ class FoldingDiffForStructureDesign:
     def __call__(
         self,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
-    ) -> Tuple[protein.Protein3, Dict[str, Any]]:
+    ) -> Tuple[protein.ProteinCATrace, Dict[str, Any]]:
         """Design a random protein structure."""
         placeholder_dset = AnglesEmptyDataset(
             feature_set_key=inference_config.dataset_config.angles_definitions,
@@ -107,12 +108,12 @@ class FoldingDiffForStructureDesign:
 
         # All residues are glycine
         n = len(coords)
-        structure = protein.Protein3(
-            atom_positions=coords,
+        structure = protein.ProteinCATrace(
+            atom_positions=coords[:, [1]],
             aatype=np.array(n * [residue_constants.restype_order_with_x["G"]]),
-            atom_mask=np.ones((n, 3)),
+            atom_mask=np.ones((n, 1)),
             residue_index=np.arange(0, n) + 1,
-            b_factors=np.zeros((n, 3)),
+            b_factors=np.zeros((n, 1)),
             chain_index=np.zeros((n,), dtype=np.int32),
         )
 

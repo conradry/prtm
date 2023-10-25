@@ -12,6 +12,8 @@ from proteome.models.openfold.utils.tensor_utils import tensor_tree_map
 from proteome.query.pipeline import QueryPipelines
 from proteome.utils import hub_utils
 
+__all__ = ["OpenFoldForFolding"]
+
 OPENFOLD_MODEL_URLS = {
     "finetuning-3": "s3://openfold/openfold_params/finetuning_3.pt",
     "finetuning-4": "s3://openfold/openfold_params/finetuning_4.pt",
@@ -85,7 +87,9 @@ class OpenFoldForFolding:
 
     def load_weights(self, weights_url):
         """Load weights from a weights url."""
-        weights = hub_utils.load_state_dict_from_s3_url(weights_url, name_prefix="openfold")
+        weights = hub_utils.load_state_dict_from_s3_url(
+            weights_url, name_prefix="openfold"
+        )
         msg = self.model.load_state_dict(weights, strict=True)
 
     def _validate_input_sequence(self, sequence: str) -> None:
