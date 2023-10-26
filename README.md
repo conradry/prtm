@@ -1,6 +1,6 @@
 # prtm
 
-**Pr**o**t**ein **M**odels (prtm) is a Python package for modeling proteins.
+**Pr**o**t**ein **M**odels (prtm) is a Python package for deep learning protein models.
 
 
 ## Background
@@ -68,7 +68,12 @@ mamba activate prtm
 ```
 
 To make `prtm` more accessible it was decided to remove custom CUDA kernels from all models that
-previously used them, so that's it! You're ready to go!
+previously used them, so that's it for most cases!
+
+Optionally, `pyrosetta` is a soft-dependency of `prtm` and is only required for the
+`protein_seq_des` model. A license is required to use `Pyrosetta` and can 
+be obtained for free for academic use. For installation instructions, see these 
+[instructions](https://www.pyrosetta.org/downloads#h.6vttn15ac69d).
 
 ## What's implemented
 
