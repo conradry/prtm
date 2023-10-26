@@ -8,12 +8,14 @@ from typing import Union
 
 import torch
 import torch.nn as nn
-
-from proteome.models.esm import config
-from proteome.models.esm import data as esm_data
-from proteome.models.esm.modules import (ContactPredictionHead,
-                                                 ESM1bLayerNorm, RobertaLMHead,
-                                                 TransformerLayer)
+from prtm.models.esm import config
+from prtm.models.esm import data as esm_data
+from prtm.models.esm.modules import (
+    ContactPredictionHead,
+    ESM1bLayerNorm,
+    RobertaLMHead,
+    TransformerLayer,
+)
 
 
 class ESM2(nn.Module):

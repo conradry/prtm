@@ -1,11 +1,10 @@
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants.residue_constants import proteinmppn_restypes
+from prtm import protein
+from prtm.constants.residue_constants import proteinmppn_restypes
 
 
 @dataclass
@@ -71,20 +70,21 @@ class DesignParams:
     pssm_log_odds: np.ndarray  # [num_res, num_aatype]
 
     bias_per_residue: np.ndarray  # [num_res, num_aatype]
-    tied_positions: Optional[List[Dict[int, List[int]]]] = None 
+    tied_positions: Optional[List[Dict[int, List[int]]]] = None
 
 
 class DesignableProtein:
     """Protein structure definition with design parameters for ProteinMPNN."""
+
     def __init__(
-        self, 
-        structure: protein.ProteinBase, 
+        self,
+        structure: protein.ProteinBase,
         design_params: DesignParams,
     ):
-        for k,v in structure.to_dict().items():
+        for k, v in structure.to_dict().items():
             setattr(self, k, v)
 
-        for k,v in asdict(design_params).items():
+        for k, v in asdict(design_params).items():
             setattr(self, k, v)
 
 

@@ -1,2 +1,2 @@
-import proteome.models.omegafold.config as omegafold_config
-from proteome.models.omegafold.modeling import *
+import prtm.models.omegafold.config as omegafold_config
+from prtm.models.omegafold.modeling import *

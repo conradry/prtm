@@ -6,23 +6,17 @@ import typing as T
 
 import torch
 import torch.nn as nn
+from prtm.constants import residue_constants
+from prtm.models.esm import config
+from prtm.models.esm.categorical_mixture import categorical_lddt
+from prtm.models.esm.data import Alphabet
+from prtm.models.esm.esm2 import ESM2
+from prtm.models.esm.misc import batch_encode_sequences, collate_dense_tensors
+from prtm.models.esm.trunk import FoldingTrunk
+from prtm.models.openfold.data.data_transforms import make_atom14_masks
+from prtm.models.openfold.utils.loss import compute_predicted_aligned_error, compute_tm
 from torch import nn
 from torch.nn import LayerNorm
-
-from proteome.constants import residue_constants
-from proteome.models.esm import config
-from proteome.models.esm.categorical_mixture import categorical_lddt
-from proteome.models.esm.data import Alphabet
-from proteome.models.esm.esm2 import ESM2
-from proteome.models.esm.misc import (
-    batch_encode_sequences,
-    collate_dense_tensors,
-)
-from proteome.models.esm.trunk import FoldingTrunk
-from proteome.models.openfold.data.data_transforms import \
-    make_atom14_masks
-from proteome.models.openfold.utils.loss import (
-    compute_predicted_aligned_error, compute_tm)
 
 
 class ESMFold(nn.Module):

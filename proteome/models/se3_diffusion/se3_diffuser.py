@@ -3,10 +3,10 @@ import logging
 
 import numpy as np
 import torch
-from proteome.models.se3_diffusion import data_utils as du
-from proteome.models.se3_diffusion import r3_diffuser
-from proteome.models.se3_diffusion import rigid_utils as ru
-from proteome.models.se3_diffusion import so3_diffuser
+from prtm.models.se3_diffusion import data_utils as du
+from prtm.models.se3_diffusion import r3_diffuser
+from prtm.models.se3_diffusion import rigid_utils as ru
+from prtm.models.se3_diffusion import so3_diffuser
 from scipy.spatial.transform import Rotation
 
 

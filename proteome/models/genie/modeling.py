@@ -3,11 +3,10 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.genie import config
-from proteome.models.genie.diffusion import Genie
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.genie import config
+from prtm.models.genie.diffusion import Genie
 
 __all__ = ["GenieForStructureDesign"]
 

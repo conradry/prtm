@@ -6,10 +6,9 @@ import pandas as pd
 import pyarrow.parquet as pq
 import torch
 from numba import njit
+from prtm.models.proteinsolver.type_definitions import Chain, Model, Structure
 from scipy.spatial import cKDTree
 from torch_geometric.data import Data
-
-from proteome.models.proteinsolver.type_definitions import Chain, Model, Structure
 
 AMINO_ACIDS: List[str] = [
     "G",

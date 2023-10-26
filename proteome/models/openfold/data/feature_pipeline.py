@@ -18,8 +18,8 @@ from typing import Dict, Mapping, Sequence
 
 import numpy as np
 import torch
-from proteome.models.openfold.config import DataConfig, Features
-from proteome.models.openfold.data import input_pipeline
+from prtm.models.openfold.config import DataConfig, Features
+from prtm.models.openfold.data import input_pipeline
 
 FeatureDict = Mapping[str, np.ndarray]
 TensorDict = Dict[str, torch.Tensor]
@@ -40,7 +40,8 @@ def np_to_tensor_dict(
         features are returned, all other ones are filtered out.
     """
     tensor_dict = {
-        k: torch.tensor(v) for k, v in np_example.items() 
+        k: torch.tensor(v)
+        for k, v in np_example.items()
         if k in features and v is not None
     }
 

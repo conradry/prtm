@@ -3,8 +3,7 @@ from typing import List
 
 import numpy as np
 import torch
-
-from proteome.models.rfdiffusion import config, potentials
+from prtm.models.rfdiffusion import config, potentials
 
 
 def make_contact_matrix(nchain, intra_all=False, inter_all=False, contact_string=None):

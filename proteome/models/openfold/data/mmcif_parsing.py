@@ -25,9 +25,8 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 import numpy as np
 from Bio import PDB
 from Bio.Data import SCOPData
-
-from proteome.constants import residue_constants
-from proteome.models.openfold.data.errors import MultipleChainsError
+from prtm.constants import residue_constants
+from prtm.models.openfold.data.errors import MultipleChainsError
 
 # Type aliases:
 ChainId = str

@@ -3,8 +3,8 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-from proteome.constants.residue_constants import proteinmppn_restypes
-from proteome.models.proteinmpnn.config import TiedFeaturizeOutput, DesignableProtein
+from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.models.proteinmpnn.config import DesignableProtein, TiedFeaturizeOutput
 
 
 def get_sequence_scores(S, log_probs, mask):

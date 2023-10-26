@@ -2,8 +2,7 @@ import random
 
 import numpy as np
 import torch
-
-from proteome import protein
+from prtm import protein
 
 try:
     import pyrosetta

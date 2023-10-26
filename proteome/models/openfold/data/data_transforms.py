@@ -19,14 +19,19 @@ from operator import add
 
 import numpy as np
 import torch
-
-from proteome.constants import residue_constants as rc
-from proteome.models.openfold.config import (NUM_EXTRA_SEQ,
-                                                     NUM_MSA_SEQ, NUM_RES,
-                                                     NUM_TEMPLATES)
-from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.openfold.utils.tensor_utils import (
-    batched_gather, tensor_tree_map, tree_map)
+from prtm.constants import residue_constants as rc
+from prtm.models.openfold.config import (
+    NUM_EXTRA_SEQ,
+    NUM_MSA_SEQ,
+    NUM_RES,
+    NUM_TEMPLATES,
+)
+from prtm.models.openfold.utils.rigid_utils import Rigid, Rotation
+from prtm.models.openfold.utils.tensor_utils import (
+    batched_gather,
+    tensor_tree_map,
+    tree_map,
+)
 
 MSA_FEATURE_NAMES = [
     "msa",

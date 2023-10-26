@@ -4,12 +4,11 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants.residue_constants import restypes
-from proteome.models.protein_generator import config
-from proteome.models.protein_generator.rosettafold_model import RoseTTAFoldModule
-from proteome.models.protein_generator.sampler import SeqDiffSampler
+from prtm import protein
+from prtm.constants.residue_constants import restypes
+from prtm.models.protein_generator import config
+from prtm.models.protein_generator.rosettafold_model import RoseTTAFoldModule
+from prtm.models.protein_generator.sampler import SeqDiffSampler
 
 __all__ = ["ProteinGeneratorForJointDesign"]
 

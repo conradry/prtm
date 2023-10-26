@@ -3,14 +3,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.models.rosettafold.config import RoseTTAFoldConfig, TRFoldConfig
-from proteome.models.rosettafold.kinematics import xyz_to_t2d
-from proteome.models.rosettafold.rosettafoldmodel import RoseTTAFold
-from proteome.models.rosettafold.trfold import TRFold
-from proteome.query.pipeline import QueryPipelines
-from proteome.utils import hub_utils
+from prtm import protein
+from prtm.models.rosettafold.config import RoseTTAFoldConfig, TRFoldConfig
+from prtm.models.rosettafold.kinematics import xyz_to_t2d
+from prtm.models.rosettafold.rosettafoldmodel import RoseTTAFold
+from prtm.models.rosettafold.trfold import TRFold
+from prtm.query.pipeline import QueryPipelines
+from prtm.utils import hub_utils
 
 __all__ = ["RoseTTAFoldForFolding"]
 

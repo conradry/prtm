@@ -8,9 +8,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
+from prtm.constants import residue_constants
 from torch import nn
-
-from proteome.constants import residue_constants
 
 
 def encode_sequence(

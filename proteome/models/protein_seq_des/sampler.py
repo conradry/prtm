@@ -2,18 +2,21 @@ import math
 from typing import List
 
 import numpy as np
-import proteome.models.protein_seq_des.data as data
-import proteome.models.protein_seq_des.pyrosetta_util as putil
-import proteome.models.protein_seq_des.resfile_util as resfile_util
-import proteome.models.protein_seq_des.sampler_util as sampler_util
+import prtm.models.protein_seq_des.data as data
+import prtm.models.protein_seq_des.pyrosetta_util as putil
+import prtm.models.protein_seq_des.resfile_util as resfile_util
+import prtm.models.protein_seq_des.sampler_util as sampler_util
 import torch
-from proteome import protein
-from proteome.models.protein_seq_des import atoms, config
+from prtm import protein
+from prtm.models.protein_seq_des import atoms, config
 from pyrosetta.rosetta.core.scoring import automorphic_rmsd
-from pyrosetta.rosetta.protocols.denovo_design.filters import \
-    ExposedHydrophobicsFilterCreator
+from pyrosetta.rosetta.protocols.denovo_design.filters import (
+    ExposedHydrophobicsFilterCreator,
+)
 from pyrosetta.rosetta.protocols.simple_filters import (
-    BuriedUnsatHbondFilterCreator, PackStatFilterCreator)
+    BuriedUnsatHbondFilterCreator,
+    PackStatFilterCreator,
+)
 from torch.distributions.categorical import Categorical
 
 

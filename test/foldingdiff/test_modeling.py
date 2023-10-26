@@ -1,11 +1,10 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.foldingdiff.modeling import (
-    FoldingDiffForStructureDesign, 
+from prtm import protein
+from prtm.models.foldingdiff.modeling import (
     FOLDINGDIFF_MODEL_URLS,
+    FoldingDiffForStructureDesign,
 )
 
 from ..test_utils import _compare_structures

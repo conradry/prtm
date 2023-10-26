@@ -1,2 +1,2 @@
-import proteome.models.rosettafold.config as rosettafold_config
-from proteome.models.rosettafold.modeling import *
+import prtm.models.rosettafold.config as rosettafold_config
+from prtm.models.rosettafold.modeling import *

@@ -5,13 +5,13 @@ from typing import Dict, Optional
 import numpy as np
 import torch
 import tree
-from proteome.constants import residue_constants
-from proteome.models.se3_diffusion import all_atom, config
-from proteome.models.se3_diffusion import data_utils as du
-from proteome.models.se3_diffusion import rigid_utils as ru
-from proteome.models.se3_diffusion.score_network import ScoreNetwork
-from proteome.models.se3_diffusion.se3_diffuser import SE3Diffuser
-from proteome.models.openfold.data import data_transforms
+from prtm.constants import residue_constants
+from prtm.models.openfold.data import data_transforms
+from prtm.models.se3_diffusion import all_atom, config
+from prtm.models.se3_diffusion import data_utils as du
+from prtm.models.se3_diffusion import rigid_utils as ru
+from prtm.models.se3_diffusion.score_network import ScoreNetwork
+from prtm.models.se3_diffusion.se3_diffuser import SE3Diffuser
 
 CA_IDX = residue_constants.atom_order["CA"]
 

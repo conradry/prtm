@@ -17,7 +17,7 @@ import unittest
 
 import numpy as np
 import torch
-from proteome.models.openfold.utils.rigid_utils import (
+from prtm.models.openfold.utils.rigid_utils import (
     Rigid,
     Rotation,
     quat_to_rot,

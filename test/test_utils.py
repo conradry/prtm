@@ -1,7 +1,6 @@
-import pytest
 import numpy as np
-
-from proteome import protein
+import pytest
+from prtm import protein
 
 
 def _compare_structures(

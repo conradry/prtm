@@ -3,13 +3,12 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.se3_diffusion import config
-from proteome.models.se3_diffusion.sampler import Sampler
-from proteome.models.se3_diffusion.score_network import ScoreNetwork
-from proteome.models.se3_diffusion.se3_diffuser import SE3Diffuser
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.se3_diffusion import config
+from prtm.models.se3_diffusion.sampler import Sampler
+from prtm.models.se3_diffusion.score_network import ScoreNetwork
+from prtm.models.se3_diffusion.se3_diffuser import SE3Diffuser
 
 __all__ = ["SE3DiffusionForStructureDesign"]
 

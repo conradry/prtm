@@ -24,9 +24,8 @@
 from abc import ABC
 
 import torch.distributed as dist
+from prtm.common_modules.se3_transformer.runtime.utils import get_local_rank
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
-
-from proteome.common_modules.se3_transformer.runtime.utils import get_local_rank
 
 
 def _get_dataloader(dataset: Dataset, shuffle: bool, **kwargs) -> DataLoader:

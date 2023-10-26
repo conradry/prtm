@@ -3,17 +3,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Tuple, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
+
 import torch
-from torch import nn
-from torch import Tensor
 import torch.nn.functional as F
-
-
-from proteome.models.esm.inverse_folding.gvp_transformer_encoder import GVPTransformerEncoder
-from proteome.models.esm.inverse_folding.transformer_decoder import TransformerDecoder
-from proteome.models.esm.inverse_folding.util import rotate, CoordBatchConverter
-from proteome.models.esm import config
+from prtm.models.esm import config
+from prtm.models.esm.inverse_folding.gvp_transformer_encoder import (
+    GVPTransformerEncoder,
+)
+from prtm.models.esm.inverse_folding.transformer_decoder import TransformerDecoder
+from prtm.models.esm.inverse_folding.util import CoordBatchConverter, rotate
+from torch import Tensor, nn
 
 
 class GVPTransformerModel(nn.Module):
@@ -49,7 +49,7 @@ class GVPTransformerModel(nn.Module):
         num_embeddings = len(cfg.alphabet)
         padding_idx = cfg.alphabet.padding_idx
         emb = nn.Embedding(num_embeddings, cfg.encoder_embed_dim, padding_idx)
-        nn.init.normal_(emb.weight, mean=0, std=(cfg.encoder_embed_dim ** -0.5))
+        nn.init.normal_(emb.weight, mean=0, std=(cfg.encoder_embed_dim**-0.5))
         nn.init.constant_(emb.weight[padding_idx], 0)
         return emb
 
@@ -62,8 +62,9 @@ class GVPTransformerModel(nn.Module):
         return_all_hiddens: bool = False,
         features_only: bool = False,
     ):
-        encoder_out = self.encoder(coords, padding_mask, confidence,
-            return_all_hiddens=return_all_hiddens)
+        encoder_out = self.encoder(
+            coords, padding_mask, confidence, return_all_hiddens=return_all_hiddens
+        )
         logits, extra = self.decoder(
             prev_output_tokens,
             encoder_out=encoder_out,
@@ -71,13 +72,13 @@ class GVPTransformerModel(nn.Module):
             return_all_hiddens=return_all_hiddens,
         )
         return logits, extra
-    
+
     def sample(
-        self, 
-        coords: torch.Tensor, 
-        temperature: float = 1.0, 
-        partial_seq: Optional[List[str]] = None, 
-        confidence: Optional[torch.Tensor] = None, 
+        self,
+        coords: torch.Tensor,
+        temperature: float = 1.0,
+        partial_seq: Optional[List[str]] = None,
+        confidence: Optional[torch.Tensor] = None,
     ):
         """
         Samples sequences based on multinomial sampling (no beam search).
@@ -94,33 +95,33 @@ class GVPTransformerModel(nn.Module):
         L = len(coords)
         # Convert to batch format
         batch_converter = CoordBatchConverter(self.decoder.alphabet)
-        batch_coords, confidence, _, _, padding_mask = (
-            batch_converter([(coords, confidence, None)], device=device)
+        batch_coords, confidence, _, _, padding_mask = batch_converter(
+            [(coords, confidence, None)], device=device
         )
-        
+
         # Start with prepend token
-        mask_idx = self.decoder.alphabet.get_idx('<mask>')
-        sampled_tokens = torch.full((1, 1+L), mask_idx, dtype=torch.int64)
-        sampled_tokens[0, 0] = self.decoder.alphabet.get_idx('<cath>')
+        mask_idx = self.decoder.alphabet.get_idx("<mask>")
+        sampled_tokens = torch.full((1, 1 + L), mask_idx, dtype=torch.int64)
+        sampled_tokens[0, 0] = self.decoder.alphabet.get_idx("<cath>")
         if partial_seq is not None:
             for i, c in enumerate(partial_seq):
-                sampled_tokens[0, i+1] = self.decoder.alphabet.get_idx(c)
-            
+                sampled_tokens[0, i + 1] = self.decoder.alphabet.get_idx(c)
+
         # Save incremental states for faster sampling
         incremental_state = dict()
-        
+
         # Run encoder only once
         encoder_out = self.encoder(batch_coords, padding_mask, confidence)
-        
+
         # Make sure all tensors are on the same device if a GPU is present
         if device:
             sampled_tokens = sampled_tokens.to(device)
-        
+
         # Decode one token at a time
         sequence_probs = []
-        for i in range(1, L+1):
+        for i in range(1, L + 1):
             logits, _ = self.decoder(
-                sampled_tokens[:, :i], 
+                sampled_tokens[:, :i],
                 encoder_out,
                 incremental_state=incremental_state,
             )
@@ -133,7 +134,10 @@ class GVPTransformerModel(nn.Module):
                 sequence_probs.append(predicted_probs[0, sampled_tokens[0, i]].item())
 
         sampled_seq = sampled_tokens[0, 1:]
-        
+
         # Convert back to string via lookup
         mean_prob = sum(sequence_probs) / len(sequence_probs)
-        return ''.join([self.decoder.alphabet.get_tok(a) for a in sampled_seq]), mean_prob
+        return (
+            "".join([self.decoder.alphabet.get_tok(a) for a in sampled_seq]),
+            mean_prob,
+        )

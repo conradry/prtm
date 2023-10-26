@@ -28,9 +28,8 @@ from typing import Optional
 
 import numpy as np
 import torch
-
-from proteome.common_modules.se3_transformer.runtime.loggers import Logger
-from proteome.common_modules.se3_transformer.runtime.metrics import MeanAbsoluteError
+from prtm.common_modules.se3_transformer.runtime.loggers import Logger
+from prtm.common_modules.se3_transformer.runtime.metrics import MeanAbsoluteError
 
 
 class BaseCallback(ABC):

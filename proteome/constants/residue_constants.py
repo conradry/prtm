@@ -23,8 +23,7 @@ import Bio.PDB
 import numpy as np
 import tree
 from Bio.Data import PDBData
-
-from proteome.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
+from prtm.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
 
 # Internal import (35fd).
 
@@ -844,27 +843,111 @@ restype_name_to_atom14_names = {
 # pylint: enable=line-too-long
 # pylint: enable=bad-whitespace
 restype_name_to_hydrogen_atom_names = {
-    "ALA": ["H","HA","1HB","2HB","3HB",  "",  "",  "",  "",  "",  "",  "",  ""],
-    "ARG": ["H","HA","1HB","2HB","1HG","2HG","1HD","2HD","HE","1HH1","2HH1","1HH2","2HH2"],
-    "ASN": ["H","HA","1HB","2HB","1HD2","2HD2",  "",  "",  "",  "",  "",  "",  ""],
-    "ASP": ["H","HA","1HB","2HB",  "",  "",  "",  "",  "",  "",  "",  "",  ""],
-    "CYS": ["H","HA","1HB","2HB","HG",  "",  "",  "",  "",  "",  "",  "",  ""],
-    "GLN": ["H","HA","1HB","2HB","1HG","2HG","1HE2","2HE2",  "",  "",  "",  "",  ""],
-    "GLU": ["H","HA","1HB","2HB","1HG","2HG",  "",  "",  "",  "",  "",  "",  ""],
-    "GLY": ["H","1HA","2HA",  "",  "",  "",  "",  "",  "",  "",  "",  "",  ""],
-    "HIS": ["H","HA","1HB","2HB","HD2","HE1","HE2",  "",  "",  "",  "",  "",  ""],
-    "ILE": ["H","HA","HB","1HG2","2HG2","3HG2","1HG1","2HG1","1HD1","2HD1","3HD1",  "",  ""],
-    "LEU": ["H","HA","1HB","2HB","HG","1HD1","2HD1","3HD1","1HD2","2HD2","3HD2",  "",  ""],
-    "LYS": ["H","HA","1HB","2HB","1HG","2HG","1HD","2HD","1HE","2HE","1HZ","2HZ","3HZ"],
-    "MET": ["H","HA","1HB","2HB","1HG","2HG","1HE","2HE","3HE",  "",  "",  "",  ""],
-    "PHE": ["H","HA","1HB","2HB","HD1","HD2","HE1","HE2","HZ",  "",  "",  "",  ""],
-    "PRO": ["HA","1HB","2HB","1HG","2HG","1HD","2HD",  "",  "",  "",  "",  "",  ""],
-    "SER": ["H","HG","HA","1HB","2HB",  "",  "",  "",  "",  "",  "",  "",  ""],
-    "THR": ["H","HG1","HA","HB","1HG2","2HG2","3HG2",  "",  "",  "",  "",  "",  ""],
-    "TRP": ["H","HA","1HB","2HB","HD1","HE1","HZ2","HH2","HZ3","HE3",  "",  "",  ""],
-    "TYR": ["H","HA","1HB","2HB","HD1","HE1","HE2","HD2","HH",  "",  "",  "",  ""],
-    "VAL": ["H","HA","HB","1HG1","2HG1","3HG1","1HG2","2HG2","3HG2",  "",  "",  "",  ""],
-    "UNK": ["H","HA","1HB","2HB","3HB",  "",  "",  "",  "",  "",  "",  "",  ""],
+    "ALA": ["H", "HA", "1HB", "2HB", "3HB", "", "", "", "", "", "", "", ""],
+    "ARG": [
+        "H",
+        "HA",
+        "1HB",
+        "2HB",
+        "1HG",
+        "2HG",
+        "1HD",
+        "2HD",
+        "HE",
+        "1HH1",
+        "2HH1",
+        "1HH2",
+        "2HH2",
+    ],
+    "ASN": ["H", "HA", "1HB", "2HB", "1HD2", "2HD2", "", "", "", "", "", "", ""],
+    "ASP": ["H", "HA", "1HB", "2HB", "", "", "", "", "", "", "", "", ""],
+    "CYS": ["H", "HA", "1HB", "2HB", "HG", "", "", "", "", "", "", "", ""],
+    "GLN": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "1HE2", "2HE2", "", "", "", "", ""],
+    "GLU": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "", "", "", "", "", "", ""],
+    "GLY": ["H", "1HA", "2HA", "", "", "", "", "", "", "", "", "", ""],
+    "HIS": ["H", "HA", "1HB", "2HB", "HD2", "HE1", "HE2", "", "", "", "", "", ""],
+    "ILE": [
+        "H",
+        "HA",
+        "HB",
+        "1HG2",
+        "2HG2",
+        "3HG2",
+        "1HG1",
+        "2HG1",
+        "1HD1",
+        "2HD1",
+        "3HD1",
+        "",
+        "",
+    ],
+    "LEU": [
+        "H",
+        "HA",
+        "1HB",
+        "2HB",
+        "HG",
+        "1HD1",
+        "2HD1",
+        "3HD1",
+        "1HD2",
+        "2HD2",
+        "3HD2",
+        "",
+        "",
+    ],
+    "LYS": [
+        "H",
+        "HA",
+        "1HB",
+        "2HB",
+        "1HG",
+        "2HG",
+        "1HD",
+        "2HD",
+        "1HE",
+        "2HE",
+        "1HZ",
+        "2HZ",
+        "3HZ",
+    ],
+    "MET": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "1HE", "2HE", "3HE", "", "", "", ""],
+    "PHE": ["H", "HA", "1HB", "2HB", "HD1", "HD2", "HE1", "HE2", "HZ", "", "", "", ""],
+    "PRO": ["HA", "1HB", "2HB", "1HG", "2HG", "1HD", "2HD", "", "", "", "", "", ""],
+    "SER": ["H", "HG", "HA", "1HB", "2HB", "", "", "", "", "", "", "", ""],
+    "THR": ["H", "HG1", "HA", "HB", "1HG2", "2HG2", "3HG2", "", "", "", "", "", ""],
+    "TRP": [
+        "H",
+        "HA",
+        "1HB",
+        "2HB",
+        "HD1",
+        "HE1",
+        "HZ2",
+        "HH2",
+        "HZ3",
+        "HE3",
+        "",
+        "",
+        "",
+    ],
+    "TYR": ["H", "HA", "1HB", "2HB", "HD1", "HE1", "HE2", "HD2", "HH", "", "", "", ""],
+    "VAL": [
+        "H",
+        "HA",
+        "HB",
+        "1HG1",
+        "2HG1",
+        "3HG1",
+        "1HG2",
+        "2HG2",
+        "3HG2",
+        "",
+        "",
+        "",
+        "",
+    ],
+    "UNK": ["H", "HA", "1HB", "2HB", "3HB", "", "", "", "", "", "", "", ""],
 }
 
 restype_name_to_atom27_names = {
@@ -902,11 +985,15 @@ restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
 proteinmppn_restypes = sorted(restypes) + ["X"]
-proteinmpnn_restype_order = {restype: i for i, restype in enumerate(proteinmppn_restypes)}
+proteinmpnn_restype_order = {
+    restype: i for i, restype in enumerate(proteinmppn_restypes)
+}
 restypes_with_x = restypes + ["X"]
-restypes_with_x_dash = restypes_with_x + ["-"] 
+restypes_with_x_dash = restypes_with_x + ["-"]
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
-restype_order_with_x_dash = {restype: i for i, restype in enumerate(restypes_with_x_dash)}
+restype_order_with_x_dash = {
+    restype: i for i, restype in enumerate(restypes_with_x_dash)
+}
 
 
 def sequence_to_onehot(
@@ -1002,8 +1089,7 @@ restype_rigidgroup_mask[:, 4:] = np.array(chi_angles_mask).astype(np.float32)
 
 # Needed for RFDiffusion
 restype1_to_atom14_names = {
-    restype: restype_name_to_atom14_names[restype_1to3[restype]]
-    for restype in restypes
+    restype: restype_name_to_atom14_names[restype_1to3[restype]] for restype in restypes
 } | {"X": restype_name_to_atom14_names["UNK"]}
 
 
@@ -1011,6 +1097,7 @@ restype1_to_atom14_names = {
 # (N, 8)
 def residx_to_3(idx):
     return restype_1to3[restypes[idx]]
+
 
 # Define a restype name for all unknown residues.
 unk_restype = "UNK"
@@ -1041,6 +1128,7 @@ def get_chi_angle_atom_indices():
     chi_atom_indices.append([[0, 0, 0, 0]] * 4)  # For UNKNOWN residue.
 
     return np.array(chi_atom_indices)
+
 
 chi_angle_atom_indices = get_chi_angle_atom_indices()
 
@@ -1338,6 +1426,7 @@ residue_atom_renaming_swaps = {
     "TYR": {"CD1": "CD2", "CE1": "CE2"},
 }
 
+
 def make_atom14_dists_bounds(overlap_tolerance=1.5, bond_length_tolerance_factor=15):
     """compute upper and lower bounds for bonds to assess violations."""
     restype_atom14_bond_lower_bound = np.zeros([21, 14, 14], np.float32)
@@ -1387,7 +1476,7 @@ restype_atom14_ambiguous_atoms = np.zeros((21, 14), dtype=np.float32)
 restype_atom14_ambiguous_atoms_swap_idx = np.tile(np.arange(14, dtype=int), (21, 1))
 
 # Create an ambiguous atoms mask.  shape: (21, 14).
-mask_ambiguous = np.zeros((21, 14), dtype='bool')
+mask_ambiguous = np.zeros((21, 14), dtype="bool")
 for resname, swap in residue_atom_renaming_swaps.items():
     for atom_name1, atom_name2 in swap.items():
         restype = restype_order[restype_3to1[resname]]
@@ -1414,7 +1503,9 @@ for resname, swap in residue_atom_renaming_swaps.items():
 
     all_matrices[resname] = renaming_matrix.astype(np.float32)
 
-renaming_matrices = np.stack(tuple(all_matrices[restype] for restype in restype_3), axis=0)
+renaming_matrices = np.stack(
+    tuple(all_matrices[restype] for restype in restype_3), axis=0
+)
 
 
 def _make_atom14_ambiguity_feats():
@@ -1435,6 +1526,7 @@ _make_atom14_ambiguity_feats()
 def aatype_to_str_sequence(aatype):
     return "".join([restypes_with_x[aatype[i]] for i in range(len(aatype))])
 
+
 def substitute(res: str):
     if Bio.PDB.is_aa(res):
         if res in resnames:
@@ -1449,6 +1541,35 @@ def substitute(res: str):
                 # did not get anything that works
                 return None
 
+
 esm_proteinseq_toks = {
-    'toks': ['L', 'A', 'G', 'V', 'S', 'E', 'R', 'T', 'I', 'D', 'P', 'K', 'Q', 'N', 'F', 'Y', 'M', 'H', 'W', 'C', 'X', 'B', 'U', 'Z', 'O', '.', '-']
+    "toks": [
+        "L",
+        "A",
+        "G",
+        "V",
+        "S",
+        "E",
+        "R",
+        "T",
+        "I",
+        "D",
+        "P",
+        "K",
+        "Q",
+        "N",
+        "F",
+        "Y",
+        "M",
+        "H",
+        "W",
+        "C",
+        "X",
+        "B",
+        "U",
+        "Z",
+        "O",
+        ".",
+        "-",
+    ]
 }

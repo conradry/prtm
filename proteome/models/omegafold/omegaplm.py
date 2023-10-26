@@ -21,9 +21,8 @@ import math
 import typing
 
 import torch
+from prtm.models.omegafold import config, embedders, modules, utils
 from torch import nn
-
-from proteome.models.omegafold import config, embedders, modules, utils
 
 
 def _get_qk_scaling(num_res: torch.Tensor, attn_dim: int) -> torch.Tensor:

@@ -5,10 +5,10 @@ import re
 import Bio.PDB
 import Bio.PDB.vectors
 import numpy as np
-import proteome.models.protein_seq_des.canonicalize as canonicalize
-import proteome.models.protein_seq_des.voxelize as voxelize
+import prtm.models.protein_seq_des.canonicalize as canonicalize
+import prtm.models.protein_seq_des.voxelize as voxelize
 import torch
-from proteome.models.protein_seq_des import atoms
+from prtm.models.protein_seq_des import atoms
 from torch.utils import data
 
 CHI_BINS = np.linspace(-np.pi, np.pi, num=25)

@@ -2,9 +2,8 @@ import random
 
 import numpy as np
 import torch
-
-from proteome.common_modules.rosetta.kinematics import get_init_xyz
-from proteome.models.protein_generator.calc_dssp import annotate_sse
+from prtm.common_modules.rosetta.kinematics import get_init_xyz
+from prtm.models.protein_generator.calc_dssp import annotate_sse
 
 
 def mask_inputs(

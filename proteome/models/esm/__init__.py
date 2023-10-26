@@ -1,2 +1,2 @@
-import proteome.models.esm.config as esm_config
-from proteome.models.esm.modeling import *
+import prtm.models.esm.config as esm_config
+from prtm.models.esm.modeling import *

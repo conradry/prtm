@@ -1,6 +1,6 @@
 import torch.nn as nn
-from proteome.models.rosettafold.attention_module import LayerNorm
-from proteome.models.rosettafold.resnet import ResidualNetwork
+from prtm.models.rosettafold.attention_module import LayerNorm
+from prtm.models.rosettafold.resnet import ResidualNetwork
 
 # predict distance map from pair features
 # based on simple 2D ResNet

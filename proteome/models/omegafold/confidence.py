@@ -18,7 +18,7 @@
 """
 
 import torch
-from proteome.models.omegafold import config, modules, utils
+from prtm.models.omegafold import config, modules, utils
 from torch import nn
 
 

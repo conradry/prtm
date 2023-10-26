@@ -17,8 +17,8 @@ from functools import partial
 from typing import Dict
 
 import torch
-from proteome.models.openfold.config import SHAPE_SCHEMA, CommonData, PredictData
-from proteome.models.openfold.data import data_transforms
+from prtm.models.openfold.config import SHAPE_SCHEMA, CommonData, PredictData
+from prtm.models.openfold.data import data_transforms
 
 
 def nonensembled_transform_fns(common_cfg: CommonData):
@@ -57,8 +57,8 @@ def nonensembled_transform_fns(common_cfg: CommonData):
 
 
 def ensembled_transform_fns(
-    common_cfg: CommonData, 
-    mode_cfg: PredictData, 
+    common_cfg: CommonData,
+    mode_cfg: PredictData,
     ensemble_seed: int,
 ):
     """Input pipeline data transformers that can be ensembled and averaged."""
@@ -127,8 +127,8 @@ def ensembled_transform_fns(
 
 
 def process_tensors_from_config(
-    tensors: Dict[str, torch.Tensor], 
-    common_cfg: CommonData, 
+    tensors: Dict[str, torch.Tensor],
+    common_cfg: CommonData,
     mode_cfg: PredictData,
 ):
     """Based on the config, apply filters and transformations to the data."""

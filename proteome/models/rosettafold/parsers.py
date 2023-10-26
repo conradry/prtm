@@ -2,10 +2,9 @@ import re
 import string
 
 import numpy as np
+import prtm.models.rosettafold.util as util
 import torch
-
-import proteome.models.rosettafold.util as util
-from proteome.models.rosettafold.ffindex import *
+from prtm.models.rosettafold.ffindex import *
 
 to1letter = {
     "ALA": "A",

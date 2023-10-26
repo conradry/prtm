@@ -4,18 +4,17 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.models.openfold.np.relax import cleanup
-from proteome.models.proteinsolver import config, protein_design
-from proteome.models.proteinsolver.parser import Parser
-from proteome.models.proteinsolver.protein_structure import (
+from prtm import protein
+from prtm.models.openfold.np.relax import cleanup
+from prtm.models.proteinsolver import config, protein_design
+from prtm.models.proteinsolver.parser import Parser
+from prtm.models.proteinsolver.protein_structure import (
     AMINO_ACIDS,
     extract_seq_and_adj,
     row_to_data,
     transform_edge_attr,
 )
-from proteome.models.proteinsolver.proteinnet import ProteinNet
+from prtm.models.proteinsolver.proteinnet import ProteinNet
 
 __all__ = ["ProteinSolverForInverseFolding"]
 

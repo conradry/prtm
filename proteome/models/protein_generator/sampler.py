@@ -1,19 +1,18 @@
 from dataclasses import asdict
 
 import numpy as np
+import prtm.models.protein_generator.diff_utils as diff_utils
 import torch
+from prtm import protein
+from prtm.common_modules.rosetta.contigs import *
+from prtm.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
+from prtm.common_modules.rosetta.util import *
+from prtm.constants.residue_constants import restypes_with_x_dash
+from prtm.models.protein_generator import config
+from prtm.models.protein_generator.calc_dssp import annotate_sse
+from prtm.models.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
+from prtm.models.protein_generator.potentials import POTENTIALS
 from tqdm import tqdm
-
-import proteome.models.protein_generator.diff_utils as diff_utils
-from proteome import protein
-from proteome.common_modules.rosetta.contigs import *
-from proteome.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
-from proteome.common_modules.rosetta.util import *
-from proteome.constants.residue_constants import restypes_with_x_dash
-from proteome.models.protein_generator import config
-from proteome.models.protein_generator.calc_dssp import annotate_sse
-from proteome.models.protein_generator.diffusion import GaussianDiffusion_SEQDIFF
-from proteome.models.protein_generator.potentials import POTENTIALS
 
 
 class SeqDiffSampler:

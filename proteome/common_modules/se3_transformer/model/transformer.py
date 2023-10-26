@@ -26,23 +26,20 @@ from typing import Dict, Literal, Optional
 import torch
 import torch.nn as nn
 from dgl import DGLGraph
-from torch import Tensor
-
-from proteome.common_modules.se3_transformer.model.basis import (
+from prtm.common_modules.se3_transformer.model.basis import (
     get_basis,
     update_basis_with_fused,
 )
-from proteome.common_modules.se3_transformer.model.fiber import Fiber
-from proteome.common_modules.se3_transformer.model.layers.attention import (
-    AttentionBlockSE3,
-)
-from proteome.common_modules.se3_transformer.model.layers.convolution import (
+from prtm.common_modules.se3_transformer.model.fiber import Fiber
+from prtm.common_modules.se3_transformer.model.layers.attention import AttentionBlockSE3
+from prtm.common_modules.se3_transformer.model.layers.convolution import (
     ConvSE3,
     ConvSE3FuseLevel,
 )
-from proteome.common_modules.se3_transformer.model.layers.norm import NormSE3
-from proteome.common_modules.se3_transformer.model.layers.pooling import GPooling
-from proteome.common_modules.se3_transformer.runtime.utils import str2bool
+from prtm.common_modules.se3_transformer.model.layers.norm import NormSE3
+from prtm.common_modules.se3_transformer.model.layers.pooling import GPooling
+from prtm.common_modules.se3_transformer.runtime.utils import str2bool
+from torch import Tensor
 
 
 class Sequential(nn.Sequential):

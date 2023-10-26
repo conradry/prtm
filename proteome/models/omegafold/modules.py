@@ -22,9 +22,8 @@ import typing
 from dataclasses import dataclass
 
 import torch
+from prtm.models.omegafold import config, utils
 from torch import nn
-
-from proteome.models.omegafold import config, utils
 
 
 def softmax(

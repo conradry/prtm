@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-
-from proteome.common_modules.rosetta.util import init_lecun_normal_param
-from proteome.common_modules.se3_transformer.model import SE3Transformer
-from proteome.common_modules.se3_transformer.model.fiber import Fiber
+from prtm.common_modules.rosetta.util import init_lecun_normal_param
+from prtm.common_modules.se3_transformer.model import SE3Transformer
+from prtm.common_modules.se3_transformer.model.fiber import Fiber
 
 
 class SE3TransformerWrapper(nn.Module):

@@ -19,40 +19,30 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
-from proteome.models.openfold.model.dropout import (
-    DropoutColumnwise,
-    DropoutRowwise,
-)
-from proteome.models.openfold.model.msa import (
+from prtm.models.openfold.model.dropout import DropoutColumnwise, DropoutRowwise
+from prtm.models.openfold.model.msa import (
     MSAColumnAttention,
     MSAColumnGlobalAttention,
     MSARowAttentionWithPairBias,
 )
-from proteome.models.openfold.model.outer_product_mean import (
-    OuterProductMean,
-)
-from proteome.models.openfold.model.pair_transition import (
-    PairTransition,
-)
-from proteome.models.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.openfold.model.triangular_attention import (
+from prtm.models.openfold.model.outer_product_mean import OuterProductMean
+from prtm.models.openfold.model.pair_transition import PairTransition
+from prtm.models.openfold.model.primitives import LayerNorm, Linear
+from prtm.models.openfold.model.triangular_attention import (
     TriangleAttention,
     TriangleAttentionEndingNode,
     TriangleAttentionStartingNode,
 )
-from proteome.models.openfold.model.triangular_multiplicative_update import (
+from prtm.models.openfold.model.triangular_multiplicative_update import (
     TriangleMultiplicationIncoming,
     TriangleMultiplicationOutgoing,
 )
-from proteome.models.openfold.utils.checkpointing import (
+from prtm.models.openfold.utils.checkpointing import (
     checkpoint_blocks,
     get_checkpoint_fn,
 )
-from proteome.models.openfold.utils.chunk_utils import (
-    ChunkSizeTuner,
-    chunk_layer,
-)
-from proteome.models.openfold.utils.tensor_utils import add
+from prtm.models.openfold.utils.chunk_utils import ChunkSizeTuner, chunk_layer
+from prtm.models.openfold.utils.tensor_utils import add
 
 
 class MSATransition(nn.Module):

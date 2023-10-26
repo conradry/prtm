@@ -6,8 +6,7 @@ import nglview as nv
 import numpy as np
 import py3Dmol
 from matplotlib import colormaps, colors
-
-from proteome.pdb_utils import overwrite_b_factors
+from prtm.pdb_utils import overwrite_b_factors
 
 
 def make_visualization_pdb(

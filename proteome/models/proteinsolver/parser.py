@@ -11,7 +11,7 @@ from typing import Dict, NamedTuple, Tuple, Union
 import numpy as np
 from Bio import File
 from Bio.File import as_handle
-from proteome.models.proteinsolver.type_definitions import StructureBuilder
+from prtm.models.proteinsolver.type_definitions import StructureBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class Parser:
          - id - string, the id that will be used for the structure
          - file - name of the PDB file OR an open filehandle
         """
-        #with as_handle(filename, mode="r") as handle:
+        # with as_handle(filename, mode="r") as handle:
         #    data = handle.readlines()
 
         self.header, coords_trailer = self._get_header(data)

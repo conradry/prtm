@@ -17,10 +17,9 @@
 from typing import Any, Dict, Sequence, Tuple
 
 import numpy as np
-
-from proteome import protein
-from proteome.models.openfold.np.relax import amber_minimize, utils
-from proteome.pdb_utils import overwrite_b_factors, overwrite_pdb_coordinates
+from prtm import protein
+from prtm.models.openfold.np.relax import amber_minimize, utils
+from prtm.pdb_utils import overwrite_b_factors, overwrite_pdb_coordinates
 
 
 class AmberRelaxation(object):

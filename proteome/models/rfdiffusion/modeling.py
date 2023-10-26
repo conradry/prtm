@@ -4,16 +4,15 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-from tqdm import tqdm
-
-from proteome import protein
-from proteome.models.rfdiffusion import config
-from proteome.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
-from proteome.models.rfdiffusion.samplers import (
+from prtm import protein
+from prtm.models.rfdiffusion import config
+from prtm.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
+from prtm.models.rfdiffusion.samplers import (
     ScaffoldedSampler,
     SelfConditioningSampler,
     UnconditionalSampler,
 )
+from tqdm import tqdm
 
 __all__ = ["RFDiffusionForStructureDesign"]
 

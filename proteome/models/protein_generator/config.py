@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import torch
-
-from proteome import protein
+from prtm import protein
 
 
 @dataclass

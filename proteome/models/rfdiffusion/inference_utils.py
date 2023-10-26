@@ -5,16 +5,12 @@ from typing import List, Optional
 
 import numpy as np
 import torch
+from prtm import protein
+from prtm.common_modules.rosetta.util import ComputeAllAtomCoords, rigid_from_3_points
+from prtm.models.rfdiffusion import config
+from prtm.models.rfdiffusion.diffusion import get_beta_schedule
+from prtm.models.rfdiffusion.secstruct_adj import make_ss_block_adj_from_structure
 from scipy.spatial.transform import Rotation as scipy_R
-
-from proteome import protein
-from proteome.common_modules.rosetta.util import (
-    ComputeAllAtomCoords,
-    rigid_from_3_points,
-)
-from proteome.models.rfdiffusion import config
-from proteome.models.rfdiffusion.diffusion import get_beta_schedule
-from proteome.models.rfdiffusion.secstruct_adj import make_ss_block_adj_from_structure
 
 ###########################################################
 #### Functions which can be called outside of Denoiser ####
@@ -521,7 +517,7 @@ def process_target(target_struct: protein.Protein14, center=True):
     protein_27 = target_struct.to_protein27()
     protein_27.atom_positions -= ca_center
 
-    #return protein_27.to_torch().to_dict()
+    # return protein_27.to_torch().to_dict()
     return protein_27.to_torch()
 
 

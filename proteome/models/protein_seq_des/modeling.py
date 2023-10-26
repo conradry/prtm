@@ -3,12 +3,11 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+from prtm import protein
+from prtm.models.protein_seq_des import config, sampler
+from prtm.models.protein_seq_des.models import SeqPred
+from prtm.utils.hub_utils import load_state_dict_from_gdrive_zip
 from tqdm import tqdm
-
-from proteome import protein
-from proteome.models.protein_seq_des import config, sampler
-from proteome.models.protein_seq_des.models import SeqPred
-from proteome.utils.hub_utils import load_state_dict_from_gdrive_zip
 
 __all__ = ["ProteinSeqDesForInverseFolding"]
 

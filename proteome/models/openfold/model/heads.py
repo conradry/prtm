@@ -16,16 +16,14 @@ from dataclasses import asdict
 
 import torch
 import torch.nn as nn
-from proteome.models.openfold.config import HeadsConfig
-from proteome.models.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.openfold.utils.loss import (
+from prtm.models.openfold.config import HeadsConfig
+from prtm.models.openfold.model.primitives import LayerNorm, Linear
+from prtm.models.openfold.utils.loss import (
     compute_plddt,
     compute_predicted_aligned_error,
     compute_tm,
 )
-from proteome.models.openfold.utils.precision_utils import (
-    is_fp16_enabled,
-)
+from prtm.models.openfold.utils.precision_utils import is_fp16_enabled
 
 
 class AuxiliaryHeads(nn.Module):
@@ -75,7 +73,9 @@ class AuxiliaryHeads(nn.Module):
         if self.config.tm.enabled:
             tm_logits = self.tm(outputs["pair"])
             aux_out["tm_logits"] = tm_logits
-            aux_out["predicted_tm_score"] = compute_tm(tm_logits, **asdict(self.config.tm))
+            aux_out["predicted_tm_score"] = compute_tm(
+                tm_logits, **asdict(self.config.tm)
+            )
             aux_out.update(
                 compute_predicted_aligned_error(
                     tm_logits,

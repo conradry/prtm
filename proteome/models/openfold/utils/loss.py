@@ -20,14 +20,18 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+from prtm.constants import residue_constants
+from prtm.models.openfold.config import FAPELoss
+from prtm.models.openfold.utils import feats
+from prtm.models.openfold.utils.rigid_utils import Rigid, Rotation
+from prtm.models.openfold.utils.tensor_utils import (
+    batched_gather,
+    masked_mean,
+    permute_final_dims,
+    tensor_tree_map,
+    tree_map,
+)
 from torch.distributions.bernoulli import Bernoulli
-
-from proteome.constants import residue_constants
-from proteome.models.openfold.config import FAPELoss
-from proteome.models.openfold.utils import feats
-from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.openfold.utils.tensor_utils import (
-    batched_gather, masked_mean, permute_final_dims, tensor_tree_map, tree_map)
 
 
 def softmax_cross_entropy(logits, labels):

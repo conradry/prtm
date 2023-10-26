@@ -2,8 +2,7 @@ import io
 
 import numpy as np
 from Bio import PDB
-
-from proteome.constants import residue_constants
+from prtm.constants import residue_constants
 
 try:
     # openmm >= 7.6

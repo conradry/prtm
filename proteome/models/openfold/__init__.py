@@ -1,2 +1,2 @@
-import proteome.models.openfold.config as openfold_config
-from proteome.models.openfold.modeling import *
+import prtm.models.openfold.config as openfold_config
+from prtm.models.openfold.modeling import *

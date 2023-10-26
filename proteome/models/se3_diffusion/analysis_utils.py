@@ -2,9 +2,9 @@ import os
 import re
 
 import numpy as np
-from proteome.constants import residue_constants
-from proteome.models.se3_diffusion import protein
-from proteome.models.openfold.utils import rigid_utils
+from prtm.constants import residue_constants
+from prtm.models.openfold.utils import rigid_utils
+from prtm.models.se3_diffusion import protein
 from scipy.spatial.transform import Rotation
 
 CA_IDX = residue_constants.atom_order["CA"]

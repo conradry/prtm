@@ -4,12 +4,11 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.models.esm import config
-from proteome.models.esm.esmfold import ESMFold
-from proteome.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
-from proteome.models.openfold.utils.feats import atom14_to_atom37
+from prtm import protein
+from prtm.models.esm import config
+from prtm.models.esm.esmfold import ESMFold
+from prtm.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
+from prtm.models.openfold.utils.feats import atom14_to_atom37
 
 __all__ = ["ESMForFolding", "ESMForInverseFolding"]
 

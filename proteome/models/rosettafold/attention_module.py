@@ -1,14 +1,21 @@
 import dgl
 import torch
 import torch.nn as nn
-from proteome.models.rosettafold.init_str_generator import \
-    InitStr_Network
-from proteome.models.rosettafold.resnet import ResidualNetwork
-from proteome.models.rosettafold.rosetta_transformer import (
-    AxialEncoderLayer, CrossEncoder, DirectEncoderLayer, Encoder, EncoderLayer,
-    FeedForwardLayer, LayerNorm, MaskedDirectMultiheadAttention,
-    SequenceWeight, _get_clones)
-from proteome.models.rosettafold.se3_network import SE3Transformer
+from prtm.models.rosettafold.init_str_generator import InitStr_Network
+from prtm.models.rosettafold.resnet import ResidualNetwork
+from prtm.models.rosettafold.rosetta_transformer import (
+    AxialEncoderLayer,
+    CrossEncoder,
+    DirectEncoderLayer,
+    Encoder,
+    EncoderLayer,
+    FeedForwardLayer,
+    LayerNorm,
+    MaskedDirectMultiheadAttention,
+    SequenceWeight,
+    _get_clones,
+)
+from prtm.models.rosettafold.se3_network import SE3Transformer
 
 
 def make_graph(xyz, pair, idx, top_k=64, kmin=9):

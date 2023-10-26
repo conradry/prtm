@@ -15,8 +15,8 @@
 # limitations under the License.
 
 import torch
-from proteome.models.genie.modules.primitives import Linear
-from proteome.models.genie.utils.affine_utils import T, quat_to_rot
+from prtm.models.genie.modules.primitives import Linear
+from prtm.models.genie.utils.affine_utils import T, quat_to_rot
 from torch import nn
 
 

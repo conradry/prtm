@@ -1,10 +1,8 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.proteinmpnn import modeling
-
+from prtm import protein
+from prtm.models.proteinmpnn import modeling
 
 EXPECTED_SEQUENCES = {
     "vanilla_model-2": "KINKNEKKALEFIKSLENGNPEEMAKVISPNTKLNINGKKYKGKGIIDFIKKIKEKKVKFKLLEYKKEGNKYVFNVEVEYNNKKYLAKVYIKVKNKKIEYVNIEIK",
@@ -22,7 +20,6 @@ def test_protein_seq_des_models(model_name: str):
     target_pdb_file = Path(__file__).parents[0] / "5L33.pdb"
     with open(target_pdb_file, "r") as f:
         target_pdb_str = f.read()
-
 
     exp_sequence = EXPECTED_SEQUENCES[model_name]
     inverse_folder = modeling.ProteinMPNNForInverseFolding(

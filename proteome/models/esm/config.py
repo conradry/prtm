@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import numpy as np
-
-from proteome.models.esm.data import Alphabet
+from prtm.models.esm.data import Alphabet
 
 
 @dataclass
@@ -77,7 +76,7 @@ class ESMFoldV0(ESMFoldConfig):
 @dataclass
 class ESMFoldV1(ESMFoldConfig):
     name: str = "esm_fold_v1"
-    
+
 
 @dataclass
 class GVPConfig:
@@ -113,7 +112,7 @@ class ESMIFConfig:
 @dataclass(frozen=True, kw_only=True)
 class DesignParams:
     """Design parameters for ESM-IF."""
-    
+
     # Binary float mask to indicate designable positions. 1.0 if a position is
     # designable and 0.0 if not.
     confidence: Optional[np.ndarray] = None  # [num_res]

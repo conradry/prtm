@@ -1,12 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from prtm.models.proteinsolver import config
+from prtm.models.proteinsolver.edge_conv_mod import EdgeConvBatch, EdgeConvMod
 from torch_geometric.utils import remove_self_loops
-
-from proteome.models.proteinsolver.edge_conv_mod import (
-    EdgeConvBatch,
-    EdgeConvMod,
-)
-from proteome.models.proteinsolver import config 
 
 
 def get_graph_conv_layer(input_size, hidden_size, output_size):
@@ -43,7 +39,9 @@ class ProteinNet(nn.Module):
             self.embed_adj = None
 
         self.graph_conv_1 = get_graph_conv_layer(
-            (2 + bool(cfg.adj_input_size)) * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size
+            (2 + bool(cfg.adj_input_size)) * cfg.hidden_size,
+            2 * cfg.hidden_size,
+            cfg.hidden_size,
         )
         self.graph_conv_2 = get_graph_conv_layer(
             3 * cfg.hidden_size, 2 * cfg.hidden_size, cfg.hidden_size

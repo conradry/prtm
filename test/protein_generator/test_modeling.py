@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from proteome import protein
-from proteome.models.protein_generator import config
-from proteome.models.protein_generator.modeling import ProteinGeneratorForJointDesign
+from prtm import protein
+from prtm.models.protein_generator import config
+from prtm.models.protein_generator.modeling import ProteinGeneratorForJointDesign
 
 from ..test_utils import _compare_structures
 

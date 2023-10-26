@@ -1,5 +1,5 @@
 import torch
-from proteome.models.genie.utils.encoding import sinusoidal_encoding
+from prtm.models.genie.utils.encoding import sinusoidal_encoding
 from torch import nn
 
 

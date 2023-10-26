@@ -19,9 +19,8 @@ import subprocess
 from typing import Optional, Sequence
 
 from absl import logging
-
-from proteome.query import utils
-from proteome.query.caching import cache_query
+from prtm.query import utils
+from prtm.query.caching import cache_query
 
 try:
     KALIGN_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "kalign")
@@ -57,9 +56,7 @@ class Kalign:
         ), "kalign binary not found in conda env, please specify path"
         self.binary_path = binary_path
 
-    @cache_query(
-        hash_func_kwargs=["sequences"], hash_class_attrs=["binary_path"]
-    )
+    @cache_query(hash_func_kwargs=["sequences"], hash_class_attrs=["binary_path"])
     def align(self, sequences: Sequence[str]) -> str:
         """Aligns the sequences and returns the alignment in A3M string.
 

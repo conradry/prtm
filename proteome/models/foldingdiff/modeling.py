@@ -4,13 +4,12 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
-
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.foldingdiff import config, sampling
-from proteome.models.foldingdiff.angles_and_coords import create_new_chain_nerf
-from proteome.models.foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
-from proteome.models.foldingdiff.model import BertForDiffusionBase
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.foldingdiff import config, sampling
+from prtm.models.foldingdiff.angles_and_coords import create_new_chain_nerf
+from prtm.models.foldingdiff.datasets import AnglesEmptyDataset, NoisedAnglesDataset
+from prtm.models.foldingdiff.model import BertForDiffusionBase
 
 __all__ = ["FoldingDiffForStructureDesign"]
 

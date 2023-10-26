@@ -8,13 +8,14 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from proteome.models.esm.modules import (ContactPredictionHead,
-                                                 ESM1bLayerNorm,
-                                                 LearnedPositionalEmbedding,
-                                                 RobertaLMHead,
-                                                 SinusoidalPositionalEmbedding,
-                                                 TransformerLayer)
+from prtm.models.esm.modules import (
+    ContactPredictionHead,
+    ESM1bLayerNorm,
+    LearnedPositionalEmbedding,
+    RobertaLMHead,
+    SinusoidalPositionalEmbedding,
+    TransformerLayer,
+)
 
 
 class ProteinBertModel(nn.Module):

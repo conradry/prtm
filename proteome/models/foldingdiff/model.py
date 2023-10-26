@@ -16,16 +16,14 @@ from typing import *
 
 import pytorch_lightning as pl
 import torch
-from proteome.models.foldingdiff import config, nerf, utils
-from proteome.models.foldingdiff.datasets import \
-    FEATURE_SET_NAMES_TO_ANGULARITY
+from prtm.models.foldingdiff import config, nerf, utils
+from prtm.models.foldingdiff.datasets import FEATURE_SET_NAMES_TO_ANGULARITY
 from torch import nn
 from torch.nn import functional as F
 from tqdm.auto import tqdm
 from transformers import BertConfig
 from transformers.activations import get_activation
-from transformers.models.bert.modeling_bert import (BertEncoder,
-                                                    BertPreTrainedModel)
+from transformers.models.bert.modeling_bert import BertEncoder, BertPreTrainedModel
 from transformers.optimization import get_linear_schedule_with_warmup
 
 LR_SCHEDULE = Optional[Literal["OneCycleLR", "LinearWarmup"]]

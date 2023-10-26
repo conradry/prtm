@@ -20,8 +20,8 @@ import os
 import subprocess
 from typing import Optional, Sequence
 
-from proteome.query import utils
-from proteome.query.caching import cache_query
+from prtm.query import utils
+from prtm.query.caching import cache_query
 
 try:
     HHSEARCH_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "hhsearch")
@@ -69,8 +69,8 @@ class HHSearch:
                 raise ValueError(f"Could not find HHsearch database {database_path}")
 
     @cache_query(
-        hash_func_kwargs=["input_fasta_path"], 
-        hash_class_attrs=["binary_path", "databases", "maxseq"]
+        hash_func_kwargs=["input_fasta_path"],
+        hash_class_attrs=["binary_path", "databases", "maxseq"],
     )
     def query(self, a3m: str) -> str:
         """Queries the database using HHsearch using a given a3m."""

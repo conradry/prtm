@@ -4,16 +4,15 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants.residue_constants import proteinmppn_restypes
-from proteome.models.proteinmpnn import config
-from proteome.models.proteinmpnn.featurizer import (
+from prtm import protein
+from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.models.proteinmpnn import config
+from prtm.models.proteinmpnn.featurizer import (
     decode_sequence,
     get_sequence_scores,
     tied_featurize,
 )
-from proteome.models.proteinmpnn.model import ProteinMPNN
+from prtm.models.proteinmpnn.model import ProteinMPNN
 
 __all__ = ["ProteinMPNNForInverseFolding"]
 

@@ -9,11 +9,11 @@ from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
-from torch.nn import LayerNorm
 import torch.nn.functional as F
-from proteome.models.esm.multihead_attention import MultiheadAttention
+from prtm.models.esm import config
+from prtm.models.esm.multihead_attention import MultiheadAttention
 from torch import Tensor
-from proteome.models.esm import config
+from torch.nn import LayerNorm
 
 
 class TransformerEncoderLayer(nn.Module):
@@ -124,10 +124,10 @@ class TransformerDecoderLayer(nn.Module):
     """
 
     def __init__(
-        self, 
-        cfg: config.ESMIFConfig, 
-        no_encoder_attn: bool = False, 
-        add_bias_kv: bool = False, 
+        self,
+        cfg: config.ESMIFConfig,
+        no_encoder_attn: bool = False,
+        add_bias_kv: bool = False,
         add_zero_attn: bool = False,
     ):
         super().__init__()
@@ -135,7 +135,9 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout_module = nn.Dropout(cfg.dropout)
 
         self.self_attn = self.build_self_attention(
-            cfg, add_bias_kv=add_bias_kv, add_zero_attn=add_zero_attn,
+            cfg,
+            add_bias_kv=add_bias_kv,
+            add_zero_attn=add_zero_attn,
         )
         self.nh = self.self_attn.num_heads
         self.head_dim = self.self_attn.head_dim
@@ -152,8 +154,7 @@ class TransformerDecoderLayer(nn.Module):
             self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
 
         self.ffn_layernorm = (
-            LayerNorm(cfg.decoder_ffn_embed_dim)
-            if cfg.scale_fc else None
+            LayerNorm(cfg.decoder_ffn_embed_dim) if cfg.scale_fc else None
         )
         self.w_resid = (
             nn.Parameter(
@@ -162,7 +163,8 @@ class TransformerDecoderLayer(nn.Module):
                 ),
                 requires_grad=True,
             )
-            if cfg.scale_resids else None
+            if cfg.scale_resids
+            else None
         )
 
         self.fc1 = self.build_fc1(

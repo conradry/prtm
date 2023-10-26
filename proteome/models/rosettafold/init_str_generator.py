@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.rosettafold.rosetta_transformer import (
-    Encoder, EncoderLayer, LayerNorm, SequenceWeight)
+from prtm.models.rosettafold.rosetta_transformer import (
+    Encoder,
+    EncoderLayer,
+    LayerNorm,
+    SequenceWeight,
+)
 from torch_geometric.data import Data
 from torch_geometric.nn import TransformerConv
 

@@ -5,9 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from proteome.models.proteinmpnn import config
-from proteome.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.models.proteinmpnn import config
 
 # A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design
 
@@ -476,12 +475,18 @@ class ProteinMPNN(nn.Module):
         # Featurization layers
         if cfg.ca_only:
             self.features = CA_ProteinFeatures(
-                cfg.node_features, cfg.edge_features, top_k=cfg.k_neighbors, augment_eps=cfg.augment_eps
+                cfg.node_features,
+                cfg.edge_features,
+                top_k=cfg.k_neighbors,
+                augment_eps=cfg.augment_eps,
             )
             self.W_v = nn.Linear(cfg.node_features, cfg.hidden_dim, bias=True)
         else:
             self.features = ProteinFeatures(
-                cfg.node_features, cfg.edge_features, top_k=cfg.k_neighbors, augment_eps=cfg.augment_eps
+                cfg.node_features,
+                cfg.edge_features,
+                top_k=cfg.k_neighbors,
+                augment_eps=cfg.augment_eps,
             )
 
         self.W_e = nn.Linear(cfg.edge_features, cfg.hidden_dim, bias=True)

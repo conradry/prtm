@@ -12,9 +12,9 @@ import torch
 from Bio import PDB
 from Bio.PDB.Chain import Chain
 from omegaconf import OmegaConf
-from proteome.constants import chemical, residue_constants
-from proteome.models.se3_diffusion import protein, so3_utils
-from proteome.models.openfold.utils import rigid_utils
+from prtm.constants import chemical, residue_constants
+from prtm.models.openfold.utils import rigid_utils
+from prtm.models.se3_diffusion import protein, so3_utils
 from scipy.spatial.transform import Rotation
 from torch.utils import data
 

@@ -3,10 +3,9 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.omegafold import config, model, utils
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.omegafold import config, model, utils
 
 __all__ = ["OmegaFoldForFolding"]
 

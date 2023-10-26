@@ -5,13 +5,9 @@ import time
 
 import numpy as np
 import torch
+from prtm.common_modules.rosetta.util import ComputeAllAtomCoords, rigid_from_3_points
+from prtm.models.rfdiffusion import igso3
 from scipy.spatial.transform import Rotation as scipy_R
-
-from proteome.common_modules.rosetta.util import (
-    ComputeAllAtomCoords,
-    rigid_from_3_points,
-)
-from proteome.models.rfdiffusion import igso3
 
 torch.set_printoptions(sci_mode=False)
 

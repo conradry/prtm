@@ -20,8 +20,7 @@ from typing import Callable, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from proteome.models.genie.utils.tensor_utils import (
-    flatten_final_dims, permute_final_dims)
+from prtm.models.genie.utils.tensor_utils import flatten_final_dims, permute_final_dims
 from scipy.stats import truncnorm
 
 

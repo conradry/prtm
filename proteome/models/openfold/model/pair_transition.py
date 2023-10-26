@@ -16,8 +16,8 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from proteome.models.openfold.model.primitives import LayerNorm, Linear
-from proteome.models.openfold.utils.chunk_utils import chunk_layer
+from prtm.models.openfold.model.primitives import LayerNorm, Linear
+from prtm.models.openfold.utils.chunk_utils import chunk_layer
 
 
 class PairTransition(nn.Module):

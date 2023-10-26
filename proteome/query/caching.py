@@ -1,9 +1,8 @@
+import hashlib
 import os
 import sqlite3
-import hashlib
 
-
-DB_NAME = "proteome_queries.db"
+DB_NAME = "prtm_queries.db"
 TABLE_NAME = "queries"
 _DB_PATH = None
 
@@ -24,9 +23,9 @@ def _get_db_path():
     if _DB_PATH is not None:
         return _DB_PATH
 
-    db_dir = os.path.join(os.path.expanduser("~"), ".proteome")
+    db_dir = os.path.join(os.path.expanduser("~"), ".prtm")
     os.makedirs(db_dir, exist_ok=True)
-    
+
     db_path = os.path.join(db_dir, DB_NAME)
     return db_path
 
@@ -41,8 +40,9 @@ def _make_table():
     if res.fetchone() is None:
         cur.execute(f"CREATE TABLE {TABLE_NAME}(query_hash, result)")
 
+
 def hash_args(*args):
-    """Hashes a list of arguments, the arguments must be string 
+    """Hashes a list of arguments, the arguments must be string
     type or convertable to strings.
     """
     hash = hashlib.sha512()
@@ -54,7 +54,7 @@ def hash_args(*args):
 
 def get_cached_query_result(hash):
     _make_table()
-    
+
     # Check if hash is in the table
     cur = _get_query_db_connect().cursor()
     cached_result = cur.execute(
@@ -76,6 +76,7 @@ def insert_result_in_cache(hash, result):
 
 def cache_query(hash_func_kwargs, hash_class_attrs):
     """Class method decorator for query utilities"""
+
     def wrapped_function(func):
         def get_cached(*args, **kwargs):
             """
@@ -94,17 +95,19 @@ def cache_query(hash_func_kwargs, hash_class_attrs):
                                 hash_func_args.append(f.read())
                         except:
                             file_stats = os.stat(v)
-                            hash_func_args.append(str(file_stats.st_size) + str(file_stats.st_mtime))
+                            hash_func_args.append(
+                                str(file_stats.st_size) + str(file_stats.st_mtime)
+                            )
                     else:
                         hash_func_args.append(v)
                 elif v and isinstance(v, list):
                     if all(isinstance(el, str) for el in v):
                         hash_func_args.append(v)
-                        
+
             for func_kw in hash_func_kwargs:
                 if func_kw in kwargs:
                     hash_func_args.append(kwargs[func_kw])
-                
+
             hash = hash_args(*(hash_class_args + hash_func_args)).hexdigest()
             cached_result = get_cached_query_result(hash)
             if cached_result is None:
@@ -115,5 +118,7 @@ def cache_query(hash_func_kwargs, hash_class_attrs):
                 print("Loaded result from cache.")
 
             return cached_result
+
         return get_cached
+
     return wrapped_function

@@ -34,9 +34,8 @@ import torch
 from Bio import PDB
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
-
-from proteome.constants import residue_constants
-from proteome.visual import view_ca_trace, view_protein_with_bfactors
+from prtm.constants import residue_constants
+from prtm.visual import view_ca_trace, view_protein_with_bfactors
 
 try:
     import pyrosetta
@@ -87,7 +86,7 @@ def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
 
 def get_structure_from_pdb(pdb_id: str) -> str:
     """Downloads and reads a pdb file from the RCSB database."""
-    pdb_path = os.path.expanduser("~/.proteome/pdb_downloads/")
+    pdb_path = os.path.expanduser("~/.prtm/pdb_downloads/")
     _ = PDB.PDBList().retrieve_pdb_file(
         pdb_code=pdb_id, pdir=pdb_path, file_format="pdb"
     )

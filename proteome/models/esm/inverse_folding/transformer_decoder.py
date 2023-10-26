@@ -10,11 +10,10 @@ from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from prtm.models.esm import config
+from prtm.models.esm.inverse_folding.transformer_layer import TransformerDecoderLayer
+from prtm.models.esm.modules import SinusoidalPositionalEmbedding
 from torch import Tensor
-
-from proteome.models.esm.modules import SinusoidalPositionalEmbedding
-from proteome.models.esm.inverse_folding.transformer_layer import TransformerDecoderLayer
-from proteome.models.esm import config
 
 
 def fill_with_neg_inf(t):
@@ -64,10 +63,7 @@ class TransformerDecoder(nn.Module):
 
         self.layers = nn.ModuleList([])
         self.layers.extend(
-            [
-                self.build_decoder_layer(cfg)
-                for _ in range(cfg.decoder_layers)
-            ]
+            [self.build_decoder_layer(cfg) for _ in range(cfg.decoder_layers)]
         )
         self.num_layers = len(self.layers)
         self.layer_norm = nn.LayerNorm(embed_dim)
@@ -79,7 +75,7 @@ class TransformerDecoder(nn.Module):
             cfg.decoder_embed_dim, len(cfg.alphabet), bias=False
         )
         nn.init.normal_(
-            self.output_projection.weight, mean=0, std=cfg.decoder_embed_dim ** -0.5
+            self.output_projection.weight, mean=0, std=cfg.decoder_embed_dim**-0.5
         )
 
     def build_decoder_layer(self, cfg: config.ESMIFConfig):
@@ -118,7 +114,7 @@ class TransformerDecoder(nn.Module):
 
         if not features_only:
             x = self.output_layer(x)
-        x = x.transpose(1, 2) # B x T x C -> B x C x T
+        x = x.transpose(1, 2)  # B x T x C -> B x C x T
         return x, extra
 
     def extract_features(
@@ -151,9 +147,7 @@ class TransformerDecoder(nn.Module):
             padding_mask = encoder_out["encoder_padding_mask"][0]
 
         # embed positions
-        positions = self.embed_positions(
-            prev_output_tokens
-        )
+        positions = self.embed_positions(prev_output_tokens)
 
         if incremental_state is not None:
             prev_output_tokens = prev_output_tokens[:, -1:]

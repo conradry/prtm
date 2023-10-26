@@ -6,9 +6,8 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.esm import modeling
+from prtm import protein
+from prtm.models.esm import modeling
 
 from ..test_utils import _compare_structures
 

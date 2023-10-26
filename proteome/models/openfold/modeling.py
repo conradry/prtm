@@ -3,14 +3,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-
-from proteome import protein
-from proteome.models.openfold import config
-from proteome.models.openfold.data import data_pipeline, feature_pipeline
-from proteome.models.openfold.model import model
-from proteome.models.openfold.utils.tensor_utils import tensor_tree_map
-from proteome.query.pipeline import QueryPipelines
-from proteome.utils import hub_utils
+from prtm import protein
+from prtm.models.openfold import config
+from prtm.models.openfold.data import data_pipeline, feature_pipeline
+from prtm.models.openfold.model import model
+from prtm.models.openfold.utils.tensor_utils import tensor_tree_map
+from prtm.query.pipeline import QueryPipelines
+from prtm.utils import hub_utils
 
 __all__ = ["OpenFoldForFolding"]
 

@@ -20,8 +20,8 @@ import os
 import subprocess
 from typing import Any, Mapping, Optional, Sequence
 
-from proteome.query import utils
-from proteome.query.caching import cache_query
+from prtm.query import utils
+from prtm.query.caching import cache_query
 
 _HHBLITS_DEFAULT_P = 20
 _HHBLITS_DEFAULT_Z = 500
@@ -105,12 +105,12 @@ class HHBlits:
         self.z = z
 
     @cache_query(
-        hash_func_kwargs=["input_fasta_path"], 
+        hash_func_kwargs=["input_fasta_path"],
         hash_class_attrs=[
-            "binary_path", 
-            "databases", 
-            "e_value", 
-            "n_iter", 
+            "binary_path",
+            "databases",
+            "e_value",
+            "n_iter",
             "max_seq",
             "realign_max",
             "min_prefilter_hits",
@@ -118,7 +118,7 @@ class HHBlits:
             "alt",
             "p",
             "z",
-        ]
+        ],
     )
     def query(self, input_fasta_path: str) -> Mapping[str, Any]:
         """Queries the database using HHblits."""

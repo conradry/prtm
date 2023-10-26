@@ -20,10 +20,8 @@
 import typing
 
 import torch
-from torch import nn
-
-from proteome.constants import residue_constants as rc
-from proteome.models.omegafold import (
+from prtm.constants import residue_constants as rc
+from prtm.models.omegafold import (
     confidence,
     config,
     decode,
@@ -33,6 +31,7 @@ from proteome.models.omegafold import (
     omegaplm,
     utils,
 )
+from torch import nn
 
 
 class OmegaFoldCycle(modules.OFModule):

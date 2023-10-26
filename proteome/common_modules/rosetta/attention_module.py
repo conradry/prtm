@@ -4,8 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from opt_einsum import contract as einsum
-
-from proteome.common_modules.rosetta.util import init_lecun_normal
+from prtm.common_modules.rosetta.util import init_lecun_normal
 
 
 class FeedForwardLayer(nn.Module):

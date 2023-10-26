@@ -5,10 +5,9 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn as nn
-
-from proteome import protein
-from proteome.common_modules.rosetta.kinematics import *
-from proteome.common_modules.rosetta.util import *
+from prtm import protein
+from prtm.common_modules.rosetta.kinematics import *
+from prtm.common_modules.rosetta.util import *
 
 
 def TemplFeaturizeFixbb(seq, conf_1d=None):

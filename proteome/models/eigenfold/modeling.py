@@ -4,16 +4,15 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.eigenfold import config, schedule
+from prtm.models.eigenfold.sampling import logp, reverse_sample
+from prtm.models.eigenfold.score_model import ScoreModel
+from prtm.models.eigenfold.sde import PolymerSDE
+from prtm.models.omegafold.config import InferenceConfig as OFInferenceConfig
+from prtm.models.omegafold.modeling import OmegaFoldForFolding
 from torch_geometric.data import HeteroData
-
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.eigenfold import config, schedule
-from proteome.models.eigenfold.sampling import logp, reverse_sample
-from proteome.models.eigenfold.score_model import ScoreModel
-from proteome.models.eigenfold.sde import PolymerSDE
-from proteome.models.omegafold.config import InferenceConfig as OFInferenceConfig
-from proteome.models.omegafold.modeling import OmegaFoldForFolding
 
 __all__ = ["EigenFoldForFoldSampling"]
 

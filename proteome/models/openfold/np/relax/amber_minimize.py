@@ -20,12 +20,11 @@ import time
 from typing import Collection, Optional, Sequence
 
 import numpy as np
+import prtm.models.openfold.utils.loss as loss
 from absl import logging
-
-import proteome.models.openfold.utils.loss as loss
-from proteome import protein
-from proteome.constants import residue_constants
-from proteome.models.openfold.np.relax import cleanup, utils
+from prtm import protein
+from prtm.constants import residue_constants
+from prtm.models.openfold.np.relax import cleanup, utils
 
 try:
     # openmm >= 7.6

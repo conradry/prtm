@@ -15,8 +15,7 @@
 
 """Utils for minimization."""
 import numpy as np
-
-from proteome.constants import residue_constants
+from prtm.constants import residue_constants
 
 
 def assert_equal_nonterminal_atom_types(

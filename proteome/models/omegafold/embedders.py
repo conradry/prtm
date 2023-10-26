@@ -20,8 +20,8 @@
 import typing
 
 import torch
-from proteome.constants import residue_constants as rc
-from proteome.models.omegafold import config, modules, utils
+from prtm.constants import residue_constants as rc
+from prtm.models.omegafold import config, modules, utils
 from torch import nn
 
 

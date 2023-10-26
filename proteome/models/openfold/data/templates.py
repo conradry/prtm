@@ -24,13 +24,12 @@ import re
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
-
-from proteome import parsers
-from proteome.constants import residue_constants
-from proteome.models.openfold.data import mmcif_parsing
-from proteome.models.openfold.data.errors import Error
-from proteome.models.openfold.data.utils import to_date
-from proteome.query import kalign
+from prtm import parsers
+from prtm.constants import residue_constants
+from prtm.models.openfold.data import mmcif_parsing
+from prtm.models.openfold.data.errors import Error
+from prtm.models.openfold.data.utils import to_date
+from prtm.query import kalign
 
 
 class NoChainsError(Error):

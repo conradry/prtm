@@ -16,12 +16,10 @@
 from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
-
-from proteome import protein
-from proteome import parsers
-from proteome.constants import residue_constants
-from proteome.models.openfold.data import mmcif_parsing
-from proteome.models.openfold.data.templates import get_custom_template_features
+from prtm import parsers, protein
+from prtm.constants import residue_constants
+from prtm.models.openfold.data import mmcif_parsing
+from prtm.models.openfold.data.templates import get_custom_template_features
 
 FeatureDict = Mapping[str, np.ndarray]
 
@@ -107,9 +105,7 @@ def unify_template_features(
     return out_dict
 
 
-def make_sequence_features(
-    sequence: str, num_res: int
-) -> FeatureDict:
+def make_sequence_features(sequence: str, num_res: int) -> FeatureDict:
     """Construct a feature dict of sequence features."""
     features = {}
     features["aatype"] = residue_constants.sequence_to_onehot(

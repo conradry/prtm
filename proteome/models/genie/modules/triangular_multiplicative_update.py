@@ -18,8 +18,8 @@ from functools import partialmethod
 
 import torch
 import torch.nn as nn
-from proteome.models.genie.modules.primitives import Linear
-from proteome.models.genie.utils.tensor_utils import permute_final_dims
+from prtm.models.genie.modules.primitives import Linear
+from prtm.models.genie.utils.tensor_utils import permute_final_dims
 
 
 class TriangleMultiplicativeUpdate(nn.Module):

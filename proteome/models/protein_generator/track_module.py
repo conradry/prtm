@@ -3,10 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from opt_einsum import contract as einsum
-
-from proteome.common_modules.rosetta.attention_module import *
-from proteome.common_modules.rosetta.se3_network import SE3TransformerWrapper
-from proteome.common_modules.rosetta.util import *
+from prtm.common_modules.rosetta.attention_module import *
+from prtm.common_modules.rosetta.se3_network import SE3TransformerWrapper
+from prtm.common_modules.rosetta.util import *
 
 # Components for three-track blocks
 # 1. MSA -> MSA update (biased attention. bias from pair & structure)

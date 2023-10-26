@@ -1,21 +1,20 @@
 import torch
 import torch.nn as nn
 from opt_einsum import contract as einsum
-
-from proteome.common_modules.rosetta.auxiliary_predictor import (
+from prtm.common_modules.rosetta.auxiliary_predictor import (
     DistanceNetwork,
     ExpResolvedNetwork,
     LDDTNetwork,
     MaskedTokenNetwork,
 )
-from proteome.models.rfdiffusion.embeddings import (
+from prtm.models.rfdiffusion.embeddings import (
     Extra_emb,
     MSA_emb,
     Recycling,
     Templ_emb,
     Timestep_emb,
 )
-from proteome.models.rfdiffusion.track_module import IterativeSimulator
+from prtm.models.rfdiffusion.track_module import IterativeSimulator
 
 
 class RoseTTAFoldModule(nn.Module):

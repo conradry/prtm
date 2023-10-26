@@ -17,10 +17,9 @@ from typing import Dict
 
 import torch
 import torch.nn as nn
-
-from proteome.constants import residue_constants as rc
-from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.openfold.utils.tensor_utils import batched_gather
+from prtm.constants import residue_constants as rc
+from prtm.models.openfold.utils.rigid_utils import Rigid, Rotation
+from prtm.models.openfold.utils.tensor_utils import batched_gather
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):

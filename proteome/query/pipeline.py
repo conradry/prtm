@@ -4,8 +4,8 @@ from enum import Enum
 from functools import partial
 from typing import Callable, Dict, List, Tuple
 
-from proteome import parsers
-from proteome.query import jackhmmer
+from prtm import parsers
+from prtm.query import jackhmmer
 
 
 def _unpack_jackhmmer_results(

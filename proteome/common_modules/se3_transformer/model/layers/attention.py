@@ -29,20 +29,19 @@ import torch
 import torch.nn as nn
 from dgl import DGLGraph
 from dgl.ops import edge_softmax
-from torch import Tensor
-from torch.cuda.nvtx import range as nvtx_range
-
-from proteome.common_modules.se3_transformer.model.fiber import Fiber
-from proteome.common_modules.se3_transformer.model.layers.convolution import (
+from prtm.common_modules.se3_transformer.model.fiber import Fiber
+from prtm.common_modules.se3_transformer.model.layers.convolution import (
     ConvSE3,
     ConvSE3FuseLevel,
 )
-from proteome.common_modules.se3_transformer.model.layers.linear import LinearSE3
-from proteome.common_modules.se3_transformer.runtime.utils import (
+from prtm.common_modules.se3_transformer.model.layers.linear import LinearSE3
+from prtm.common_modules.se3_transformer.runtime.utils import (
     aggregate_residual,
     degree_to_dim,
     unfuse_features,
 )
+from torch import Tensor
+from torch.cuda.nvtx import range as nvtx_range
 
 
 class AttentionSE3(nn.Module):

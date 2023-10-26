@@ -3,9 +3,12 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.rosettafold.attention_module import LayerNorm
-from proteome.models.rosettafold.rosetta_transformer import (
-    AxialEncoderLayer, Encoder, EncoderLayer)
+from prtm.models.rosettafold.attention_module import LayerNorm
+from prtm.models.rosettafold.rosetta_transformer import (
+    AxialEncoderLayer,
+    Encoder,
+    EncoderLayer,
+)
 
 # Initial embeddings for target sequence, msa, template info
 # positional encoding

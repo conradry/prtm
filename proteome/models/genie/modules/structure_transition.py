@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import torch.nn as nn
-from proteome.models.genie.modules.primitives import Linear
+from prtm.models.genie.modules.primitives import Linear
 
 
 class StructureTransitionLayer(nn.Module):

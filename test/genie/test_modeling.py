@@ -1,13 +1,9 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.genie import config
-from proteome.models.genie.modeling import (
-    GenieForStructureDesign, 
-    GENIE_MODEL_URLS,
-)
+from prtm import protein
+from prtm.models.genie import config
+from prtm.models.genie.modeling import GENIE_MODEL_URLS, GenieForStructureDesign
 
 from ..test_utils import _compare_structures
 

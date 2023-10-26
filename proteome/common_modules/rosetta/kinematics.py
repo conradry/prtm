@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-
-from proteome.constants.chemical import INIT_CRDS
+from prtm.constants.chemical import INIT_CRDS
 
 PARAMS = {
     "DMIN": 2.0,

@@ -14,7 +14,7 @@
 
 import numpy as np
 import torch
-from proteome.models.openfold.model.primitives import Attention
+from prtm.models.openfold.model.primitives import Attention
 
 from .config import consts
 

@@ -1,27 +1,28 @@
 from dataclasses import asdict
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from proteome.models.rosettafold.attention_module import \
-    IterativeFeatureExtractor
-from proteome.models.rosettafold.distance_predictor import \
-    DistanceNetwork
-from proteome.models.rosettafold.embeddings import (MSA_emb,
-                                                            Pair_emb_w_templ,
-                                                            Pair_emb_wo_templ,
-                                                            Templ_emb)
-from proteome.models.rosettafold.refine_module import Refine_module
-from proteome.models.rosettafold.config import RoseTTAFoldConfig
+from prtm.models.rosettafold.attention_module import IterativeFeatureExtractor
+from prtm.models.rosettafold.config import RoseTTAFoldConfig
+from prtm.models.rosettafold.distance_predictor import DistanceNetwork
+from prtm.models.rosettafold.embeddings import (
+    MSA_emb,
+    Pair_emb_w_templ,
+    Pair_emb_wo_templ,
+    Templ_emb,
+)
+from prtm.models.rosettafold.refine_module import Refine_module
 
 
 class RoseTTAFold(nn.Module):
     """This is the end-to-end RoseTTAFold model"""
+
     def __init__(self, config: RoseTTAFoldConfig):
         super(RoseTTAFold, self).__init__()
         self.use_templ = config.use_templ
-        
+
         self.msa_emb = MSA_emb(d_model=config.d_msa, p_drop=config.p_drop, max_len=5000)
         if config.use_templ:
             self.templ_emb = Templ_emb(
@@ -35,8 +36,10 @@ class RoseTTAFold(nn.Module):
                 d_model=config.d_pair, d_templ=config.d_templ, p_drop=config.p_drop
             )
         else:
-            self.pair_emb = Pair_emb_wo_templ(d_model=config.d_pair, p_drop=config.p_drop)
- 
+            self.pair_emb = Pair_emb_wo_templ(
+                d_model=config.d_pair, p_drop=config.p_drop
+            )
+
         self.feat_extractor = IterativeFeatureExtractor(
             n_module=config.n_module,
             n_module_str=config.n_module_str,
@@ -73,7 +76,9 @@ class RoseTTAFold(nn.Module):
         return ref_xyz, ref_lddt.view(B, L)
 
     def forward(
-        self, batch: Dict[str, torch.Tensor], refine: bool = False,
+        self,
+        batch: Dict[str, torch.Tensor],
+        refine: bool = False,
     ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor, torch.Tensor]:
         """Runs the full model."""
         msa = batch["msa"]
@@ -91,7 +96,7 @@ class RoseTTAFold(nn.Module):
             pair = self.pair_emb(seq, idx, tmpl)
         else:
             pair = self.pair_emb(seq, idx)
-     
+
         # Extract features
         msa, pair, xyz, lddt = self.feat_extractor(msa, pair, seq1hot, idx)
 

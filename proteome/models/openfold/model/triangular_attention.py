@@ -19,13 +19,9 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-from proteome.models.openfold.model.primitives import (
-    Attention,
-    LayerNorm,
-    Linear,
-)
-from proteome.models.openfold.utils.chunk_utils import chunk_layer
-from proteome.models.openfold.utils.tensor_utils import (
+from prtm.models.openfold.model.primitives import Attention, LayerNorm, Linear
+from prtm.models.openfold.utils.chunk_utils import chunk_layer
+from prtm.models.openfold.utils.tensor_utils import (
     flatten_final_dims,
     permute_final_dims,
 )

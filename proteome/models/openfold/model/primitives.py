@@ -31,14 +31,10 @@ if fa_is_installed:
 
 import torch
 import torch.nn as nn
-from proteome.models.openfold.utils.checkpointing import (
-    get_checkpoint_fn,
-)
-from proteome.models.openfold.utils.chunk_utils import _chunk_slice
-from proteome.models.openfold.utils.precision_utils import (
-    is_fp16_enabled,
-)
-from proteome.models.openfold.utils.tensor_utils import (
+from prtm.models.openfold.utils.checkpointing import get_checkpoint_fn
+from prtm.models.openfold.utils.chunk_utils import _chunk_slice
+from prtm.models.openfold.utils.precision_utils import is_fp16_enabled
+from prtm.models.openfold.utils.tensor_utils import (
     flatten_final_dims,
     permute_final_dims,
 )

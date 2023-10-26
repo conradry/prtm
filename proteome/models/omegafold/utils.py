@@ -21,7 +21,7 @@ import typing
 from typing import List, Tuple, Union
 
 import torch
-from proteome.constants import residue_constants as rc
+from prtm.constants import residue_constants as rc
 from torch.nn import functional as F
 
 T = typing.TypeVar("T")
@@ -980,7 +980,9 @@ class AAFrame(object):
 
         # make extra backbone frames
         # This follows the order of ~restypes
-        m = torch.from_numpy(rc.restype_rigid_group_default_frame).to(self.device)[fasta]
+        m = torch.from_numpy(rc.restype_rigid_group_default_frame).to(self.device)[
+            fasta
+        ]
         default_frames = AAFrame.from_4x4(m, torsion_angles_mask, unit="Angstrom")
         all_frames = default_frames * rot_x
         # make side chain frames (chain them up along the side chain)

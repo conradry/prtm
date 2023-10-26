@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from e3nn import o3
 from e3nn.nn import BatchNorm
-from proteome.models.eigenfold import config
-from proteome.models.eigenfold.utils import (
+from prtm.models.eigenfold import config
+from prtm.models.eigenfold.utils import (
     GaussianSmearing,
     get_timestep_embedding,
     sinusoidal_embedding,

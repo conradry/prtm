@@ -1,9 +1,13 @@
 import torch
 import torch.nn as nn
-from proteome.models.rosettafold.equivariant_attention.fibers import \
-    Fiber
-from proteome.models.rosettafold.equivariant_attention.modules import (
-    GConvSE3, GNormBias, GNormSE3, GSE3Res, get_basis_and_r)
+from prtm.models.rosettafold.equivariant_attention.fibers import Fiber
+from prtm.models.rosettafold.equivariant_attention.modules import (
+    GConvSE3,
+    GNormBias,
+    GNormSE3,
+    GSE3Res,
+    get_basis_and_r,
+)
 
 
 class TFN(nn.Module):

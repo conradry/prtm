@@ -1,2 +1,2 @@
-import proteome.models.foldingdiff.config as foldingdiff_config
-from proteome.models.foldingdiff.modeling import *
+import prtm.models.foldingdiff.config as foldingdiff_config
+from prtm.models.foldingdiff.modeling import *

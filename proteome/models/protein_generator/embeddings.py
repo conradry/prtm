@@ -2,18 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-
-from proteome.common_modules.rosetta.attention_module import (
+from prtm.common_modules.rosetta.attention_module import (
     Attention,
     AttentionWithBias,
     FeedForwardLayer,
 )
-from proteome.common_modules.rosetta.util import (
+from prtm.common_modules.rosetta.util import (
     create_custom_forward,
     init_lecun_normal,
     rbf,
 )
-from proteome.models.protein_generator.track_module import PairStr2Pair
+from prtm.models.protein_generator.track_module import PairStr2Pair
 
 # Module contains classes and functions to generate initial embeddings
 

@@ -5,9 +5,8 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 import torch
-
-from proteome.constants.residue_constants import restypes_with_x_dash
-from proteome.models.protein_generator import config
+from prtm.constants.residue_constants import restypes_with_x_dash
+from prtm.models.protein_generator import config
 
 
 class Potential:

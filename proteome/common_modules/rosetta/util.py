@@ -5,9 +5,8 @@ import numpy as np
 import scipy.sparse
 import torch
 import torch.nn as nn
-
-from proteome.common_modules.rosetta.scoring import *
-from proteome.constants.chemical import *
+from prtm.common_modules.rosetta.scoring import *
+from prtm.constants.chemical import *
 
 
 def generate_Cbeta(N, Ca, C):

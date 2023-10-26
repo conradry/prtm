@@ -23,8 +23,8 @@ from concurrent import futures
 from typing import Any, Callable, Mapping, Optional, Sequence
 from urllib import request
 
-from proteome.query import utils
-from proteome.query.caching import cache_query
+from prtm.query import utils
+from prtm.query.caching import cache_query
 
 try:
     JACKHMMER_BINARY_PATH = os.path.join(os.environ["CONDA_PREFIX"], "bin", "jackhmmer")
@@ -180,19 +180,19 @@ class Jackhmmer:
         return raw_output
 
     @cache_query(
-        hash_func_kwargs=["input_fasta_path"], 
+        hash_func_kwargs=["input_fasta_path"],
         hash_class_attrs=[
-            "binary_path", 
-            "database_path", 
-            "e_value", 
-            "z_value", 
+            "binary_path",
+            "database_path",
+            "e_value",
+            "z_value",
             "num_streamed_chunks",
             "filter_f1",
             "filter_f2",
             "filter_f3",
             "incdom_e",
             "dom_e",
-        ]
+        ],
     )
     def query(self, input_fasta_path: str) -> Sequence[Mapping[str, Any]]:
         """Queries the database using Jackhmmer."""

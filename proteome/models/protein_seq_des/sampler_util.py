@@ -1,11 +1,11 @@
 import numpy as np
-import proteome.models.protein_seq_des.canonicalize as canonicalize
-import proteome.models.protein_seq_des.data as data
-import proteome.models.protein_seq_des.voxelize as voxelize
+import prtm.models.protein_seq_des.canonicalize as canonicalize
+import prtm.models.protein_seq_des.data as data
+import prtm.models.protein_seq_des.voxelize as voxelize
 import torch
 import torch.nn.functional as F
-from proteome import protein
-from proteome.models.protein_seq_des import atoms
+from prtm import protein
+from prtm.models.protein_seq_des import atoms
 from torch.distributions.categorical import Categorical
 
 

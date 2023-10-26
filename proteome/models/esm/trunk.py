@@ -8,12 +8,9 @@ from dataclasses import asdict
 
 import torch
 import torch.nn as nn
-
-from proteome.models.esm import config
-from proteome.models.esm.tri_self_attn_block import \
-    TriangularSelfAttentionBlock
-from proteome.models.openfold.model.structure_module import \
-    StructureModule
+from prtm.models.esm import config
+from prtm.models.esm.tri_self_attn_block import TriangularSelfAttentionBlock
+from prtm.models.openfold.model.structure_module import StructureModule
 
 
 def get_axial_mask(mask):

@@ -3,10 +3,9 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
-
-from proteome import protein
-from proteome.models.dmpfold2 import config, model, utils
-from proteome.query.pipeline import QueryPipelines
+from prtm import protein
+from prtm.models.dmpfold2 import config, model, utils
+from prtm.query.pipeline import QueryPipelines
 
 __all__ = [
     "DMPFoldForFolding",

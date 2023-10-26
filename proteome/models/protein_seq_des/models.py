@@ -1,7 +1,7 @@
-import proteome.models.protein_seq_des.data as data
+import prtm.models.protein_seq_des.data as data
 import torch
 import torch.nn as nn
-from proteome.models.protein_seq_des import atoms, config
+from prtm.models.protein_seq_des import atoms, config
 
 
 def init_ortho_weights(self):

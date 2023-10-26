@@ -5,8 +5,8 @@ import os
 
 import numpy as np
 import torch
-from proteome.models.se3_diffusion import data_utils as du
-from proteome.models.se3_diffusion import so3_utils
+from prtm.models.se3_diffusion import data_utils as du
+from prtm.models.se3_diffusion import so3_utils
 
 
 def f_igso3(omega, t, L=500):

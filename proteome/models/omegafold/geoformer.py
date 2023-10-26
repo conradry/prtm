@@ -19,9 +19,8 @@
 import typing
 
 import torch
+from prtm.models.omegafold import config, modules, utils
 from torch import nn
-
-from proteome.models.omegafold import config, modules, utils
 
 
 class GeoFormerBlock(modules.OFModule):

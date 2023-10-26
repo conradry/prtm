@@ -5,22 +5,28 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import asdict
-
 import argparse
 import math
+from dataclasses import asdict
 from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
+from prtm.models.esm import config
+from prtm.models.esm.inverse_folding.features import (
+    DihedralFeatures,
+    GVPInputFeaturizer,
+)
+from prtm.models.esm.inverse_folding.gvp_encoder import GVPEncoder
+from prtm.models.esm.inverse_folding.transformer_layer import TransformerEncoderLayer
+from prtm.models.esm.inverse_folding.util import (
+    get_rotation_frames,
+    nan_to_num,
+    rbf,
+    rotate,
+)
+from prtm.models.esm.modules import SinusoidalPositionalEmbedding
 from torch import Tensor
-
-from proteome.models.esm.modules import SinusoidalPositionalEmbedding
-from proteome.models.esm.inverse_folding.features import GVPInputFeaturizer, DihedralFeatures
-from proteome.models.esm.inverse_folding.gvp_encoder import GVPEncoder
-from proteome.models.esm.inverse_folding.transformer_layer import TransformerEncoderLayer
-from proteome.models.esm.inverse_folding.util import nan_to_num, get_rotation_frames, rotate, rbf
-from proteome.models.esm import config
 
 
 class GVPTransformerEncoder(nn.Module):
@@ -55,8 +61,9 @@ class GVPTransformerEncoder(nn.Module):
         self.embed_dihedrals = DihedralFeatures(embed_dim)
 
         self.gvp_encoder = GVPEncoder(cfg.gvp_config)
-        gvp_out_dim = cfg.gvp_config.node_hidden_dim_scalar + (3 *
-                cfg.gvp_config.node_hidden_dim_vector)
+        gvp_out_dim = cfg.gvp_config.node_hidden_dim_scalar + (
+            3 * cfg.gvp_config.node_hidden_dim_vector
+        )
         self.embed_gvp_output = nn.Linear(gvp_out_dim, embed_dim)
 
         self.layers = nn.ModuleList([])
@@ -72,7 +79,7 @@ class GVPTransformerEncoder(nn.Module):
     def forward_embedding(self, coords, padding_mask, confidence):
         """
         Args:
-            coords: N, CA, C backbone coordinates in shape length x 3 (atoms) x 3 
+            coords: N, CA, C backbone coordinates in shape length x 3 (atoms) x 3
             padding_mask: boolean Tensor (true for padding) of shape length
             confidence: confidence scores between 0 and 1 of shape length
         """
@@ -80,34 +87,41 @@ class GVPTransformerEncoder(nn.Module):
         coord_mask = torch.all(torch.all(torch.isfinite(coords), dim=-1), dim=-1)
         coords = nan_to_num(coords)
         mask_tokens = (
-            padding_mask * self.alphabet.padding_idx + 
-            ~padding_mask * self.alphabet.get_idx("<mask>")
+            padding_mask * self.alphabet.padding_idx
+            + ~padding_mask * self.alphabet.get_idx("<mask>")
         )
         components["tokens"] = self.embed_tokens(mask_tokens) * self.embed_scale
         components["diherals"] = self.embed_dihedrals(coords)
 
         # GVP encoder
-        gvp_out_scalars, gvp_out_vectors = self.gvp_encoder(coords,
-                coord_mask, padding_mask, confidence)
+        gvp_out_scalars, gvp_out_vectors = self.gvp_encoder(
+            coords, coord_mask, padding_mask, confidence
+        )
         R = get_rotation_frames(coords)
         # Rotate to local rotation frame for rotation-invariance
-        gvp_out_features = torch.cat([
-            gvp_out_scalars,
-            rotate(gvp_out_vectors, R.transpose(-2, -1)).flatten(-2, -1),
-        ], dim=-1)
+        gvp_out_features = torch.cat(
+            [
+                gvp_out_scalars,
+                rotate(gvp_out_vectors, R.transpose(-2, -1)).flatten(-2, -1),
+            ],
+            dim=-1,
+        )
         components["gvp_out"] = self.embed_gvp_output(gvp_out_features)
 
-        components["confidence"] = self.embed_confidence(
-             rbf(confidence, 0., 1.))
+        components["confidence"] = self.embed_confidence(rbf(confidence, 0.0, 1.0))
 
         # In addition to GVP encoder outputs, also directly embed GVP input node
         # features to the Transformer
         scalar_features, vector_features = GVPInputFeaturizer.get_node_features(
-            coords, coord_mask, with_coord_mask=False)
-        features = torch.cat([
-            scalar_features,
-            rotate(vector_features, R.transpose(-2, -1)).flatten(-2, -1),
-        ], dim=-1)
+            coords, coord_mask, with_coord_mask=False
+        )
+        features = torch.cat(
+            [
+                scalar_features,
+                rotate(vector_features, R.transpose(-2, -1)).flatten(-2, -1),
+            ],
+            dim=-1,
+        )
         components["gvp_input_features"] = self.embed_gvp_input_features(features)
 
         embed = sum(components.values())
@@ -117,7 +131,7 @@ class GVPTransformerEncoder(nn.Module):
         x = embed
         x = x + self.embed_positions(mask_tokens)
         x = self.dropout_module(x)
-        return x, components 
+        return x, components
 
     def forward(
         self,
@@ -150,8 +164,9 @@ class GVPTransformerEncoder(nn.Module):
                   hidden states of shape `(num_residues, batch_size, embed_dim)`.
                   Only populated if *return_all_hiddens* is True.
         """
-        x, encoder_embedding = self.forward_embedding(coords,
-                encoder_padding_mask, confidence)
+        x, encoder_embedding = self.forward_embedding(
+            coords, encoder_padding_mask, confidence
+        )
         # account for padding while computing the representation
         x = x * (1 - encoder_padding_mask.unsqueeze(-1).type_as(x))
 
@@ -165,9 +180,7 @@ class GVPTransformerEncoder(nn.Module):
 
         # encoder layers
         for layer in self.layers:
-            x = layer(
-                x, encoder_padding_mask=encoder_padding_mask
-            )
+            x = layer(x, encoder_padding_mask=encoder_padding_mask)
             if return_all_hiddens:
                 assert encoder_states is not None
                 encoder_states.append(x)

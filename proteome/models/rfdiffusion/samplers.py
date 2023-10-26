@@ -4,18 +4,17 @@ from dataclasses import asdict
 import numpy as np
 import torch
 import torch.nn.functional as nn
-
-from proteome import protein
-from proteome.common_modules.rosetta import util
-from proteome.common_modules.rosetta.contigs import ContigMap
-from proteome.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
-from proteome.common_modules.rosetta.util import ComputeAllAtomCoords
-from proteome.models.rfdiffusion import config
-from proteome.models.rfdiffusion import inference_utils as iu
-from proteome.models.rfdiffusion import symmetry
-from proteome.models.rfdiffusion.diffusion import Diffuser
-from proteome.models.rfdiffusion.potentials_manager import PotentialManager
-from proteome.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
+from prtm import protein
+from prtm.common_modules.rosetta import util
+from prtm.common_modules.rosetta.contigs import ContigMap
+from prtm.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
+from prtm.common_modules.rosetta.util import ComputeAllAtomCoords
+from prtm.models.rfdiffusion import config
+from prtm.models.rfdiffusion import inference_utils as iu
+from prtm.models.rfdiffusion import symmetry
+from prtm.models.rfdiffusion.diffusion import Diffuser
+from prtm.models.rfdiffusion.potentials_manager import PotentialManager
+from prtm.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 

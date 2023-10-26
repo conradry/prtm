@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-
-from proteome.common_modules.rosetta.util import generate_Cbeta
+from prtm.common_modules.rosetta.util import generate_Cbeta
 
 
 class Potential:
