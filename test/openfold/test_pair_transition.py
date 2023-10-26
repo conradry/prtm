@@ -16,9 +16,8 @@ import unittest
 
 import numpy as np
 import torch
-
-from proteome.models.openfold.model.pair_transition import PairTransition
-from proteome.models.openfold.utils.tensor_utils import tree_map
+from prtm.models.openfold.model.pair_transition import PairTransition
+from prtm.models.openfold.utils.tensor_utils import tree_map
 
 from .compare_utils import (
     alphafold_is_installed,

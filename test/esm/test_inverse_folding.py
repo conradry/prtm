@@ -8,8 +8,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from proteome.models.esm.inverse_folding import util
-from proteome.models.esm.modeling import ESMForInverseFolding
+from prtm.models.esm.inverse_folding import util
+from prtm.models.esm.modeling import ESMForInverseFolding
 from scipy.stats import special_ortho_group
 from tqdm import tqdm
 

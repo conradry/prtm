@@ -1,10 +1,8 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.proteinsolver import modeling
-
+from prtm import protein
+from prtm.models.proteinsolver import modeling
 
 EXPECTED_SEQUENCES = {
     "model_0": "MLPAVEAAARAFLEALESGSPELLRELLEPEVTIQAEGFELTGEEVVAFVEEVTELGTRWRLTSFERVGGTWTFALRVTVDGETLTFRVTLDVREGRISRLQLTLR",

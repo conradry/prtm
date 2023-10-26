@@ -2,13 +2,9 @@ import os
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.dmpfold2.modeling import (
-    DMPFOLD_MODEL_URLS,
-    DMPFoldForFolding,
-)
-from proteome.query import caching
+from prtm import protein
+from prtm.models.dmpfold2.modeling import DMPFOLD_MODEL_URLS, DMPFoldForFolding
+from prtm.query import caching
 
 from ..test_utils import _compare_structures
 

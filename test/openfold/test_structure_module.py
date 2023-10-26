@@ -13,22 +13,18 @@
 # limitations under the License.
 
 import numpy as np
+import prtm.models.openfold.utils.feats as feats
 import torch
-
-import proteome.models.openfold.utils.feats as feats
-from proteome.constants.residue_constants import (
-    restype_atom14_mask,
-    restype_atom37_mask,
-)
-from proteome.models.openfold.data.data_transforms import make_atom14_masks_np
-from proteome.models.openfold.model.structure_module import (
+from prtm.constants.residue_constants import restype_atom14_mask, restype_atom37_mask
+from prtm.models.openfold.data.data_transforms import make_atom14_masks_np
+from prtm.models.openfold.model.structure_module import (
     AngleResnet,
     BackboneUpdate,
     InvariantPointAttention,
     StructureModule,
     StructureModuleTransition,
 )
-from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
+from prtm.models.openfold.utils.rigid_utils import Rigid, Rotation
 
 from .compare_utils import (
     alphafold_is_installed,

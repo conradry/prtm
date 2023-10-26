@@ -13,20 +13,17 @@
 # limitations under the License.
 
 import numpy as np
-import proteome.models.openfold.data.data_transforms as data_transforms
-import proteome.models.openfold.utils.feats as feats
+import prtm.models.openfold.data.data_transforms as data_transforms
+import prtm.models.openfold.utils.feats as feats
 import torch
-from proteome.constants.residue_constants import (
+from prtm.constants.residue_constants import (
     restype_atom14_mask,
     restype_atom14_rigid_group_positions,
     restype_atom14_to_rigid_group,
     restype_rigid_group_default_frame,
 )
-from proteome.models.openfold.utils.rigid_utils import Rigid, Rotation
-from proteome.models.openfold.utils.tensor_utils import (
-    tensor_tree_map,
-    tree_map,
-)
+from prtm.models.openfold.utils.rigid_utils import Rigid, Rotation
+from prtm.models.openfold.utils.tensor_utils import tensor_tree_map, tree_map
 
 from .compare_utils import (
     alphafold_is_installed,

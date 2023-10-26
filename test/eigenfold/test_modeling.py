@@ -1,10 +1,8 @@
 from pathlib import Path
 
 import pytest
-
-from proteome import protein
-from proteome.models.eigenfold.modeling import (
-    MODEL_URLS, EigenFoldForFoldSampling)
+from prtm import protein
+from prtm.models.eigenfold.modeling import MODEL_URLS, EigenFoldForFoldSampling
 
 from ..test_utils import _compare_structures
 

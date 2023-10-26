@@ -17,8 +17,8 @@ import pickle
 import shutil
 
 import numpy as np
-from proteome.models.openfold.data.data_pipeline import DataPipeline
-from proteome.models.openfold.data.templates import TemplateHitFeaturizer
+from prtm.models.openfold.data.data_pipeline import DataPipeline
+from prtm.models.openfold.data.templates import TemplateHitFeaturizer
 
 from .compare_utils import (
     alphafold_is_installed,

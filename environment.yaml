@@ -1,4 +1,4 @@
-name: proteome
+name: prtm
 channels:
   - conda-forge
   - bioconda
