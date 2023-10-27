@@ -65,6 +65,7 @@ git clone https://github.com/conradry/prtm.git
 cd prtm
 mamba env create -f environment.yaml
 mamba activate prtm
+pip install -e .
 ```
 
 To make `prtm` more accessible it was decided to remove custom CUDA kernels from all models that
@@ -72,8 +73,8 @@ previously used them, so that's it for most cases!
 
 Optionally, `Pyrosetta` is a soft-dependency of `prtm` and is only required for the
 `protein_seq_des` model. A license is required to use `Pyrosetta` and can 
-be obtained for free for academic use. For installation instructions, see these 
-[instructions](https://www.pyrosetta.org/downloads#h.6vttn15ac69d).
+be obtained for free for academic use. For installation instructions, see 
+[here](https://www.pyrosetta.org/downloads#h.6vttn15ac69d).
 
 ## What's implemented
 

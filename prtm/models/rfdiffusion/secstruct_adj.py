@@ -10,7 +10,6 @@ try:
     pyrosetta.init(silent=True, extra_options="-mute all")
     APPROX = False
 except:
-    print("WARNING: pyRosetta not found, will use an approximate SSE calculation")
     APPROX = True
 
 

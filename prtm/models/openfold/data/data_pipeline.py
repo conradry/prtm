@@ -147,7 +147,7 @@ def make_mmcif_features(
     )
 
     mmcif_feats["release_date"] = np.array(
-        [mmcif_object.header["release_date"].encode("utf-8")], dtype=np.object_
+        [mmcif_object.header["release_date"].encode("utf-8")], dtype=object
     )
 
     mmcif_feats["is_distillation"] = np.array(0.0, dtype=np.float32)

@@ -182,7 +182,6 @@ class Jackhmmer:
     @cache_query(
         hash_func_kwargs=["input_fasta_path"],
         hash_class_attrs=[
-            "binary_path",
             "database_path",
             "e_value",
             "z_value",

@@ -1,11 +1,10 @@
 from pathlib import Path
 
-import pytest
 from prtm import protein
 from prtm.models.rfdiffusion import config
 from prtm.models.rfdiffusion.modeling import RFDiffusionForStructureDesign
 
-from ..test_utils import _compare_structures, skip_unless_pyrosetta_installed
+from ..test_utils import _compare_structures
 
 
 def test_random_length_design():
@@ -477,7 +476,6 @@ def test_partial_diffusion_with_multisequence_design():
     _compare_structures(pred_structure, gt_structure, atol=0.1)
 
 
-@skip_unless_pyrosetta_installed()
 def test_scaffoldguided_tim_barrel_design():
     gt_pdb_file = Path(__file__).parents[0] / f"reference_scaffoldguided_tim_barrel.pdb"
     with open(gt_pdb_file, "r") as f:
@@ -524,7 +522,6 @@ def test_scaffoldguided_tim_barrel_design():
     _compare_structures(pred_structure, gt_structure, atol=0.1)
 
 
-@skip_unless_pyrosetta_installed()
 def test_scaffoldguided_ppi_design():
     gt_pdb_file = Path(__file__).parents[0] / f"reference_scaffoldguided_ppi.pdb"
     with open(gt_pdb_file, "r") as f:

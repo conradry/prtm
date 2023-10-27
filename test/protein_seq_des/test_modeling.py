@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 from prtm import protein
-from prtm.models.protein_seq_des import modeling
+try:
+    from prtm.models.protein_seq_des import modeling
+    model_configs = list(modeling.PSD_MODEL_CONFIGS.keys())
+except ImportError:
+    model_configs = []
 
 from ..test_utils import skip_unless_pyrosetta_installed
 
@@ -15,7 +19,7 @@ EXPECTED_SEQUENCES = {
 
 
 @skip_unless_pyrosetta_installed()
-@pytest.mark.parametrize("model_name", list(modeling.PSD_MODEL_CONFIGS.keys()))
+@pytest.mark.parametrize("model_name", model_configs)
 def test_protein_seq_des_models(model_name: str):
     target_pdb_file = Path(__file__).parents[0] / "5L33.pdb"
     with open(target_pdb_file, "r") as f:

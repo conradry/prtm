@@ -14,7 +14,6 @@
 
 import os
 
-import ml_collections as mlc
 import numpy as np
 import torch
 from prtm.models.openfold.data import data_transforms
@@ -290,12 +289,10 @@ def test_find_structural_violations_compare():
 
     pred_pos = np.random.rand(n_res, 14, 3)
 
-    config = mlc.ConfigDict(
-        {
-            "clash_overlap_tolerance": 1.5,
-            "violation_tolerance_factor": 12.0,
-        }
-    )
+    config = {
+        "clash_overlap_tolerance": 1.5,
+        "violation_tolerance_factor": 12.0,
+    }
 
     out_gt = f.apply({}, None, batch, pred_pos, config)
     out_gt = jax.tree_map(lambda x: x.block_until_ready(), out_gt)
