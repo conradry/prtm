@@ -12,9 +12,9 @@ def _compare_structures(
         if isinstance(getattr(pred_structure, field), np.ndarray):
             assert np.allclose(
                 getattr(pred_structure, field), getattr(gt_structure, field), atol=atol
-            )
+            ), f"{field} not equal"
         else:
-            assert getattr(pred_structure, field) == getattr(gt_structure, field)
+            assert getattr(pred_structure, field) == getattr(gt_structure, field), f"{field} not equal"
 
 
 def pyrosetta_is_installed():

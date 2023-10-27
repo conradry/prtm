@@ -31,12 +31,8 @@ def test_dmpfold2_for_folding(model_name):
 
     gt_structure = protein.Protein5.from_pdb_string(gt_pdb_str)
 
-    # Fold the sequence using OpenFoldForFolding
     pred_structure = folder(sequence)[0]
     pred_pdb_str = pred_structure.to_pdb()
     pred_structure = protein.Protein5.from_pdb_string(pred_pdb_str)
 
-    # RoseTTAfold outputs are not deterministic but usually
-    # they are reasonably close to the ground truth
-    # If this test fails it may just be flaky.
     _compare_structures(pred_structure, gt_structure, atol=0.1)
