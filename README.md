@@ -35,9 +35,9 @@ folder = models.OmegaFoldForFolding()
 
 # Tell RFDiffusion to create a structure with exactly 128 residues
 designed_structure, _ = designer(
- models.rfdiffusion_config.UnconditionalSamplerConfig(
- contigmap_params=models.rfdiffusion_config.ContigMap(contigs=["128-128"]),
- )
+    models.rfdiffusion_config.UnconditionalSamplerConfig(
+        contigmap_params=models.rfdiffusion_config.ContigMap(contigs=["128-128"]),
+    )
 )
 
 # Design a sequence and fold it!
@@ -70,7 +70,7 @@ mamba activate prtm
 To make `prtm` more accessible it was decided to remove custom CUDA kernels from all models that
 previously used them, so that's it for most cases!
 
-Optionally, `pyrosetta` is a soft-dependency of `prtm` and is only required for the
+Optionally, `Pyrosetta` is a soft-dependency of `prtm` and is only required for the
 `protein_seq_des` model. A license is required to use `Pyrosetta` and can 
 be obtained for free for academic use. For installation instructions, see these 
 [instructions](https://www.pyrosetta.org/downloads#h.6vttn15ac69d).
