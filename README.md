@@ -48,7 +48,7 @@ predicted_designed_structure, _ = folder(designed_sequence)
 visual.view_superimposed_structures(designed_structure, predicted_designed_structure)
 
 # Convert to PBD
-pdb_str = predicted_designed_structure.to_pdb("designed_structure.pdb")
+pdb_str = predicted_designed_structure.to_pdb()
 
 ```
 
