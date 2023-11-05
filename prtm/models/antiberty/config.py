@@ -1,32 +1,22 @@
-# Num params = 13150233
-antiberty_sm_config = {
-    "hidden_size": 512,
-    "intermediate_size": 2048,
-    "max_position_embeddings": 512,
-    "num_attention_heads": 8,
-    "num_hidden_layers": 4,
-}
-# Num params = 25759769
-antiberty_md_config = {
-    "hidden_size": 512,
-    "intermediate_size": 2048,
-    "max_position_embeddings": 512,
-    "num_attention_heads": 8,
-    "num_hidden_layers": 8,
-}
-# Num params = 38369305
-antiberty_lg_config = {
-    "hidden_size": 512,
-    "intermediate_size": 2048,
-    "max_position_embeddings": 512,
-    "num_attention_heads": 8,
-    "num_hidden_layers": 12,
-}
-# Num params = 86062105
-antiberty_xl_config = {
-    "hidden_size": 768,
-    "intermediate_size": 3072,
-    "max_position_embeddings": 512,
-    "num_attention_heads": 12,
-    "num_hidden_layers": 12,
-}
+from dataclasses import dataclass
+
+@dataclass
+class AntiBERTyConfig:
+    attention_probs_dropout_prob: float = 0.1
+    gradient_checkpointing: bool = False
+    hidden_act: str = "gelu"
+    hidden_dropout_prob: float = 0.1
+    hidden_size: int = 512
+    initializer_range: float = 0.02
+    intermediate_size: int = 2048
+    layer_norm_eps: float = 1e-12
+    max_position_embeddings: int = 512
+    model_type: str = "bert"
+    num_attention_heads: int = 8
+    num_hidden_layers: int = 8
+    pad_token_id: int = 0
+    position_embedding_type: str = "absolute"
+    transformers_version: str = "4.5.1"
+    type_vocab_size: int = 2
+    use_cache: bool = True
+    vocab_size: int = 25

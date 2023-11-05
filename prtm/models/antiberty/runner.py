@@ -1,17 +1,8 @@
-import os
-
 import torch
 import transformers
-from prtm.models.igfold.antiberty.model import AntiBERTy
+from prtm.models.antiberty.model import AntiBERTy
 from prtm.models.igfold.utils.general import exists
 
-import antiberty
-
-project_path = os.path.dirname(os.path.realpath(antiberty.__file__))
-trained_models_dir = os.path.join(project_path, "trained_models")
-
-CHECKPOINT_PATH = os.path.join(trained_models_dir, "AntiBERTy_md_smooth")
-VOCAB_FILE = os.path.join(trained_models_dir, "vocab.txt")
 
 LABEL_TO_SPECIES = {
     0: "Camel",
@@ -28,14 +19,14 @@ CHAIN_TO_LABEL = {v: k for k, v in LABEL_TO_CHAIN.items()}
 
 
 class AntiBERTyRunner:
-    def __init__(self):
+    def __init__(self, checkpoint_path: str, vocab_file: str):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model = AntiBERTy.from_pretrained(CHECKPOINT_PATH).to(self.device)
+        self.model = AntiBERTy.from_pretrained(checkpoint_path).to(self.device)
         self.model.eval()
 
         self.tokenizer = transformers.BertTokenizer(
-            vocab_file=VOCAB_FILE, do_lower_case=False
+            vocab_file=vocab_file, do_lower_case=False
         )
 
     def embed(self, sequences, hidden_layer=-1, return_attention=False):
@@ -231,7 +222,6 @@ class AntiBERTyRunner:
                 masked_sequence = list(s[:i]) + ["[MASK]"] + list(s[i + 1 :])
                 masked_sequences.append(" ".join(masked_sequence))
 
-            # masked_sequences = [" ".join(s) for s in masked_sequences]
             tokenizer_out = self.tokenizer(
                 masked_sequences,
                 return_tensors="pt",
@@ -270,7 +260,7 @@ class AntiBERTyRunner:
             labels = self.tokenizer.encode(
                 " ".join(list(s)),
                 return_tensors="pt",
-            )[:, 1:-1]
+            )[:, 1:-1].to(logits.device)
             nll = torch.nn.functional.cross_entropy(
                 logits,
                 labels,
