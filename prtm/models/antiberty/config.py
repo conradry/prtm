@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class AntiBERTyConfig:
     attention_probs_dropout_prob: float = 0.1

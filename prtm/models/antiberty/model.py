@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import torch
-from prtm.models.igfold.utils.general import exists
 from torch import nn
 from transformers.models.bert.modeling_bert import (
     BertLMPredictionHead,
@@ -10,6 +9,10 @@ from transformers.models.bert.modeling_bert import (
     BertPreTrainedModel,
     ModelOutput,
 )
+
+
+def exists(x):
+    return x is not None
 
 
 class AntiBERTyHeads(nn.Module):
