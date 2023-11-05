@@ -12,6 +12,8 @@ from prtm.utils import hub_utils
 
 __all__ = [
     "AntiBERTyForSequenceEmbedding",
+    "AntiBERTyForSequenceInpainting",
+    "AntiBERTyForAntibodySequenceClassification",
 ]
 
 ANTIBERTY_MODEL_URLS = {
@@ -133,7 +135,7 @@ class AntiBERTyForSequenceEmbedding(_AntiBERTyBase):
             attentions[i] = attentions[i][:, :, a == 1]
             attentions[i] = attentions[i][:, :, :, a == 1]
 
-        return embeddings[0], {"attention": attentions[0]}
+        return embeddings[0], {"attention": attentions[0].flatten(0, 1)}
 
 
 class AntiBERTyForSequenceInpainting(_AntiBERTyBase):
