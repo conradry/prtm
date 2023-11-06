@@ -516,7 +516,7 @@ class InvariantPointAttention(nn.Module):
 # one transformer block based on IPA
 
 
-def FeedForward(dim, mult=1.0, num_layers=2, act=nn.ReLU):
+def FeedForwardList(dim, mult=1.0, num_layers=2, act=nn.ReLU):
     layers = []
     dim_hidden = dim * mult
 
@@ -526,7 +526,7 @@ def FeedForward(dim, mult=1.0, num_layers=2, act=nn.ReLU):
         dim_in = dim if is_first else dim_hidden
         dim_out = dim if is_last else dim_hidden
 
-        layers.append(nn.Linear(dim_in, dim_out))
+        layers.append(nn.Linear(int(dim_in), int(dim_out)))
 
         if is_last:
             continue
@@ -553,7 +553,7 @@ class IPABlock(nn.Module):
         self.attn = InvariantPointAttention(dim=dim, **kwargs)
 
         self.ff_norm = nn.LayerNorm(dim)
-        self.ff = FeedForward(dim, mult=ff_mult, num_layers=ff_num_layers)
+        self.ff = FeedForwardList(dim, mult=ff_mult, num_layers=ff_num_layers)
 
     def forward(self, x, **kwargs):
         post_norm = self.post_norm

@@ -1,15 +1,14 @@
 import numpy as np
-import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from prtm.models.igfold.interface import *
 from prtm.models.igfold.modules import (
     IPAEncoder,
     IPATransformer,
     TriangleGraphTransformer,
 )
+from prtm.models.igfold.config import IgFoldConfig, IgFoldInput, IgFoldOutput
 from prtm.models.igfold.train_utils import *
 from prtm.models.igfold.utils.coordinates import get_ideal_coords, place_o_coords
 from prtm.models.igfold.utils.general import exists
@@ -18,36 +17,27 @@ from prtm.models.igfold.utils.transforms import quaternion_to_matrix
 ATOM_DIM = 3
 
 
-class IgFold(pl.LightningModule):
-    def __init__(
-        self,
-        config,
-        config_overwrite=None,
-    ):
+class IgFold(nn.Module):
+    def __init__(self, config: IgFoldConfig):
         super().__init__()
-
-        self.save_hyperparameters()
-        config = self.hparams.config
-        if exists(config_overwrite):
-            config.update(config_overwrite)
 
         self.bert_feat_dim = 512
         self.bert_attn_dim = 64
 
-        self.node_dim = config["node_dim"]
+        self.node_dim = config.node_dim
 
-        self.depth = config["depth"]
-        self.gt_depth = config["gt_depth"]
-        self.gt_heads = config["gt_heads"]
+        self.depth = config.depth
+        self.gt_depth = config.gt_depth
+        self.gt_heads = config.gt_heads
 
-        self.temp_ipa_depth = config["temp_ipa_depth"]
-        self.temp_ipa_heads = config["temp_ipa_heads"]
+        self.temp_ipa_depth = config.temp_ipa_depth
+        self.temp_ipa_heads = config.temp_ipa_heads
 
-        self.str_ipa_depth = config["str_ipa_depth"]
-        self.str_ipa_heads = config["str_ipa_heads"]
+        self.str_ipa_depth = config.str_ipa_depth
+        self.str_ipa_heads = config.str_ipa_heads
 
-        self.dev_ipa_depth = config["dev_ipa_depth"]
-        self.dev_ipa_heads = config["dev_ipa_heads"]
+        self.dev_ipa_depth = config.dev_ipa_depth
+        self.dev_ipa_heads = config.dev_ipa_heads
 
         self.str_node_transform = nn.Sequential(
             nn.Linear(
@@ -119,18 +109,20 @@ class IgFold(pl.LightningModule):
         batch_size,
         seq_len,
     ):
+        # Get the model device from self.parameters
+        device = next(self.parameters()).device
         res_coords = rearrange(
             temp_coords,
             "b (l a) d -> b l a d",
             l=seq_len,
-        ).to(self.device)
+        ).to(device)
         ideal_coords = get_ideal_coords()
         res_ideal_coords = repeat(
             ideal_coords,
             "a d -> b l a d",
             b=batch_size,
             l=seq_len,
-        ).to(self.device)
+        ).to(device)
         _, rotations, translations = kabsch(
             res_ideal_coords,
             res_coords,
@@ -147,6 +139,7 @@ class IgFold(pl.LightningModule):
         self,
         input: IgFoldInput,
     ):
+        device = next(self.parameters()).device
         embeddings = input.embeddings
         temp_coords = input.template_coords
         temp_mask = input.template_mask
@@ -162,25 +155,25 @@ class IgFold(pl.LightningModule):
                 batch_size,
                 4 * seq_len,
                 ATOM_DIM,
-                device=self.device,
+                device=device,
             ).float()
         if not exists(temp_mask):
             temp_mask = torch.zeros(
                 batch_size,
                 4 * seq_len,
-                device=self.device,
+                device=device,
             ).bool()
         if not exists(batch_mask):
             batch_mask = torch.ones(
                 batch_size,
                 4 * seq_len,
-                device=self.device,
+                device=device,
             ).bool()
         if not exists(align_mask):
             align_mask = torch.ones(
                 batch_size,
                 4 * seq_len,
-                device=self.device,
+                device=device,
             ).bool()
 
         align_mask = (
@@ -200,7 +193,7 @@ class IgFold(pl.LightningModule):
     def forward(
         self,
         input: IgFoldInput,
-    ):
+    ) -> IgFoldOutput:
         input, batch_size, seq_lens, seq_len = self.clean_input(input)
         embeddings = input.embeddings
         attentions = input.attentions
@@ -210,6 +203,7 @@ class IgFold(pl.LightningModule):
         batch_mask = input.batch_mask
         align_mask = input.align_mask
         return_embeddings = input.return_embeddings
+        device = next(self.parameters()).device
 
         res_batch_mask = (
             rearrange(
@@ -218,7 +212,7 @@ class IgFold(pl.LightningModule):
                 a=4,
             )
             .all(-1)
-            .to(self.device)
+            .to(device)
         )
         res_temp_mask = (
             rearrange(
@@ -227,15 +221,15 @@ class IgFold(pl.LightningModule):
                 a=4,
             )
             .all(-1)
-            .to(self.device)
+            .to(device)
         )
 
         ### Model forward pass
 
-        bert_feats = torch.cat(embeddings, dim=1).to(self.device)
+        bert_feats = torch.cat(embeddings, dim=1).to(device)
         bert_attn = torch.zeros(
             (batch_size, seq_len, seq_len, self.bert_attn_dim),
-            device=self.device,
+            device=device,
         )
         for i, (a, l) in enumerate(zip(attentions, seq_lens)):
             a = rearrange(a, "b n h l1 l2 -> b l1 l2 (n h)")
@@ -298,7 +292,7 @@ class IgFold(pl.LightningModule):
         ### Calculate losses if given labels
         loss = torch.zeros(
             batch_size,
-            device=self.device,
+            device=device,
         )
         if exists(coords_label):
             rmsd_clamp = self.hparams.config["rmsd_clamp"]
@@ -443,7 +437,7 @@ class IgFold(pl.LightningModule):
         input: IgFoldInput,
         output: IgFoldOutput,
         num_steps: int = 80,
-    ):
+    ) -> IgFoldOutput:
         input_, _, seq_lens, _ = self.clean_input(input)
         batch_mask = input_.batch_mask
         res_batch_mask = rearrange(
