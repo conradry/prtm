@@ -1,6 +1,6 @@
 # prtm
 
-**Pr**o**t**ein **M**odels (prtm) is a Python package for deep learning protein models.
+**Pr**o**t**ein **M**odels (prtm) is an inference-only library for deep learning protein models.
 
 
 ## Background
@@ -14,6 +14,7 @@ chaining together protein DL models. Currently covered use cases include:
 - Folding
 - Inverse Folding
 - Structure design
+- Sequence language modeling
 
 With many more to come!
 
@@ -85,6 +86,7 @@ be obtained for free for academic use. For installation instructions, see
 | RoseTTAFold| Folding | https://github.com/RosettaCommons/RoseTTAFold | [MIT License](https://github.com/RosettaCommons/RoseTTAFold/blob/main/LICENSE) |
 | OmegaFold | Folding | https://github.com/HeliXonProtein/OmegaFold | [Apache 2.0](https://github.com/HeliXonProtein/OmegaFold/blob/main/LICENSE) |
 | DMPfold2 | Folding | https://github.com/psipred/DMPfold2 | [GPL v3.0](https://github.com/psipred/DMPfold2/blob/master/LICENSE) |
+| IgFold | Antibody Folding | https://github.com/Graylab/IgFold | [JHU License](https://github.com/Graylab/IgFold/blob/main/LICENSE.md) |
 | ESM-IF | Inverse Folding | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
 | ProteinMPNN| Inverse Folding | https://github.com/dauparas/ProteinMPNN | [MIT License](https://github.com/dauparas/ProteinMPNN/blob/main/LICENSE) |
 | ProteinSeqDes| Inverse Folding| https://github.com/nanand2/protein_seq_des | [BSD-3](https://github.com/nanand2/protein_seq_des/blob/master/LICENSE) |
@@ -95,6 +97,7 @@ be obtained for free for academic use. For installation instructions, see
 | FoldingDiff | Design | https://github.com/microsoft/foldingdiff | [MIT License](https://github.com/microsoft/foldingdiff/blob/main/LICENSE) |
 | SE3-Diffusion | Design | https://github.com/jasonkyuyim/se3_diffusion | [MIT License](https://github.com/jasonkyuyim/se3_diffusion/blob/master/LICENSE) |
 | EigenFold | Fold sampling | https://github.com/bjing2016/EigenFold | [MIT License](https://github.com/bjing2016/EigenFold/blob/master/LICENSE) |
+| AntiBERTy | Antibody language modeling | https://github.com/jeffreyruffolo/AntiBERTy | [MIT License](https://github.com/jeffreyruffolo/AntiBERTy/blob/main/LICENSE.MD) |
 
 Links for papers can be found on the Github repos for each model.
 
@@ -108,6 +111,12 @@ that cover common use cases and some features of the `prtm` API. A good order to
 - [folding.ipynb](./notebooks/folding.ipynb)
 - [inverse_folding.ipynb](./notebooks/inverse_folding.ipynb)
 - [unconditional_design.ipynb](./notebooks/unconditional_design.ipynb)
+
+For more complex design algorithms like `RFDiffusion` and `ProteinGenerator`, there are detailed
+example notebooks to look at:
+
+- [RFDiffusion.ipynb](./notebooks/model_notebooks/RFDiffusion.ipynb)
+- [ProteinGenerator.ipynb](./notebooks/ProteinGenerator.ipynb)
 
 ## Roadmap and Contributing
 

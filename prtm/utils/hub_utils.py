@@ -47,6 +47,7 @@ def download_extract_tar_gz(
     url: str,
     dst: str,
     extract_member: str,
+    model_name: Optional[str] = None,
 ) -> None:
     r"""Download object at the given S3 URL to a local path.
 
@@ -67,7 +68,9 @@ def download_extract_tar_gz(
         model_buffer = tar.extractfile(extract_member).read()  # type: ignore
 
     model_bytes = io.BytesIO(model_buffer)
-    model_name = os.path.basename(extract_member)
+    if model_name is None:
+        model_name = os.path.basename(extract_member)
+
     with open(os.path.join(dst, model_name), "wb") as f:
         f.write(model_bytes.getbuffer())  # type: ignore
 
@@ -129,6 +132,7 @@ def load_state_dict_from_s3_url(
 def load_state_dict_from_tar_gz_url(
     url: str,
     extract_member: str,
+    model_name: Optional[str],
     model_dir: Optional[str] = None,
     map_location: MAP_LOCATION = None,
 ) -> Dict[str, Any]:
@@ -163,11 +167,14 @@ def load_state_dict_from_tar_gz_url(
 
     os.makedirs(model_dir, exist_ok=True)
 
-    cached_file = os.path.join(model_dir, os.path.basename(extract_member))
+    if model_name is None:
+        model_name = os.path.basename(extract_member)
+
+    cached_file = os.path.join(model_dir, model_name)
     if not os.path.exists(cached_file):
         print(f"Downloading model from {url}...")
         download_extract_tar_gz(
-            url, os.path.dirname(cached_file), extract_member=extract_member
+            url, os.path.dirname(cached_file), extract_member=extract_member, model_name=model_name
         )
         print(f"Model downloaded and cached in {cached_file}.")
 
