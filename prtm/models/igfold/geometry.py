@@ -1,6 +1,6 @@
 import torch
 from einops import rearrange
-from prtm.models.igfold.utils.constants import EPS
+from prtm.models.igfold.constants import EPS
 
 
 def normed_vec(vec, eps=EPS):

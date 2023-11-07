@@ -2,9 +2,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from prtm.models.igfold.utils.constants import *
-from prtm.models.igfold.utils.general import exists
-from prtm.models.igfold.utils.geometry import angle, dihedral, dist
+from prtm.models.igfold.constants import *
+from prtm.models.igfold.general import exists
+from prtm.models.igfold.geometry import angle, dihedral, dist
 
 
 def kabsch(

@@ -3,16 +3,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, repeat
+from prtm.models.igfold.config import IgFoldConfig, IgFoldInput, IgFoldOutput
+from prtm.models.igfold.coordinates import get_ideal_coords, place_o_coords
+from prtm.models.igfold.general import exists
 from prtm.models.igfold.modules import (
     IPAEncoder,
     IPATransformer,
     TriangleGraphTransformer,
 )
-from prtm.models.igfold.config import IgFoldConfig, IgFoldInput, IgFoldOutput
 from prtm.models.igfold.train_utils import *
-from prtm.models.igfold.utils.coordinates import get_ideal_coords, place_o_coords
-from prtm.models.igfold.utils.general import exists
-from prtm.models.igfold.utils.transforms import quaternion_to_matrix
+from prtm.models.igfold.transforms import quaternion_to_matrix
 
 ATOM_DIM = 3
 

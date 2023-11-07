@@ -4,11 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 from einops import rearrange
-from prtm.protein import Protein5, PDB_CHAIN_IDS
+from prtm.constants.residue_constants import restype_order
 from prtm.models.antiberty.modeling import _AntiBERTyBase
 from prtm.models.igfold import config
 from prtm.models.igfold.model import IgFold
-from prtm.constants.residue_constants import restype_order
+from prtm.protein import PDB_CHAIN_IDS, Protein5
 from prtm.utils import hub_utils
 
 __all__ = ["IgFoldForFolding"]
@@ -33,7 +33,9 @@ def _get_model_config(model_name: str) -> config.IgFoldConfig:
 
 
 class _AntiBERTyForIgFoldInput(_AntiBERTyBase):
-    def _prepare_sequences(self, sequences: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_sequences(
+        self, sequences: List[str]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Takes an amino acid sequence and returns a tokenized tensor along
         with an attention mask for the sequence.
         """
@@ -55,7 +57,7 @@ class _AntiBERTyForIgFoldInput(_AntiBERTyBase):
         attention_mask = tokenizer_out["attention_mask"].to(self.device)
 
         return tokens, attention_mask
-    
+
     @torch.no_grad()
     def __call__(self, sequences: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed a single sequence."""
@@ -110,7 +112,7 @@ class IgFoldForFolding:
 
         self.model = self.model.to(self.device)
         self.antiberty_embedder = _AntiBERTyForIgFoldInput(model_name="base")
-        
+
         # Make sure model devices are the same
         self.antiberty_embedder.model = self.antiberty_embedder.model.to(self.device)
 
@@ -140,7 +142,9 @@ class IgFoldForFolding:
     ) -> Tuple[Protein5, Dict[str, Any]]:
         """Embed a single sequence."""
         assert all([chain in ["H", "L"] for chain in sequences_dict.keys()])
-        assert len(sequences_dict) <= 2, "Only a single heavy and light chain are supported!"
+        assert (
+            len(sequences_dict) <= 2
+        ), "Only a single heavy and light chain are supported!"
         assert len(sequences_dict) > 0, "At least one sequence must be provided!"
 
         embeddings, attentions = self.antiberty_embedder(list(sequences_dict.values()))
@@ -187,18 +191,31 @@ class IgFoldForFolding:
         residue_index = 1 + np.arange(0, delims[0])
         chain_index = np.array(delims[0] * [PDB_CHAIN_IDS.index(seq_chain_ids[0])])
         if len(sequences_dict) == 2:
-            residue_index = np.concatenate([
-                residue_index,
-                1 + np.arange(0, delims[1] - delims[0]),
-            ], axis=0)
-            chain_index = np.concatenate([
-                chain_index,
-                np.array((delims[1] - delims[0]) * [PDB_CHAIN_IDS.index(seq_chain_ids[1])]),
-            ], axis=0)
+            residue_index = np.concatenate(
+                [
+                    residue_index,
+                    1 + np.arange(0, delims[1] - delims[0]),
+                ],
+                axis=0,
+            )
+            chain_index = np.concatenate(
+                [
+                    chain_index,
+                    np.array(
+                        (delims[1] - delims[0])
+                        * [PDB_CHAIN_IDS.index(seq_chain_ids[1])]
+                    ),
+                ],
+                axis=0,
+            )
 
+        # IgFold swaps the CB and O atom that is canonical in prtm
+        atom_order = [0, 1, 2, 4, 3]
 
+        # Atom mask and b_factors are the same for all atoms
+        # so we don't need to permute the order
         structure = Protein5(
-            atom_positions=coords,
+            atom_positions=coords[:, atom_order],
             aatype=aatype,
             atom_mask=atom_mask,
             residue_index=residue_index,

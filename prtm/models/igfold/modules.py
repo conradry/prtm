@@ -8,12 +8,9 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from prtm.models.igfold.utils.coordinates import get_ideal_coords, place_o_coords
-from prtm.models.igfold.utils.general import default, exists
-from prtm.models.igfold.utils.transforms import (
-    quaternion_multiply,
-    quaternion_to_matrix,
-)
+from prtm.models.igfold.coordinates import get_ideal_coords, place_o_coords
+from prtm.models.igfold.general import default, exists
+from prtm.models.igfold.transforms import quaternion_multiply, quaternion_to_matrix
 from torch import einsum, nn
 from torch.cuda.amp import autocast
 
