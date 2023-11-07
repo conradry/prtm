@@ -116,7 +116,7 @@ For more complex design algorithms like `RFDiffusion` and `ProteinGenerator`, th
 example notebooks to look at:
 
 - [RFDiffusion.ipynb](./notebooks/model_notebooks/RFDiffusion.ipynb)
-- [ProteinGenerator.ipynb](./notebooks/ProteinGenerator.ipynb)
+- [ProteinGenerator.ipynb](./notebooks/model_notebooks/ProteinGenerator.ipynb)
 
 ## Roadmap and Contributing
 
