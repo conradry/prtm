@@ -79,6 +79,8 @@ be obtained for free for academic use. For installation instructions, see
 
 ## What's implemented
 
+**Note**: Most, but not all models, allow commerial use. Please check the license of each model.
+
 | Model Name | Function | Source Code | License |
 |------------|----------|-------------|---------|
 | OpenFold | Folding | https://github.com/aqlaboratory/openfold | [Apache 2.0](https://github.com/aqlaboratory/openfold/blob/main/LICENSE) |
@@ -89,6 +91,7 @@ be obtained for free for academic use. For installation instructions, see
 | IgFold | Antibody Folding | https://github.com/Graylab/IgFold | [JHU License](https://github.com/Graylab/IgFold/blob/main/LICENSE.md) |
 | ESM-IF | Inverse Folding | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
 | ProteinMPNN| Inverse Folding | https://github.com/dauparas/ProteinMPNN | [MIT License](https://github.com/dauparas/ProteinMPNN/blob/main/LICENSE) |
+| PiFold | Inverse Folding | https://github.com/A4Bio/PiFold | [MIT License](https://github.com/A4Bio/PiFold/blob/main/license) |
 | ProteinSeqDes| Inverse Folding| https://github.com/nanand2/protein_seq_des | [BSD-3](https://github.com/nanand2/protein_seq_des/blob/master/LICENSE) |
 | ProteinSolver| Inverse Folding| https://github.com/ostrokach/proteinsolver | [MIT License](https://github.com/ostrokach/proteinsolver/blob/master/LICENSE) |
 | RFDiffusion | Design | https://github.com/RosettaCommons/RFdiffusion | [BSD](https://github.com/RosettaCommons/RFdiffusion/blob/main/LICENSE) |
