@@ -34,6 +34,7 @@ import torch
 from Bio import PDB
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
+
 from prtm.constants import residue_constants
 from prtm.visual import view_ca_trace, view_protein_with_bfactors
 
@@ -1173,6 +1174,28 @@ class Protein4(Protein5):
     def to_protein4(self) -> Protein4:
         return self
 
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = True,
+    ) -> ProteinBase:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_protein4()
+
 
 class Protein3(Protein5):
     VALID_ATOM_COUNTS = [3]
@@ -1182,6 +1205,28 @@ class Protein3(Protein5):
 
     def to_protein3(self) -> Protein3:
         return self
+
+    @classmethod
+    def from_pdb_string(
+        cls,
+        pdb_str: str,
+        chain_id: Optional[str] = None,
+        parse_hetatom: bool = True,
+    ) -> ProteinBase:
+        """Converts a PDB string to a protein.
+
+        Args:
+            pdb_str: The contents of the pdb file
+            chain_id: If None, then the whole pdb file is parsed. If chain_id is specified (e.g. A), then only that chain
+            is parsed.
+            parse_hetatom: If True, then HETATM lines are parsed and returned in the hetatom_positions and hetatom_names
+
+        Returns:
+            A `Protein` instance.
+        """
+        prot_dict = parse_pdb_string(pdb_str, chain_id, parse_hetatom)
+        protein37 = Protein37(**prot_dict)
+        return protein37.to_protein3()
 
 
 class ProteinCATrace(ProteinBase):

@@ -1,46 +1,30 @@
-import itertools
+from typing import Optional
 
 import numpy as np
 import torch
+from prtm import protein
+from prtm.constants.residue_constants import proteinmppn_restypes
 
 
-def shuffle_subset(n, p):
-    n_shuffle = np.random.binomial(n, p)
-    ix = np.arange(n)
-    ix_subset = np.random.choice(ix, size=n_shuffle, replace=False)
-    ix_subset_shuffled = np.copy(ix_subset)
-    np.random.shuffle(ix_subset_shuffled)
-    ix[ix_subset] = ix_subset_shuffled
-    return ix
-
-
-def featurize_GTrans(batch, shuffle_fraction=0.0):
+def featurize_structure(
+    structure: protein.Protein4,
+    device: Optional[torch.device] = torch.device("cpu"),
+):
     """Pack and pad batch into torch tensors"""
-    alphabet = "ACDEFGHIKLMNPQRSTVWY"
-    B = len(batch)
-    lengths = np.array([len(b["seq"]) for b in batch], dtype=np.int32)
-    L_max = max([len(b["seq"]) for b in batch])
-    X = np.zeros([B, L_max, 4, 3])
-    S = np.zeros([B, L_max], dtype=np.int32)
-    score = np.ones([B, L_max]) * 100.0
+    assert isinstance(
+        structure, protein.Protein4
+    ), "Structure must be a Protein4 object"
 
-    # Build the batch
-    for i, b in enumerate(batch):
-        x = np.stack([b[c] for c in ["N", "CA", "C", "O"]], 1)  # [#atom, 4, 3]
+    sequence = structure.sequence()
+    length = len(sequence)
 
-        l = len(b["seq"])
-        x_pad = np.pad(
-            x, [[0, L_max - l], [0, 0], [0, 0]], "constant", constant_values=(np.nan,)
-        )  # [#atom, 4, 3]
-        X[i, :, :, :] = x_pad
+    X = structure.atom_positions
+    score = 100 * np.ones([1, length])
+    S = np.asarray([proteinmppn_restypes.index(a) for a in sequence], dtype=np.int32)
 
-        # Convert to labels
-        indices = np.asarray([alphabet.index(a) for a in b["seq"]], dtype=np.int32)
-        if shuffle_fraction > 0.0:
-            idx_shuffle = shuffle_subset(l, shuffle_fraction)
-            S[i, :l] = indices[idx_shuffle]
-        else:
-            S[i, :l] = indices
+    # Add batch dimension
+    X = X[None]
+    S = S[None]
 
     mask = np.isfinite(np.sum(X, (2, 3))).astype(np.float32)  # atom mask
     numbers = np.sum(mask, axis=1).astype(np.int)
@@ -52,12 +36,15 @@ def featurize_GTrans(batch, shuffle_fraction=0.0):
 
     X = X_new
     S = S_new
+
     isnan = np.isnan(X)
     mask = np.isfinite(np.sum(X, (2, 3))).astype(np.float32)
     X[isnan] = 0.0
+
     # Conversion
-    S = torch.from_numpy(S).to(dtype=torch.long)
-    score = torch.from_numpy(score).float()
-    X = torch.from_numpy(X).to(dtype=torch.float32)
-    mask = torch.from_numpy(mask).to(dtype=torch.float32)
-    return X, S, score, mask, lengths
+    S = torch.from_numpy(S).to(dtype=torch.long).to(device)
+    score = torch.from_numpy(score).float().to(device)
+    X = torch.from_numpy(X).to(dtype=torch.float32).to(device)
+    mask = torch.from_numpy(mask).to(dtype=torch.float32).to(device)
+
+    return X, S, score, mask
