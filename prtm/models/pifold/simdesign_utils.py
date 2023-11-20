@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from prtm.constants.residue_constants import backbone4_atoms
+
 
 # Thanks for StructTrans
 # https://github.com/jingraham/neurips19-graph-protein-design
@@ -64,7 +66,7 @@ def _dihedrals(X, dihedral_type=0, eps=1e-7):
 
 
 def _hbonds(X, E_idx, mask_neighbors, eps=1e-3):
-    X_atoms = dict(zip(["N", "CA", "C", "O"], torch.unbind(X, 2)))
+    X_atoms = dict(zip(backbone4_atoms, torch.unbind(X, 2)))
 
     X_atoms["C_prev"] = F.pad(X_atoms["C"][:, 1:, :], (0, 0, 0, 1), "constant", 0)
     X_atoms["H"] = X_atoms["N"] + _normalize(

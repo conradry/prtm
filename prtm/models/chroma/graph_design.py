@@ -24,9 +24,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.chroma import complexity, graph
 from prtm.models.chroma.model_utils import load_model as utility_load_model
-from prtm.models.chroma.sequence import AA20
 from prtm.models.chroma.structure import diffusion, potts, protein_graph, sidechain
 from prtm.models.chroma.structure.protein_graph_allatom import (
     EdgeSidechainsDirect,
@@ -783,7 +783,7 @@ class GraphDesign(nn.Module):
                 top-p value [1].
                 [1] Holtzman et al. The Curious Case of Neural Text Degeneration. (2020)
             ban_S (tuple, optional): An optional set of token indices from
-                `chroma.constants.AA20` to ban during sampling.
+                `alphabetical_restypes` to ban during sampling.
             sampling_method (str): Sampling method for decoding sequence from structure.
                 If `autoregressive`, sequences will be designed by ancestral sampling with
                 the autoregessive decoder head. If `potts`, sequences will be designed
@@ -821,7 +821,7 @@ class GraphDesign(nn.Module):
         """
         if X.shape[2] == 4:
             X = F.pad(X, [0, 0, 0, 10])
-        alphabet = AA20
+        alphabet = alphabetical_restypes
         node_h, edge_h, edge_idx, mask_i, mask_ij = self.encode(X, C, t=t)
 
         # Process sampling mask
@@ -1736,7 +1736,7 @@ class SidechainDecoderGNN(nn.Module):
             top_p_S (float, optional): Top-p cutoff for Nucleus Sampling, see
                 Holtzman et al ICLR 2020.
             ban_S (tuple, optional): An optional set of token indices from
-                `chroma.constants.AA20` to ban during sampling.
+                `alphabetical_restypes` to ban during sampling.
 
         Returns:
             S (torch.LongTensor): Sequence tensor with shape
@@ -1958,7 +1958,7 @@ class NodePredictorS(nn.Module):
             top_p (float, optional): Top-p cutoff for Nucleus Sampling, see
                 Holtzman et al ICLR 2020.
             ban_S (tuple, optional): An optional set of token indices from
-                `chroma.constants.AA20` to ban during sampling.
+                `alphabetical_restypes` to ban during sampling.
 
         Returns:
             S_sample (torch.LongTensor): Sampled sequence of shape `(num_batch,

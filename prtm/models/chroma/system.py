@@ -24,12 +24,15 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
+from prtm.constants.residue_constants import (
+    PDB_CHAIN_IDS,
+    alphabetical_restypes,
+    backbone4_atoms,
+    restype_1to3,
+)
 from prtm.models.chroma import polyseq
 from prtm.models.chroma import starparser as sp
 from prtm.models.chroma.geometry import AA_GEOMETRY
-from prtm.models.chroma.sequence import AA20, AA20_1_TO_3, ATOMS_BB, CHAIN_ALPHABET
-
-from chroma import constants
 
 
 @dataclass
@@ -670,12 +673,14 @@ class System:
             S (torch.LongTensor): Sequence with shape `(1, num_residues)`.
             alternate_alphabet (str, optional): Optional alternative alphabet for
                 sequence encoding. Otherwise the default alphabet is set in
-                    `AA20`.Amino acid alphabet for embedding.
+                    `alphabetical_restypes`.Amino acid alphabet for embedding.
         Returns:
             System: A System object with the new XCS data.
 
         """
-        alphabet = AA20 if alternate_alphabet is None else alternate_alphabet
+        alphabet = (
+            alphabetical_restypes if alternate_alphabet is None else alternate_alphabet
+        )
         all_atom = X.shape[2] == 14
 
         assert X.shape[0] == 1
@@ -711,7 +716,7 @@ class System:
                 )
 
                 if C_i > 0:
-                    atom_names = ATOMS_BB
+                    atom_names = backbone4_atoms
 
                     if all_atom and resname in AA_GEOMETRY:
                         atom_names = atom_names + AA_GEOMETRY[resname]["atoms"]
@@ -787,17 +792,21 @@ class System:
                 the coordinates in `X`.
 
         """
-        alphabet = AA20 if alternate_alphabet is None else alternate_alphabet
+        alphabet = (
+            alphabetical_restypes if alternate_alphabet is None else alternate_alphabet
+        )
 
         # Get chain map grabbing each chain in system and look at length
         C = []
+        # Unclear to me why the underscore is needed, maybe it isn't?
+        valid_chain_ids = "_" + PDB_CHAIN_IDS
         for ch_id, chain in enumerate(self.chains()):
             ch_str = chain.cid
-            if ch_str in list(CHAIN_ALPHABET):
-                map_ch_id = list(CHAIN_ALPHABET).index(ch_str)
+            if ch_str in list(valid_chain_ids):
+                map_ch_id = list(valid_chain_ids).index(ch_str)
             else:
                 # fmt: off
-                map_ch_id = np.setdiff1d(np.arange(1, len(CHAIN_ALPHABET)), np.unique(C))[0]
+                map_ch_id = np.setdiff1d(np.arange(1, len(valid_chain_ids)), np.unique(C))[0]
                 # fmt: on
             if reorder_chain:
                 map_ch_id = ch_id + 1
@@ -817,7 +826,7 @@ class System:
             if alternate_atoms is not None:
                 atom_names = alternate_atoms
             else:
-                atom_names = ATOMS_BB
+                atom_names = backbone4_atoms
             num_atoms = len(atom_names)
             atom_names = {a: i for (i, a) in enumerate(atom_names)}
         num_residues = self.num_residues()
@@ -851,8 +860,8 @@ class System:
             else:
                 # Loop through atoms
                 if all_atom:
-                    code3 = AA20_1_TO_3[oneLetterSeq[i]]
-                    atom_names = ATOMS_BB + AA_GEOMETRY[code3]["atoms"]
+                    code3 = restype_1to3[oneLetterSeq[i]]
+                    atom_names = backbone4_atoms + AA_GEOMETRY[code3]["atoms"]
                     atom_names = {a: i for (i, a) in enumerate(atom_names)}
 
                 X[
@@ -938,7 +947,9 @@ class System:
         X, C, S = map(_process_inputs, [X, C, S])
 
         shape_changed = False
-        alphabet = AA20 if alternate_alphabet is None else alternate_alphabet
+        alphabet = (
+            alphabetical_restypes if alternate_alphabet is None else alternate_alphabet
+        )
         for i, res in enumerate(self.residues()):
             # atoms to update must have structure and are present in the chain map
             if not res.has_structure() or C[i] <= 0:
@@ -954,7 +965,7 @@ class System:
 
             # Second, delete all atoms that are missing in XCS or have duplicate names
             atoms_sys = [atom.name for atom in res.atoms()]
-            atoms_XCS = ATOMS_BB
+            atoms_XCS = backbone4_atoms
             if resname in AA_GEOMETRY:
                 atoms_XCS = atoms_XCS + AA_GEOMETRY[resname]["atoms"]
                 atoms_XCS = atoms_XCS[: X.shape[1]]

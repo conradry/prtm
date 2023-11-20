@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from prtm.constants.residue_constants import proteinmppn_restypes
 from prtm.models.proteinmpnn import config
 
 # A number of functions/classes are adopted from: https://github.com/jingraham/neurips19-graph-protein-design

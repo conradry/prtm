@@ -12,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
-from prtm.models.chroma.protein import Protein
-from prtm.models.chroma.sequence import AA20
+from prtm.models import chroma
 from prtm.models.chroma.structure import backbone
 from sklearn.decomposition import PCA
-from torch import nn
-
-import chroma
 
 
 def letter_to_point_cloud(
@@ -177,116 +172,3 @@ def plane_split_protein(X=None, C=None, protein=None, mask_percent=0.5):
         )
 
     return C_mask
-
-
-def export_potts_evzoom(
-    outfile: str,
-    chroma: nn.Module,
-    protein: Protein,
-    t: float = 0.5,
-    alphabet_reorder="DEKRHQNSTPGAVILMCFWY",
-    element_cutoff_percentile: float = 0.95,
-    norm_cutoff_fraction: float = 0.98,
-    logo_cutoff_fraction: float = 0.9,
-):
-    """Build EVzoom visualization given Chroma and a protein.
-
-    EVzoom files can be dragged and dropped onto a viewer at EVzoom.org
-
-    Args:
-        outfile (str): File destination for outputting EVzoom json data. Should
-            end in `.json`.
-        chroma (nn.Module): Chroma model instance.
-        protein (Protein): Protein
-        t (float): Diffusion time for evaluating ChromaDesign Potts models.
-        alphabet_reorder (str): Amino acid ordering for EVzoom output.
-        element_cutoff_percentile (float): Percentile on (0,1) at which to clip
-            `J_ij` element-wise values for visualization.
-        norm_cutoff_fraction (float): Only visualize the top `i,j` pairs whose
-            norms account for this fraction of the sum of all norm values.
-        logo_cutoff_fraction (float): Only visualize the amino acids whose
-            cumulative marginal probabilities account for this total fraction
-            per position.
-    """
-    if not outfile.endswith(".json"):
-        raise Exception("Destination should be a json file")
-
-    alphabet = AA20
-    X, C, S = protein.to_XCS()
-    h, J, edge_idx = chroma.design_network.predict_potts(X, C, t=t)
-    log_probs = chroma.design_network.predict_marginals(X, C, t=t)[0]
-
-    sequence = "".join([alphabet[ax] for ax in S.cpu().data.numpy().flatten().tolist()])
-    permute_ix = np.array([alphabet.index(c) for c in alphabet_reorder])
-
-    evz_data = {
-        "map": {"letters": sequence, "indices": list(range(len(sequence)))},
-        "logo": [],
-        "couplings": [],
-    }
-
-    h = -h[0, :, :].data.cpu().numpy()
-    J = -J[0, :, :, :, :].data.cpu().numpy()
-    edge_idx = edge_idx[0, :, :].data.cpu().numpy()
-    log_probs = log_probs[0, :, :].data.cpu().numpy()
-    N = J.shape[0]
-    k = J.shape[1]
-
-    # Compute entropy
-    P = np.exp(log_probs)
-    P = P / np.sum(P, 1, keepdims=True)
-    H = -np.sum(P * np.log2(P), 1)
-
-    # Determine top residues per position
-    P_sort = np.sort(P, axis=-1)[:, ::-1]
-    CDF = P_sort.cumsum(axis=-1)
-    ix_valid = CDF <= logo_cutoff_fraction
-    ix = ix_valid.sum(axis=1)
-    p_cutoff_logo = P_sort[np.arange(N), ix]
-    P_mask = P >= p_cutoff_logo[:, np.newaxis]
-
-    # Export logo
-    for i in range(N):
-        bits = (np.log2(20.0) - H[i]) * P[i]
-        aa_idx = np.argsort(bits)[::-1]
-        data_i = []
-        for a_i in aa_idx:
-            if P_mask[i, a_i]:
-                data_i.append({"code": alphabet[a_i], "bits": str(bits[a_i])})
-        evz_data["logo"].append(data_i)
-
-    # Compute cutoff automatically
-    norms = (J**2).sum(axis=(2, 3))
-    norms_descend = np.sort(norms.flatten())[::-1]
-    norms_cumsum = np.cumsum(norms_descend)
-    valid_norms = norms_cumsum / norms_cumsum[-1] < norm_cutoff_fraction
-    cutoff = norms_descend[valid_norms].min()
-
-    # Export couplings
-    for i in range(N):
-        for j in range(k):
-            j_idx = edge_idx[i, j]
-            score = np.sqrt(np.mean(J[i, j, :, :] ** 2))
-            if score > cutoff:
-                ii = [ix for ix in permute_ix if P_mask[i, ix]]
-                jj = [ix for ix in permute_ix if P_mask[j_idx, ix]]
-                J_ij = J[i, j, :, :]
-                J_ij = J_ij[ii][:, jj]
-                J_ij = np.clip(
-                    J_ij,
-                    np.percentile(J_ij, 100 * (1 - element_cutoff_percentile)),
-                    np.percentile(J_ij, element_cutoff_percentile * 100),
-                )
-                J_ij = np.round(J_ij, 3)
-                data_ij = {
-                    "i": i + 1,
-                    "j": str(j_idx + 1),
-                    "score": str(score),
-                    "iC": [alphabet[ix] for ix in ii],
-                    "jC": [alphabet[ix] for ix in jj],
-                    "matrix": J_ij.tolist(),
-                }
-                evz_data["couplings"].append(data_ij)
-
-    with open(outfile, "w") as file:
-        file.write(json.dumps(evz_data))

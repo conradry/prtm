@@ -23,9 +23,9 @@ from typing import List, Literal, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from prtm.constants.residue_constants import alphabetical_restype_3
 from prtm.models.chroma import graph_backbone, graph_design
 from prtm.models.chroma.protein import Protein
-from prtm.models.chroma.sequence import AA20_3
 from prtm.models.chroma.structure.backbone import ProteinBackbone
 
 
@@ -547,7 +547,7 @@ class Chroma(nn.Module):
         X, C, S = protein.to_XCS()
         ban_S = None
         if alphabet is not None:
-            ban_S = set(AA20_3).difference(alphabet)
+            ban_S = set(alphabetical_restype_3).difference(alphabet)
 
         X_sample, S_sample, _, _ = self.design_network_ar.sample(
             X,

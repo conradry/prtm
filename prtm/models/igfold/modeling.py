@@ -4,11 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 from einops import rearrange
-from prtm.constants.residue_constants import restype_order
+from prtm.constants.residue_constants import PDB_CHAIN_IDS, restype_order
 from prtm.models.antiberty.modeling import _AntiBERTyBase
 from prtm.models.igfold import config
 from prtm.models.igfold.model import IgFold
-from prtm.protein import PDB_CHAIN_IDS, Protein5
+from prtm.protein import Protein5
 from prtm.utils import hub_utils
 
 __all__ = ["IgFoldForFolding"]

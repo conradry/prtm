@@ -19,10 +19,9 @@ from typing import List, Optional, Tuple, Union
 
 import nglview as nv
 import torch
-from prtm.models.chroma.sequence import CHAIN_ALPHABET, PROTEIN_TOKENS
+from prtm.constants.residue_constants import PDB_CHAIN_IDS, alphabetical_restypes
+from prtm.models.chroma import polyseq
 from prtm.models.chroma.system import System, SystemEntity
-
-import polyseq
 
 
 class Protein:
@@ -89,7 +88,7 @@ class Protein:
 
                 url = f"https://data.rcsb.org/rest/v1/core/entry/{args[0]}"
                 VALID_PDBID = requests.get(url).status_code == 200
-                VALID_SEQUENCE = all([s in PROTEIN_TOKENS for s in args[0]])
+                VALID_SEQUENCE = all([s in alphabetical_restypes for s in args[0]])
 
                 if VALID_PDBID:
                     # This only works if connected to the internet,
@@ -227,7 +226,7 @@ class Protein:
         """
         from os import unlink
 
-        from chroma.utility.fetchdb import RCSB_file_download
+        from prtm.models.chroma.fetchdb import RCSB_file_download
 
         file_cif = f"/tmp/{pdb_id}.cif"
         RCSB_file_download(pdb_id, ".cif", file_cif)
@@ -255,7 +254,7 @@ class Protein:
 
         system = System("system")
         for c_ix, seq in enumerate(chains):
-            chain_id = CHAIN_ALPHABET[c_ix + 1]
+            chain_id = PDB_CHAIN_IDS[c_ix]
             chain = system.add_chain(chain_id)
 
             # Populate the Chain
@@ -452,7 +451,7 @@ class Protein:
         Returns:
             viewer: A viewer object for interactive visualization.
         """
-        from chroma.utility.ngl import SystemTrajectory, view_gsystem
+        from prtm.models.chroma.ngl import SystemTrajectory, view_gsystem
 
         if self.sys.num_models() == 1:
             viewer = view_gsystem(self.sys)

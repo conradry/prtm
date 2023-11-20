@@ -33,7 +33,7 @@ The tensors in an XCS representation are:
 
     `S` (LongTensor), the sequence of the protein as alphabet indices with
         shape `(num_batch, num_residues)`. The standard alphabet is
-        `ACDEFGHIKLMNPQRSTVWY`, also defined in `constants.AA20`.
+        `ACDEFGHIKLMNPQRSTVWY`, also defined in `residue_constants.alphabetical_restypes`.
 """
 
 

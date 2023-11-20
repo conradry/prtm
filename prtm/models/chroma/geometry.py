@@ -16,6 +16,15 @@
  for building amino acid 3D coordinates"""
 from typing import Dict
 
+ATOM_SYMMETRIES = {
+    "ARG": [("NH1", "NH2")],  # Correct handling of NH1 and NH2 is relabeling
+    "ASP": [("OD1", "OD2")],
+    "GLU": [("OE1", "OE2")],
+    "PHE": [("CD1", "CD2"), ("CE1", "CE2")],
+    "TYR": [("CD1", "CD2"), ("CE1", "CE2")],
+}
+
+
 AA_GEOMETRY: Dict[str, dict] = {
     "ALA": {
         "atoms": ["CB"],

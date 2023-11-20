@@ -26,8 +26,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.chroma import basic, sde
-from prtm.models.chroma.sequence import AA20
 from prtm.models.chroma.structure import backbone, hbonds, mvn, rmsd
 from prtm.models.chroma.xcs import validate_XC
 from torch.autograd import grad
@@ -945,7 +945,7 @@ class DiffusionChainCov(nn.Module):
             # Apply optional conditioner transformations to state and energy
             Xt, Ct, U_conditioner = X, C, 0.0
             St = torch.zeros(Ct.shape, device=Xt.device).long()
-            Ot = F.one_hot(St, len(AA20)).float()
+            Ot = F.one_hot(St, len(alphabetical_restypes)).float()
             if conditioner is not None:
                 Xt, Ct, _, U_conditioner, _ = conditioner(X, C, Ot, U_conditioner, t)
             U_conditioner = torch.as_tensor(U_conditioner)
@@ -1206,7 +1206,7 @@ class DiffusionChainCov(nn.Module):
                 X_init_test = X_init.clone()
                 X_init_test.requires_grad = True
                 S_test = torch.zeros(C.shape, device=X_init.device).long()
-                O_test = F.one_hot(S_test, len(AA20)).float()
+                O_test = F.one_hot(S_test, len(alphabetical_restypes)).float()
                 U_test = 0.0
                 t_test = torch.tensor([0.0], device=X_init.device)
                 _, Ct, _, _, _ = conditioner(X_init_test, C, O_test, U_test, t_test)

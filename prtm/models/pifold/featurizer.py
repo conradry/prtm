@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 from prtm import protein
-from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import alphabetical_restypes
 
 
 def featurize_structure(
@@ -20,7 +20,7 @@ def featurize_structure(
 
     X = structure.atom_positions
     score = 100 * np.ones([1, length])
-    S = np.asarray([proteinmppn_restypes.index(a) for a in sequence], dtype=np.int32)
+    S = np.asarray([alphabetical_restypes.index(a) for a in sequence], dtype=np.int32)
 
     # Add batch dimension
     X = X[None]

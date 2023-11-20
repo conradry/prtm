@@ -49,11 +49,7 @@ except:
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
-PICO_TO_ANGSTROM = 0.01
 
-PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
-assert PDB_MAX_CHAINS == 62
 
 """
 Some notes about number of atoms:
@@ -375,7 +371,7 @@ class ProteinBase:
             if arr is not None:
                 assert arr.shape[1] == num_atom_type
 
-        assert self.chain_index.max() < PDB_MAX_CHAINS, "Chain index must be < 62"
+        assert self.chain_index.max() < residue_constants.PDB_MAX_CHAINS, "Chain index must be < 62"
 
     def to_torch(self) -> ProteinBase:
         """Converts a `Protein` instance to torch tensors."""
@@ -458,11 +454,11 @@ class ProteinBase:
         chain_ids = {}
         unique_fn = np.unique if isinstance(chain_index, np.ndarray) else torch.unique
         for i in unique_fn(chain_index):
-            if i >= PDB_MAX_CHAINS:
+            if i >= residue_constants.PDB_MAX_CHAINS:
                 raise ValueError(
-                    f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
+                    f"The PDB format supports at most {residue_constants.PDB_MAX_CHAINS} chains."
                 )
-            chain_ids[i] = PDB_CHAIN_IDS[i]
+            chain_ids[i] = residue_constants.PDB_CHAIN_IDS[i]
 
         headers = self.get_pdb_headers()
         if len(headers) > 0:
@@ -846,8 +842,8 @@ class ProteinBase:
         )
 
     def get_chain(self, chain_id: str) -> ProteinBase:
-        assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
-        chain_index = PDB_CHAIN_IDS.index(chain_id)
+        assert chain_id in residue_constants.PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
+        chain_index = residue_constants.PDB_CHAIN_IDS.index(chain_id)
         # Get the mask for indices in this chain
         chain_mask = self.chain_index == chain_index
         # Create a new Protein instance that only includes the
@@ -869,8 +865,8 @@ class ProteinBase:
     def sequence(self, chain_id: Optional[str] = None) -> str:
         # Decode the aatype sequence to a string
         if chain_id is not None:
-            assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
-            aatypes = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
+            assert chain_id in residue_constants.PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
+            aatypes = self.aatype[self.chain_index == residue_constants.PDB_CHAIN_IDS.index(chain_id)]
         else:
             aatypes = self.aatype
 
@@ -904,7 +900,7 @@ class ProteinBase:
     @property
     def chains(self):
         """Returns a string with all available chains."""
-        return "".join(PDB_CHAIN_IDS[i] for i in np.unique(self.chain_index))
+        return "".join(residue_constants.PDB_CHAIN_IDS[i] for i in np.unique(self.chain_index))
 
     def superimpose(self, other: ProteinBase) -> ProteinBase:
         """Superimposes another protein onto this protein."""

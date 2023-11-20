@@ -26,16 +26,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from prtm.constants import residue_constants
 from prtm.models.chroma import graph
-from prtm.models.chroma.geometry import AA_GEOMETRY
-from prtm.models.chroma.sequence import (
-    AA20,
-    AA20_3,
-    AA20_NUM_ATOMS,
-    AA20_NUM_CHI,
-    ATOM_SYMMETRIES,
-    ATOMS_BB,
-)
+from prtm.models.chroma.geometry import AA_GEOMETRY, ATOM_SYMMETRIES
 from prtm.models.chroma.structure import protein_graph
 from prtm.models.chroma.structure.geometry import (
     dihedrals,
@@ -76,7 +69,7 @@ class SideChainBuilder(nn.Module):
         super(SideChainBuilder, self).__init__()
         self.num_atoms = 10
         self.num_chi = 4
-        self.num_aa = len(AA20)
+        self.num_aa = len(residue_constants.alphabetical_restypes)
         self.distance_eps = distance_eps
 
         self._init_maps()
@@ -91,9 +84,9 @@ class SideChainBuilder(nn.Module):
             "_chi_ix", 10 * torch.ones((self.num_chi, self.num_aa), dtype=torch.long)
         )
 
-        for i, aa in enumerate(AA20_3):
+        for i, aa in enumerate(residue_constants.alphabetical_restype_3):
             aa_dict = AA_GEOMETRY[aa]
-            atoms_parents = ["N", "CA", "C", "O"] + aa_dict["atoms"]
+            atoms_parents = residue_constants.backbone4_atoms + aa_dict["atoms"]
             for j, atom in enumerate(aa_dict["atoms"]):
                 # Internal coordinates per atom
                 self._Z[0, j, i] = aa_dict["z-lengths"][j]
@@ -114,7 +107,7 @@ class SideChainBuilder(nn.Module):
         self._Z[1:, :, :] = self._Z[1:, :, :] * np.pi / 180.0
 
         # Manually fix Arginine, for which CHARMM places NH1 in trans to CD
-        self._Z[2, 5, AA20.index("R")] = 0.0
+        self._Z[2, 5, residue_constants.alphabetical_restypes.index("R")] = 0.0
 
     def forward(self, X, C, S, chi=None):
         num_batch, num_residues = list(S.shape)
@@ -226,7 +219,7 @@ class ChiAngles(nn.Module):
         super(ChiAngles, self).__init__()
         self.num_atoms = 10
         self.num_chi = 4
-        self.num_aa = len(AA20)
+        self.num_aa = len(residue_constants.alphabetical_restypes)
 
         self.distance_eps = distance_eps
 
@@ -240,9 +233,9 @@ class ChiAngles(nn.Module):
             torch.zeros((self.num_aa, self.num_chi, 4), dtype=torch.long),
         )
 
-        for i, aa in enumerate(AA20_3):
+        for i, aa in enumerate(residue_constants.alphabetical_restype_3):
             aa_dict = AA_GEOMETRY[aa]
-            atoms_names = ["N", "CA", "C", "O"] + aa_dict["atoms"]
+            atoms_names = residue_constants.backbone4_atoms + aa_dict["atoms"]
 
             # Map which chi angles are flexible
             for j, parent_ix in enumerate(aa_dict["chi_indices"]):
@@ -294,14 +287,14 @@ class SideChainSymmetryRenamer(nn.Module):
     def __init__(self):
         super(SideChainSymmetryRenamer, self).__init__()
         self.num_atoms = 10
-        self.num_aa = len(AA20)
+        self.num_aa = len(residue_constants.alphabetical_restypes)
 
         # Build symmetry indices give alternative atom labelings
         self.register_buffer(
             "_symmetry_indices",
             torch.arange(self.num_atoms).unsqueeze(0).repeat(self.num_aa, 1),
         )
-        for i, aa in enumerate(AA20_3):
+        for i, aa in enumerate(residue_constants.alphabetical_restype_3):
             if aa in ATOM_SYMMETRIES:
                 for aa_1, aa_2 in ATOM_SYMMETRIES[aa]:
                     atom_names = AA_GEOMETRY[aa]["atoms"]
@@ -430,7 +423,7 @@ class LossSideChainRMSD(nn.Module):
     def __init__(self, rmsd_eps=1e-2):
         super(LossSideChainRMSD, self).__init__()
         self.num_atoms = 10
-        self.num_aa = len(AA20)
+        self.num_aa = len(residue_constants.alphabetical_restypes)
 
         self.rmsd_eps = rmsd_eps
         self.renamer = SideChainSymmetryRenamer()
@@ -721,8 +714,8 @@ class LossSidechainClashes(nn.Module):
 
         # Van der waal radii per atom per residue [AA,ATOM]
         R = torch.zeros([20, 14], device=C.device)
-        for i, aa in enumerate(AA20_3):
-            atoms = ATOMS_BB + AA_GEOMETRY[aa]["atoms"]
+        for i, aa in enumerate(residue_constants.alphabetical_restype_3):
+            atoms = residue_constants.backbone4_atoms + AA_GEOMETRY[aa]["atoms"]
             for j, atom_name in enumerate(atoms):
                 R[i, j] = vdw_radii[atom_name[0]]
 
@@ -800,7 +793,7 @@ def atom_mask(C, S):
         mask_atoms (tensor): Atomic mask with shape
             `(batch_size, num_residues, 14)`.
     """
-    return _gather_atom_mask(C, S, AA20_NUM_ATOMS, 14)
+    return _gather_atom_mask(C, S, residue_constants.num_atoms_per_alphabetical_aa, 14)
 
 
 def chi_mask(C, S):
@@ -814,4 +807,4 @@ def chi_mask(C, S):
         mask_atoms (tensor): Chi angle mask with shape
             `(batch_size, num_residues, 4)`.
     """
-    return _gather_atom_mask(C, S, AA20_NUM_CHI, 4)
+    return _gather_atom_mask(C, S, residue_constants.num_chi_per_alphabetical_aa, 4)

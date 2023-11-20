@@ -18,8 +18,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.chroma.graph import collect_neighbors
-from prtm.models.chroma.sequence import AA20
 
 
 def compositions(S: torch.Tensor, C: torch.LongTensor, w: int = 30):
@@ -40,7 +40,7 @@ def compositions(S: torch.Tensor, C: torch.LongTensor, w: int = 30):
             `(num_batch, num_residues - w + 1)`.
     """
     S.device
-    Q = len(AA20)
+    Q = len(alphabetical_restypes)
     mask_i = (C > 0).float()
     if len(S.shape) == 2:
         S = F.one_hot(S, Q)
@@ -140,7 +140,7 @@ def complexity_scores_lcp_t(
     method: str = "chao-shen",
 ) -> torch.Tensor:
     """Compute local LCP scores for autoregressive decoding."""
-    Q = len(AA20)
+    Q = len(alphabetical_restypes)
     O = F.one_hot(S, Q)
     O_j = collect_neighbors(O, edge_idx_t)
     idx_i = idx[:, t, None]
