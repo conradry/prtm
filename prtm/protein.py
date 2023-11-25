@@ -467,7 +467,7 @@ class ProteinBase:
 
         return pdb_headers
 
-    def _to_pdb_from_atom37(self) -> str:
+    def _to_pdb_from_atom37(self, write_hetatoms=True) -> str:
         """Converts this `Protein` instance to a PDB string.
         This is a private method because children should have
         an appropriate to_pdb method that makes sure there are 37
@@ -586,7 +586,7 @@ class ProteinBase:
         pdb_lines.append("ENDMDL")
 
         # Add all HETATM sites.
-        if self.hetatom_positions is not None:
+        if write_hetatoms and self.hetatom_positions is not None:
             for name, pos, atom_type, res_index, chain_id, b_factor in zip(
                 self.hetatom_names,
                 self.hetatom_positions,
@@ -620,7 +620,7 @@ class ProteinBase:
         pdb_lines = [line.ljust(80) for line in pdb_lines]
         return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
-    def to_pdb(self):
+    def to_pdb(self, write_hetatoms=True):
         raise NotImplementedError
 
     def _to_modelcif_from_atom37(self) -> str:
@@ -1012,8 +1012,8 @@ class Protein37(ProteinBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def to_pdb(self) -> str:
-        return self._to_pdb_from_atom37()
+    def to_pdb(self, write_hetatoms=True) -> str:
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         return self._to_modelcif_from_atom37()
@@ -1137,9 +1137,9 @@ class Protein14(ProteinBase):
     def to_protein14(self) -> Protein14:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1185,9 +1185,9 @@ class Protein27(ProteinBase):
     def to_protein27(self) -> Protein27:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1237,9 +1237,9 @@ class Protein5(ProteinBase):
     def to_protein5(self) -> Protein5:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1373,15 +1373,15 @@ class ProteinCATrace(ProteinBase):
             remark=protein_ca.remark,
             hetatom_positions=protein_ca.hetatom_positions,
             hetatom_names=protein_ca.hetatom_names,
-            hetatom_types=protein.hetatom_types,
-            hetatom_index=protein.hetatom_index,
-            hetatom_chain_ids=protein.hetatom_chain_ids,
-            hetatom_b_factors=protein.hetatom_b_factors,
+            hetatom_types=protein_ca.hetatom_types,
+            hetatom_index=protein_ca.hetatom_index,
+            hetatom_chain_ids=protein_ca.hetatom_chain_ids,
+            hetatom_b_factors=protein_ca.hetatom_b_factors,
         )
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein3 = self.to_protein3()
-        return protein3.to_pdb()
+        return protein3.to_pdb()(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein3 = self.to_protein3()

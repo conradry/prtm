@@ -1063,12 +1063,15 @@ restype_1to3 = {
     "X": "UNK",
 }
 
-
 # NB: restype_3to1 differs from Bio.PDB.protein_letters_3to1 by being a simple
 # 1-to-1 mapping of 3 letter names to one letter names. The latter contains
 # many more, and less common, three letter names as keys and maps many of these
 # to the same one letter name (including 'X' and 'U' which we don't use here).
 restype_3to1 = {v: k for k, v in restype_1to3.items()}
+
+# Add handling of non-standard residues for Chroma
+restype_3to1.update({res: "H" for res in ["HSD", "HSE", "HSC", "HSP"]})
+restype_3to1.update({"MSE": "M", "SEC": "C"})
 
 restype2atom14_mask = np.zeros([len(restypes_with_x), 14])
 for k, v in restype_name_to_atom14_names.items():

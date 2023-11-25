@@ -169,7 +169,7 @@ class Protein:
         return protein
 
     @classmethod
-    def from_PDB(cls, input_file: str, device: str = "cpu") -> Protein:
+    def from_PDB_string(cls, pdb_str: str, device: str = "cpu") -> Protein:
         """
         Load a Protein object from a provided PDB file.
 
@@ -181,7 +181,7 @@ class Protein:
             Protein: Initialized Protein object from the provided PDB file.
         """
         protein = super(Protein, cls).__new__(cls)
-        protein.sys = System.from_PDB(input_file)
+        protein.sys = System.from_PDB_string(pdb_str)
         protein.device = device
         return protein
 
