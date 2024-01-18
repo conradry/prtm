@@ -17,6 +17,8 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from torch.nn.functional import pad
+
 from prtm.models.chroma import graph_classifier
 from prtm.models.chroma.basic import FourierFeaturization
 from prtm.models.chroma.graph_classifier import GraphClassifier
@@ -25,7 +27,6 @@ from prtm.models.chroma.model_utils import load_model as utility_load_model
 from prtm.models.chroma.model_utils import save_model as utility_save_model
 from prtm.models.chroma.structure import diffusion
 from prtm.models.chroma.xcs import validate_XC
-from torch.nn.functional import pad
 
 
 class ProteinCaption(nn.Module):

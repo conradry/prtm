@@ -27,7 +27,7 @@ dependencies:
   - biopython==1.81
   - biotite==0.37.0
   - chex==0.1.7
-  - deepspeed==0.9.2
+  - deepspeed==0.12.2
   - dgllife==0.3.2
   - dm-haiku==0.0.8
   - dm-tree==0.1.7
@@ -88,8 +88,6 @@ dependencies:
       - pytest
       - requests
       - subword-nmt
-      - tensorflow
-      - tensorflow_addons
       - threadpoolctl
       - typing-extensions
       - urllib3

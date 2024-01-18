@@ -23,6 +23,7 @@ from typing import List, Literal, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+
 from prtm.constants.residue_constants import alphabetical_restype_3
 from prtm.models.chroma import graph_backbone, graph_design
 from prtm.models.chroma.protein import Protein

@@ -17,9 +17,12 @@ import os
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
-from prtm.models import chroma
-from prtm.models.chroma.structure import backbone
 from sklearn.decomposition import PCA
+
+from prtm.models import chroma
+from prtm.models.chroma.modeling import protein_to_xcs
+from prtm.models.chroma.structure import backbone
+from prtm.protein import ProteinBase
 
 
 def letter_to_point_cloud(
@@ -116,12 +119,9 @@ def point_cloud_volume(X, radius):
     return volume
 
 
-def plane_split_protein(X=None, C=None, protein=None, mask_percent=0.5):
-    if protein is None:
-        assert X is not None and C is not None
-    else:
-        X, C, _ = protein.to_XCS()
-        X = X[:, :, :4, :]
+def plane_split_protein(protein: ProteinBase, mask_percent=0.5):
+    """Split a protein by plane, masking mask_percent of residues."""
+    X, C, _ = protein_to_xcs(protein, all_atom=False)
 
     X = backbone.center_X(X, C)
     points = X[C > 0].reshape(-1, 3)

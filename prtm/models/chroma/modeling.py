@@ -1,15 +1,16 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
 
 from prtm.constants import residue_constants
+from prtm.models.chroma.system import System
 from prtm.protein import ProteinBase
 
 
 def dihedral(
-    a: np.ndarray, 
-    b: np.ndarray, 
+    a: np.ndarray,
+    b: np.ndarray,
     c: np.ndarray,
     d: np.ndarray,
     radians: bool = False,
@@ -61,12 +62,15 @@ def canonicalize_structure(prot: ProteinBase) -> ProteinBase:
     prot = prot.to_numpy()
 
     # Get the index for arginine
-    arg_res_idx = residue_constants.restype_3["ARG"]
+    arg_res_idx = residue_constants.restype_3.index("ARG")
     arg_indices = np.where(prot.aatype == arg_res_idx)[0]
 
     # Check if sidechain atoms are present in the structure
     arg_sidechain_atom_indices = np.array(
-        [residue_constants.atom_types.index(atom) for atom in ["CD", "NE", "CZ", "NH1", "NH2"]]
+        [
+            residue_constants.atom_types.index(atom)
+            for atom in ["CD", "NE", "CZ", "NH1", "NH2"]
+        ]
     )
     has_sidechain_atoms = np.where(
         prot.atom_mask[:, arg_sidechain_atom_indices].sum(axis=1) == 5
@@ -160,7 +164,7 @@ def protein_to_xcs(
     S = prot.aatype
 
     # Unknown residues are mapped to 0 for Chroma
-    # but in prtm parsing they will be marked as X, 
+    # but in prtm parsing they will be marked as X,
     # so make the conversion
     masked_res_idx = residue_constants.restypes_with_x.index("X")
     S[S == masked_res_idx] = 0
@@ -168,8 +172,8 @@ def protein_to_xcs(
     # Map from the default protein restypes to the alphabetical restypes
     chroma_alphabet = residue_constants.alphabetical_restypes
     restype_to_alphabetical = {
-        res_idx: chroma_alphabet.index(res) 
-        for res_idx,res in enumerate(residue_constants.restypes)
+        res_idx: chroma_alphabet.index(res)
+        for res_idx, res in enumerate(residue_constants.restypes)
     }
     # Map the restypes to the alphabetical restypes
     S = np.vectorize(restype_to_alphabetical.get)(S)
@@ -183,3 +187,26 @@ def protein_to_xcs(
     S = torch.tensor(S, device=device).type(torch.long)[None]
 
     return X, C, S
+
+
+def get_mask(
+    protein_system: System,
+    selection: str,
+    device: Optional[torch.device] = None,
+) -> torch.Tensor:
+    """
+    Generate a mask tensor based on the provided residue selection.
+
+    Args:
+        protein_system (System): A Chroma System object.
+        selection (str): A selection string to specify which residues should be included in the mask.
+
+    Returns:
+        torch.Tensor: A mask tensor of shape `(1, protein length)`, where positions corresponding to selected residues have a value of 1.
+    """
+    residue_gtis = protein_system.select_residues(selection, gti=True)
+    D = torch.zeros(1, protein_system.num_residues(), device=device)
+    for gti in residue_gtis:
+        D[0, gti] = 1
+
+    return D

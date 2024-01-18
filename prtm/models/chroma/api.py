@@ -18,6 +18,7 @@ import os
 import tempfile
 
 import requests
+
 from prtm.models import chroma
 
 ROOT_DIR = os.path.dirname(os.path.dirname(chroma.__file__))

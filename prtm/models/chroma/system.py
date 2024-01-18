@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
+
 from prtm.constants.residue_constants import (
     PDB_CHAIN_IDS,
     alphabetical_restypes,
@@ -2174,7 +2175,7 @@ class System:
                     for row in tab:
                         if row[0] not in system._labels:
                             system._labels[row[0]] = dict()
-                        int(row[1])
+                        idx = int(row[1])
                         system._labels[row[0]][int(row[1])] = row[2]
                 elif cat == "_atom_site":
                     if is_read["coors"]:
@@ -2659,6 +2660,27 @@ class System:
         return cif_str
 
     def _write_cif(self, f):
+        # fmt: off
+        _specials_atom_names = [
+            "MG", "CL", "FE", "ZN", "MN", "NI", "SE", "CU", "BR", "CO", "AS",
+            "BE", "RU", "RB", "ZR", "OS", "SR", "GD", "MO", "AU", "AG", "PT",
+            "AL", "XE", "BE", "CS", "EU", "IR", "AM", "TE", "BA", "SB"
+        ]
+        # fmt: on
+        _ambiguous_atom_names = ["CA", "CD", "NA", "HG", "PB"]
+
+        def _guess_type(atom_name, res_name):
+            if len(atom_name) > 0 and atom_name[0] == '"':
+                atom_name = atom_name.replace('"', "")
+            if atom_name[:2] in _specials_atom_names:
+                return atom_name[:2]
+            else:
+                if atom_name in _ambiguous_atom_names and res_name == atom_name:
+                    return atom_name
+                elif atom_name == "UNK":
+                    return "X"
+            return atom_name[:1]
+
         entry_id = self.name.strip()
         if entry_id == "":
             entry_id = "system"
@@ -2781,6 +2803,7 @@ class System:
                 "pdbx_PDB_model_num",
                 "auth_seq_id",
                 "auth_asym_id",
+                "type_symbol",
             ],
         )
         idx = -1
@@ -2819,6 +2842,9 @@ class System:
                             )
                             f.write(f"{coor[3]:g} {coor[4]:g} {model_index} ")
                             f.write(f"{authresid} {authchainid}\n")
+                            f.write(
+                                f"{authresid} {authchainid} {_guess_type(atom.name, residue.name)}\n"
+                            )
             self.swap_model(model_index)
         f.write("#\n")
 
@@ -2941,7 +2967,7 @@ class System:
         noter = True if "NOTER" in options else False
 
         # write alternative locations by default
-        True if "NOALT" in options else False
+        writeAlt = True if "NOALT" in options else False
 
         # upon writing, convert to a generic PDB naming convention (no
         # protonation state specified for HIS)

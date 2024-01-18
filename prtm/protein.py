@@ -919,10 +919,10 @@ class ProteinBase:
             remark=self.remark,
             hetatom_positions=self.hetatom_positions,
             hetatom_names=self.hetatom_names,
-            hetatom_types=protein.hetatom_types,
-            hetatom_index=protein.hetatom_index,
-            hetatom_chain_ids=protein.hetatom_chain_ids,
-            hetatom_b_factors=protein.hetatom_b_factors,
+            hetatom_types=self.hetatom_types,
+            hetatom_index=self.hetatom_index,
+            hetatom_chain_ids=self.hetatom_chain_ids,
+            hetatom_b_factors=self.hetatom_b_factors,
         )
 
     def get_chain(self, chain_id: str) -> ProteinBase:
@@ -946,10 +946,10 @@ class ProteinBase:
             remark=self.remark,
             hetatom_positions=self.hetatom_positions,
             hetatom_names=self.hetatom_names,
-            hetatom_types=protein.hetatom_types,
-            hetatom_index=protein.hetatom_index,
-            hetatom_chain_ids=protein.hetatom_chain_ids,
-            hetatom_b_factors=protein.hetatom_b_factors,
+            hetatom_types=self.hetatom_types,
+            hetatom_index=self.hetatom_index,
+            hetatom_chain_ids=self.hetatom_chain_ids,
+            hetatom_b_factors=self.hetatom_b_factors,
         )
 
     def get_all_chains(self) -> List[ProteinBase]:
@@ -1051,10 +1051,10 @@ class Protein37(ProteinBase):
             remark=protein37.remark,
             hetatom_positions=protein37.hetatom_positions,
             hetatom_names=protein37.hetatom_names,
-            hetatom_types=protein.hetatom_types,
-            hetatom_index=protein.hetatom_index,
-            hetatom_chain_ids=protein.hetatom_chain_ids,
-            hetatom_b_factors=protein.hetatom_b_factors,
+            hetatom_types=protein37.hetatom_types,
+            hetatom_index=protein37.hetatom_index,
+            hetatom_chain_ids=protein37.hetatom_chain_ids,
+            hetatom_b_factors=protein37.hetatom_b_factors,
         )
 
     def to_protein27(self) -> Protein27:
@@ -1125,10 +1125,10 @@ class Protein14(ProteinBase):
             remark=protein14.remark,
             hetatom_positions=protein14.hetatom_positions,
             hetatom_names=protein14.hetatom_names,
-            hetatom_types=protein.hetatom_types,
-            hetatom_index=protein.hetatom_index,
-            hetatom_chain_ids=protein.hetatom_chain_ids,
-            hetatom_b_factors=protein.hetatom_b_factors,
+            hetatom_types=protein14.hetatom_types,
+            hetatom_index=protein14.hetatom_index,
+            hetatom_chain_ids=protein14.hetatom_chain_ids,
+            hetatom_b_factors=protein14.hetatom_b_factors,
         )
 
     def to_protein27(self) -> Protein27:

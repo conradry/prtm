@@ -24,6 +24,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
+
 from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.chroma import complexity, graph
 from prtm.models.chroma.model_utils import load_model as utility_load_model
@@ -33,7 +35,6 @@ from prtm.models.chroma.structure.protein_graph_allatom import (
     NodeChiRBF,
 )
 from prtm.models.chroma.xcs import validate_XC
-from torch.utils.checkpoint import checkpoint
 
 
 class GraphDesign(nn.Module):

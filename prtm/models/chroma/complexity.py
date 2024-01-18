@@ -18,6 +18,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+
 from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.chroma.graph import collect_neighbors
 

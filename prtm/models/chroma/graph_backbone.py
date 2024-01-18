@@ -20,6 +20,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+
 from prtm.models.chroma import basic, graph
 from prtm.models.chroma.graph_design import BackboneEncoderGNN
 from prtm.models.chroma.model_utils import load_model as utility_load_model

@@ -23,9 +23,10 @@ from typing import Callable, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from prtm.models.chroma.attention import Attention
 from torch.utils.checkpoint import checkpoint
 from tqdm.autonotebook import tqdm
+
+from prtm.models.chroma.attention import Attention
 
 
 class GraphNN(nn.Module):

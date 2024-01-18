@@ -21,6 +21,7 @@ from types import SimpleNamespace
 
 import torch
 import torch.nn as nn
+
 from prtm.models.chroma import basic
 from prtm.models.chroma.attention import AttentionChainPool
 from prtm.models.chroma.basic import NodeProduct, NoOp

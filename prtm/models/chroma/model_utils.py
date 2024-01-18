@@ -20,8 +20,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
-import prtm.models.chroma.api as api
 import torch
+
+import prtm.models.chroma.api as api
 from prtm.models.chroma.named_models import NAMED_MODELS
 
 
