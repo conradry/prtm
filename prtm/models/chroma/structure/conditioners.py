@@ -20,14 +20,17 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+from prtm.protein import ProteinBase
 from prtm.models.chroma import chroma_utils, graph_classifier, procap
 from prtm.models.chroma.graph_backbone import GraphBackbone
 from prtm.models.chroma.graph_classifier import GraphClassifier
 from prtm.models.chroma.graph_design import GraphDesign
 from prtm.models.chroma.procap import ProteinCaption
-from prtm.models.chroma.protein import Protein
+from prtm.models.chroma.modeling import get_mask, protein_to_xcs
 from prtm.models.chroma.structure import backbone, mvn, optimal_transport, symmetry
 from prtm.models.chroma.structure.backbone import expand_chain_map
+from prtm.models.chroma.system import System
 from prtm.models.chroma.xcs import validate_XC
 from scipy.sparse.csgraph import shortest_path
 from torch import nn
@@ -148,8 +151,8 @@ class ComposedConditioner(Conditioner):
         return X, C, O, U, t
 
     def _postprocessing_(
-        self, protein: Protein, output_dict: Optional[dict] = None
-    ) -> Union[Protein, Tuple[Protein, dict]]:
+        self, protein: ProteinBase, output_dict: Optional[dict] = None
+    ) -> Union[ProteinBase, Tuple[ProteinBase, dict]]:
         for _conditioner in self.conditioners:
             if hasattr(_conditioner, "_postprocessing_"):
                 if output_dict is None:
@@ -186,7 +189,7 @@ class SubsequenceConditioner(Conditioner):
     def __init__(
         self,
         design_model: GraphDesign,
-        protein: Protein,
+        protein: ProteinBase,
         selection: str = "all",
         weight: float = 1.0,
         renormalize_grad: Optional[bool] = False,
@@ -195,8 +198,8 @@ class SubsequenceConditioner(Conditioner):
         self.design_model = design_model
 
         # Register sequence buffers
-        X, C, S = protein.to_XCS()
-        mask_condition = protein.get_mask(selection)
+        X, C, S = protein_to_xcs(protein)
+        mask_condition = get_mask(protein, selection)
         self.register_buffer("S_condition", S)
         self.register_buffer("mask_condition", mask_condition)
 
@@ -856,7 +859,7 @@ class SubstructureConditioner(Conditioner):
 
     def __init__(
         self,
-        protein: Protein,
+        protein: ProteinBase,
         backbone_model: GraphBackbone,
         selection: str,
         rg: bool = False,
@@ -873,7 +876,7 @@ class SubstructureConditioner(Conditioner):
         X = X[:, :, :4, :]
         if center_init:
             X = backbone.center_X(X, C)
-        D = protein.get_mask(selection).bool()
+        D = get_mask(protein, selection).bool()
         self.base_distribution = self.backbone_model.noise_perturb.base_gaussian
         self.noise_schedule = self.backbone_model.noise_perturb.noise_schedule
         self.conditional_distribution = mvn.ConditionalBackboneMVNGlobular(
@@ -1118,23 +1121,12 @@ class SymmetryConditioner(Conditioner):
         return X, C
 
     def _postprocessing_(
-        self, protein: Protein, output_dict: Optional[dict] = None
-    ) -> Union[Protein, Tuple[Protein, dict]]:
-        X, C, S = protein.to_XCS(all_atom=True)
+        self, protein: ProteinBase, output_dict: Optional[dict] = None
+    ) -> Union[ProteinBase, Tuple[ProteinBase, dict]]:
+        X, C, S = protein_to_xcs(protein, all_atom=True)
         X_sym, C_sym, S_sym = self.symmetrize_output(X, C, S)
-        protein_sym = Protein.from_XCS(X_sym, C_sym, S_sym)
 
-        if output_dict is None:
-            return protein_sym
-        else:
-            trajectory = output_dict["trajectory"]
-            traj_sym, C_sym, S_sym = self.symmetrize_output(
-                trajectory.to_XCS_trajectory()[0], C, S
-            )
-            trajectory_sym = Protein.from_XCS_trajectory(traj_sym, C_sym, S_sym)
-            output_dict["trajectory"] = trajectory_sym
-
-            return protein_sym, output_dict
+        return protein
 
     def center_X(self, X, C):
         mask_expand = (

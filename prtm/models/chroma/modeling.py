@@ -5,7 +5,7 @@ import torch
 
 from prtm.constants import residue_constants
 from prtm.models.chroma.system import System
-from prtm.protein import ProteinBase
+from prtm.protein import ProteinBase, Protein14, Protein4
 
 
 def dihedral(
@@ -189,8 +189,35 @@ def protein_to_xcs(
     return X, C, S
 
 
+def protein_from_xcs(
+    X: torch.Tensor,
+    C: torch.Tensor,
+    S: torch.Tensor,
+) -> ProteinBase:
+    """Convert XCS format to System object.
+
+    Args:
+        X (torch.Tensor): Coordinates with shape `(1, num_residues, num_atoms, 3)`.
+            `num_atoms` will be 14 if `all_atom=True` or 4 otherwise.
+        C (torch.LongTensor): Chain map with shape `(1, num_residues)`. It codes
+            positions as 0 when masked, positive integers for chain indices,
+            and negative integers to represent missing residues of the
+            corresponding positive integers.
+        S (torch.LongTensor): Sequence with shape `(1, num_residues)`.
+
+    Returns:
+        system (System): System object.
+    """
+
+    # Convert to numpy
+    X = X.detach().cpu().numpy()[0]
+    C = C.detach().cpu().numpy()[0]
+    S = S.detach().cpu().numpy()[0]
+    return X, C, S
+
+
 def get_mask(
-    protein_system: System,
+    protein: ProteinBase,
     selection: str,
     device: Optional[torch.device] = None,
 ) -> torch.Tensor:
@@ -204,6 +231,9 @@ def get_mask(
     Returns:
         torch.Tensor: A mask tensor of shape `(1, protein length)`, where positions corresponding to selected residues have a value of 1.
     """
+    canon_protein = canonicalize_structure(protein)
+    protein_system = System.from_XCS(*protein_to_xcs(canon_protein, all_atom=True))
+
     residue_gtis = protein_system.select_residues(selection, gti=True)
     D = torch.zeros(1, protein_system.num_residues(), device=device)
     for gti in residue_gtis:

@@ -24,9 +24,9 @@ from typing import List, Literal, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
+from prtm.protein import ProteinBase
 from prtm.constants.residue_constants import alphabetical_restype_3
 from prtm.models.chroma import graph_backbone, graph_design
-from prtm.models.chroma.protein import Protein
 from prtm.models.chroma.structure.backbone import ProteinBackbone
 
 
@@ -99,7 +99,7 @@ class Chroma(nn.Module):
         steps: int = 500,
         chain_lengths: List[int] = [100],
         tspan: List[float] = (1.0, 0.001),
-        protein_init: Protein = None,
+        protein_init: Optional[ProteinBase] = None,
         conditioner: Optional[nn.Module] = None,
         langevin_factor: float = 2,
         langevin_isothermal: bool = False,
@@ -123,7 +123,7 @@ class Chroma(nn.Module):
         potts_symmetry_order: int = None,
         verbose: bool = False,
     ) -> Union[
-        Union[Protein, List[Protein]], Tuple[Union[Protein, List[Protein]], dict]
+        Union[ProteinBase, List[ProteinBase]], Tuple[Union[ProteinBase, List[ProteinBase]], dict]
     ]:
         """
         Performs Backbone Sampling and Sequence Design and returns a Protein or list
@@ -296,7 +296,7 @@ class Chroma(nn.Module):
         steps: int = 500,
         chain_lengths: List[int] = [100],
         tspan: List[float] = (1.0, 0.001),
-        protein_init: Protein = None,
+        protein_init: Optional[ProteinBase] = None,
         conditioner: Optional[nn.Module] = None,
         langevin_factor: float = 2,
         langevin_isothermal: bool = False,
@@ -308,8 +308,8 @@ class Chroma(nn.Module):
         full_output: bool = False,
         **kwargs,
     ) -> Union[
-        Tuple[List[Protein], List[Protein]],
-        Tuple[List[Protein], List[Protein], List[Protein], List[Protein]],
+        Tuple[List[ProteinBase], List[ProteinBase]],
+        Tuple[List[ProteinBase], List[ProteinBase], List[ProteinBase], List[ProteinBase]],
     ]:
         """Samples backbones given chain lengths by integrating SDEs.
 
