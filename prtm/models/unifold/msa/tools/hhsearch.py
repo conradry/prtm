@@ -21,9 +21,8 @@ from typing import Sequence
 
 from absl import logging
 
-from unifold.msa import parsers
-
-from . import utils
+from prtm.models.unifold.msa import parsers
+from prtm.models.unifold.msa.tools import utils
 
 
 class HHSearch:

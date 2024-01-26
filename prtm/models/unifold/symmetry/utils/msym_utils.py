@@ -5,7 +5,7 @@ from typing import *
 import numpy as np
 from libmsym import libmsym as m
 
-from .geometry_utils import (
+from prtm.models.unifold.symmetry.utils.geometry_utils import (
     ANGLE_EPS,
     LabelType,
     PairingFailError,

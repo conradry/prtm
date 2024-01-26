@@ -2,8 +2,12 @@ from typing import Dict
 
 import torch.nn as nn
 
-from .common import Linear
-from .confidence import predicted_aligned_error, predicted_lddt, predicted_tm_score
+from prtm.models.unifold.modules.common import Linear
+from prtm.models.unifold.modules.confidence import (
+    predicted_aligned_error,
+    predicted_lddt,
+    predicted_tm_score,
+)
 
 
 class AuxiliaryHeads(nn.Module):

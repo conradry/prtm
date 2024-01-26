@@ -1,10 +1,9 @@
 import numpy as np
 import torch
 
-from unifold.data.protein import Protein
-
-from ..modules.featurization import atom14_to_atom37
-from ..modules.frame import Frame
+from prtm.models.unifold.data.protein import Protein
+from prtm.models.unifold.modules.featurization import atom14_to_atom37
+from prtm.models.unifold.modules.frame import Frame
 
 
 def expand_frames(frames: Frame, ops: Frame) -> torch.Tensor:

@@ -3,16 +3,15 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-from prtm.models.unifold.utils import checkpoint_sequential
 
-from .attentions import (
+from prtm.models.unifold.modules.attentions import (
     MSAColumnAttention,
     MSAColumnGlobalAttention,
     MSARowAttentionWithPairBias,
     TriangleAttentionEnding,
     TriangleAttentionStarting,
 )
-from .common import (
+from prtm.models.unifold.modules.common import (
     Linear,
     OuterProductMean,
     SimpleModuleList,
@@ -21,10 +20,11 @@ from .common import (
     residual,
     tri_mul_residual,
 )
-from .triangle_multiplication import (
+from prtm.models.unifold.modules.triangle_multiplication import (
     TriangleMultiplicationIncoming,
     TriangleMultiplicationOutgoing,
 )
+from prtm.models.unifold.utils import checkpoint_sequential
 
 
 class EvoformerIteration(nn.Module):

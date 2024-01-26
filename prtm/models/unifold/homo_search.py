@@ -24,10 +24,10 @@ from pathlib import Path
 
 from absl import app, flags, logging
 
-from unifold.data.utils import compress_features
-from unifold.msa import parsers, pipeline, templates
-from unifold.msa.tools import hmmsearch
-from unifold.msa.utils import divide_multi_chains
+from prtm.models.unifold.data.utils import compress_features
+from prtm.models.unifold.msa import parsers, pipeline, templates
+from prtm.models.unifold.msa.tools import hmmsearch
+from prtm.models.unifold.msa.utils import divide_multi_chains
 
 logging.set_verbosity(logging.INFO)
 

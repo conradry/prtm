@@ -4,8 +4,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from .au_span import get_pair_distance_set_dict, span_au
-from .geometry_utils import (
+from prtm.models.unifold.symmetry.utils.au_span import (
+    get_pair_distance_set_dict,
+    span_au,
+)
+from prtm.models.unifold.symmetry.utils.geometry_utils import (
     LabelType,
     MaskNotEnoughError,
     PairingFailError,
@@ -14,9 +17,13 @@ from .geometry_utils import (
     get_standard_syms_axes,
     get_transform,
 )
-from .inertia import best_inertia_gap_id, get_ref_idx, inertia_gap
-from .msym_utils import au_with_axes_msym
-from .quaternion import quaternion_rotate
+from prtm.models.unifold.symmetry.utils.inertia import (
+    best_inertia_gap_id,
+    get_ref_idx,
+    inertia_gap,
+)
+from prtm.models.unifold.symmetry.utils.msym_utils import au_with_axes_msym
+from prtm.models.unifold.symmetry.utils.quaternion import quaternion_rotate
 
 
 def masked_mean_pos(

@@ -3,15 +3,14 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-from prtm.models.unifold.utils import checkpoint_sequential, permute_final_dims
 
-from .attentions import (
+from prtm.models.unifold.modules.attentions import (
     Attention,
     TriangleAttentionEnding,
     TriangleAttentionStarting,
     gen_attn_mask,
 )
-from .common import (
+from prtm.models.unifold.modules.common import (
     Linear,
     SimpleModuleList,
     Transition,
@@ -20,10 +19,11 @@ from .common import (
     residual,
     tri_mul_residual,
 )
-from .triangle_multiplication import (
+from prtm.models.unifold.modules.triangle_multiplication import (
     TriangleMultiplicationIncoming,
     TriangleMultiplicationOutgoing,
 )
+from prtm.models.unifold.utils import checkpoint_sequential, permute_final_dims
 
 
 class TemplatePointwiseAttention(nn.Module):

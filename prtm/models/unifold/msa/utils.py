@@ -4,7 +4,7 @@ from typing import Mapping, Sequence
 
 from absl import logging
 
-from unifold.data import protein
+from prtm.models.unifold.data import protein
 
 
 def get_chain_id_map(

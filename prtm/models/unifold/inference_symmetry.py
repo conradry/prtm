@@ -8,17 +8,17 @@ import time
 
 import numpy as np
 import torch
-from prtm.models.unifold.utils import tensor_tree_map
 
-from unifold.data import protein, residue_constants
-from unifold.dataset import UnifoldDataset
-from unifold.inference import automatic_chunk_size
-from unifold.symmetry import (
+from prtm.models.unifold.data import protein, residue_constants
+from prtm.models.unifold.dataset import UnifoldDataset
+from prtm.models.unifold.inference import automatic_chunk_size
+from prtm.models.unifold.symmetry import (
     UFSymmetry,
     assembly_from_prediction,
     load_and_process_symmetry,
     uf_symmetry_config,
 )
+from prtm.models.unifold.utils import tensor_tree_map
 
 
 def load_feature_for_one_target(

@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 
-from unifold.data import data_ops
+from prtm.models.unifold.data import data_ops
 
 
 def nonensembled_fns(common_cfg, mode_cfg):

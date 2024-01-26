@@ -4,8 +4,8 @@ import ml_collections as mlc
 import numpy as np
 import torch
 
-from ..dataset import load_and_process
-from .utils import get_transform
+from prtm.models.unifold.dataset import load_and_process
+from prtm.models.unifold.symmetry.utils import get_transform
 
 
 def get_pseudo_residue_feat(symmetry: str):

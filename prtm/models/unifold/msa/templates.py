@@ -25,9 +25,9 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 import numpy as np
 from absl import logging
 
-from unifold.data import residue_constants
-from unifold.msa import mmcif, parsers
-from unifold.msa.tools import kalign
+from prtm.models.unifold.data import residue_constants
+from prtm.models.unifold.msa import mmcif, parsers
+from prtm.models.unifold.msa.tools import kalign
 
 
 class Error(Exception):

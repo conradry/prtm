@@ -20,7 +20,7 @@ import subprocess
 
 from absl import logging
 
-from . import utils
+from prtm.models.unifold.msa.tools import utils
 
 
 class Hmmbuild(object):

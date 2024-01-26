@@ -19,7 +19,7 @@ from typing import Sequence
 
 from absl import logging
 
-from . import utils
+from prtm.models.unifold.msa.tools import utils
 
 
 def _to_a3m(sequences: Sequence[str]) -> str:

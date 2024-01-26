@@ -2,11 +2,10 @@ from typing import Dict
 
 import torch
 import torch.nn as nn
+
+from prtm.models.unifold.data import residue_constants as rc
+from prtm.models.unifold.modules.frame import Frame
 from prtm.models.unifold.utils import batched_gather, one_hot
-
-from unifold.data import residue_constants as rc
-
-from .frame import Frame
 
 
 def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):

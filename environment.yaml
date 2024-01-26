@@ -76,6 +76,7 @@ dependencies:
       - gitpython
       - huggingface_hub
       - immutabledict
+      - libmsym
       - lie_learn
       - lifelines
       - mpl-scatter-density

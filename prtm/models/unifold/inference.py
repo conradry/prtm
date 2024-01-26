@@ -9,12 +9,12 @@ import time
 
 import numpy as np
 import torch
-from prtm.models.unifold.utils import tensor_tree_map
 
-from unifold.config import model_config
-from unifold.data import protein, residue_constants
-from unifold.dataset import UnifoldDataset, load_and_process
-from unifold.modules.alphafold import AlphaFold
+from prtm.models.unifold.config import model_config
+from prtm.models.unifold.data import protein, residue_constants
+from prtm.models.unifold.dataset import UnifoldDataset, load_and_process
+from prtm.models.unifold.modules.alphafold import AlphaFold
+from prtm.models.unifold.utils import tensor_tree_map
 
 
 def get_device_mem(device):

@@ -23,7 +23,7 @@ from absl import logging
 from Bio import PDB
 from Bio.PDB.MMCIFParser import MMCIFParser
 
-from . import SCOPData
+from prtm.models.unifold.msa import SCOPData
 
 # Type aliases:
 ChainId = str

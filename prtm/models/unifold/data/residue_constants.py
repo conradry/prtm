@@ -20,6 +20,7 @@ import os
 from typing import List, Mapping, Tuple
 
 import numpy as np
+
 from prtm.models.unifold.utils import tree_map
 
 # Distance from one CA to next CA [trans configuration: omega = 180].

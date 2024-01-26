@@ -8,8 +8,8 @@ from typing import *
 import numpy as np
 from scipy import sparse as sp
 
-from . import residue_constants as rc
-from .data_ops import NumpyDict
+from prtm.models.unifold.data import residue_constants as rc
+from prtm.models.unifold.data.data_ops import NumpyDict
 
 
 def lru_cache(maxsize=16, typed=False, copy=False, deepcopy=False):

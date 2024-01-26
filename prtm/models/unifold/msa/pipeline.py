@@ -20,9 +20,9 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Union
 import numpy as np
 from absl import logging
 
-from unifold.data import residue_constants
-from unifold.msa import msa_identifiers, parsers, templates
-from unifold.msa.tools import hhblits, hhsearch, hmmsearch, jackhmmer
+from prtm.models.unifold.data import residue_constants
+from prtm.models.unifold.msa import msa_identifiers, parsers, templates
+from prtm.models.unifold.msa.tools import hhblits, hhsearch, hmmsearch, jackhmmer
 
 FeatureDict = MutableMapping[str, np.ndarray]
 TemplateSearcher = Union[hhsearch.HHSearch, hmmsearch.Hmmsearch]

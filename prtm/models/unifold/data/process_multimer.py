@@ -19,9 +19,8 @@ from typing import Iterable, List, MutableMapping
 
 import numpy as np
 
-from unifold.data import msa_pairing, residue_constants
-
-from .utils import correct_template_restypes
+from prtm.models.unifold.data import msa_pairing, residue_constants
+from prtm.models.unifold.data.utils import correct_template_restypes
 
 FeatureDict = MutableMapping[str, np.ndarray]
 

@@ -3,10 +3,9 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from prtm.models.unifold.modules.common import softmax_dropout
-from prtm.models.unifold.utils import permute_final_dims
 
-from .common import Linear, chunk_layer
+from prtm.models.unifold.modules.common import Linear, chunk_layer, softmax_dropout
+from prtm.models.unifold.utils import permute_final_dims
 
 
 def gen_attn_mask(mask, neg_inf):

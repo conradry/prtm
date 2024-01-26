@@ -3,19 +3,22 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-from prtm.models.unifold.modules.common import softmax_dropout
-from prtm.models.unifold.utils import dict_multimap, one_hot, permute_final_dims
 
-from unifold.data.residue_constants import (
+from prtm.models.unifold.data.residue_constants import (
     restype_atom14_mask,
     restype_atom14_rigid_group_positions,
     restype_atom14_to_rigid_group,
     restype_rigid_group_default_frame,
 )
-
-from .attentions import gen_attn_mask
-from .common import Linear, SimpleModuleList, residual
-from .frame import Frame, Quaternion, Rotation
+from prtm.models.unifold.modules.attentions import gen_attn_mask
+from prtm.models.unifold.modules.common import (
+    Linear,
+    SimpleModuleList,
+    residual,
+    softmax_dropout,
+)
+from prtm.models.unifold.modules.frame import Frame, Quaternion, Rotation
+from prtm.models.unifold.utils import dict_multimap, one_hot, permute_final_dims
 
 
 def ipa_point_weights_init_(weights):

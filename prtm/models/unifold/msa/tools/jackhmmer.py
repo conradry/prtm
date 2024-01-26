@@ -23,7 +23,7 @@ from urllib import request
 
 from absl import logging
 
-from . import utils
+from prtm.models.unifold.msa.tools import utils
 
 
 class Jackhmmer:

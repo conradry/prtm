@@ -1,6 +1,6 @@
 import ml_collections as mlc
 
-from ..config import model_config, recursive_set
+from prtm.models.unifold.config import model_config, recursive_set
 
 
 def uf_symmetry_config():

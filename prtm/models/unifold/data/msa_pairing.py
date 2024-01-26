@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 import scipy.linalg
 
-from .data_ops import NumpyDict
-from .residue_constants import restypes_with_x_and_gap
+from prtm.models.unifold.data.data_ops import NumpyDict
+from prtm.models.unifold.data.residue_constants import restypes_with_x_and_gap
 
 MSA_GAP_IDX = restypes_with_x_and_gap.index("-")
 SEQUENCE_GAP_CUTOFF = 0.5
