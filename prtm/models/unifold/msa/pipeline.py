@@ -22,24 +22,24 @@ from absl import logging
 
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.msa import msa_identifiers, parsers, templates
-from prtm.models.unifold.msa.tools import hhblits, hhsearch, hmmsearch, jackhmmer
+from prtm.models.unifold.msa.tools import (hhblits, hhsearch, hmmsearch,
+                                           jackhmmer)
 
 FeatureDict = MutableMapping[str, np.ndarray]
 TemplateSearcher = Union[hhsearch.HHSearch, hmmsearch.Hmmsearch]
 
 
-def make_sequence_features(
-    sequence: str, description: str, num_res: int
-) -> FeatureDict:
+def make_sequence_features(sequence: str, chain_name: str) -> FeatureDict:
     """Constructs a feature dict of sequence features."""
     features = {}
+    num_res = len(sequence)
     features["aatype"] = residue_constants.sequence_to_onehot(
         sequence=sequence,
         mapping=residue_constants.restype_order_with_x,
         map_unknown_to_x=True,
     )
     features["between_segment_residues"] = np.zeros((num_res,), dtype=np.int32)
-    features["domain_name"] = np.array([description.encode("utf-8")], dtype=np.object_)
+    features["domain_name"] = np.array([chain_name.encode("utf-8")], dtype=np.object_)
     features["residue_index"] = np.array(range(num_res), dtype=np.int32)
     features["seq_length"] = np.array([num_res] * num_res, dtype=np.int32)
     features["sequence"] = np.array([sequence.encode("utf-8")], dtype=np.object_)
@@ -74,7 +74,7 @@ def make_msa_features(msas: Sequence[parsers.Msa]) -> FeatureDict:
     num_res = len(msas[0].sequences[0])
     num_alignments = len(int_msa)
     features = {}
-    features["deletion_matrix_int"] = np.array(deletion_matrix, dtype=np.int32)
+    features["deletion_matrix"] = np.array(deletion_matrix, dtype=np.int32)
     features["msa"] = np.array(int_msa, dtype=np.int32)
     features["num_alignments"] = np.array([num_alignments] * num_res, dtype=np.int32)
     features["msa_species_identifiers"] = np.array(species_ids, dtype=np.object_)

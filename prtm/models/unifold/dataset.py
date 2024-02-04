@@ -12,17 +12,11 @@ from prtm.models.unifold.data import utils
 from prtm.models.unifold.data.data_ops import NumpyDict, TorchDict
 from prtm.models.unifold.data.process import process_features, process_labels
 from prtm.models.unifold.data.process_multimer import (
-    add_assembly_features,
-    convert_monomer_features,
-    merge_msas,
-    pair_and_merge,
-    post_process,
-)
-from prtm.models.unifold.utils import (
-    collate_dict,
-    get_data_parallel_world_size,
-    numpy_seed,
-)
+    add_assembly_features, convert_monomer_features, merge_msas,
+    pair_and_merge, post_process)
+from prtm.models.unifold.utils import (collate_dict,
+                                       get_data_parallel_world_size,
+                                       numpy_seed)
 
 Rotation = Iterable[Iterable]
 Translation = Iterable
@@ -55,15 +49,6 @@ def make_data_config(
         feature_names += cfg.supervised.supervised_features
 
     return cfg, feature_names
-
-
-def process_label(all_atom_positions: np.ndarray, operation: Operation) -> np.ndarray:
-    if operation == "I":
-        return all_atom_positions
-    rot, trans = operation
-    rot = np.array(rot).reshape(3, 3)
-    trans = np.array(trans).reshape(3)
-    return all_atom_positions @ rot.T + trans
 
 
 @utils.lru_cache(maxsize=8, copy=True)
@@ -102,64 +87,18 @@ def load_single_feature(
     return chain_feature
 
 
-def load_single_label(
-    label_id: str,
-    label_dir: str,
-    symmetry_operation: Optional[Operation] = None,
-) -> NumpyDict:
-    label = utils.load_pickle(os.path.join(label_dir, f"{label_id}.label.pkl.gz"))
-    if symmetry_operation is not None:
-        label["all_atom_positions"] = process_label(
-            label["all_atom_positions"], symmetry_operation
-        )
-    label = {
-        k: v
-        for k, v in label.items()
-        if k in ["aatype", "all_atom_positions", "all_atom_mask", "resolution"]
-    }
-    return label
-
-
 def load(
     sequence_ids: List[str],
     monomer_feature_dir: str,
     uniprot_msa_dir: Optional[str] = None,
-    label_ids: Optional[List[str]] = None,
-    label_dir: Optional[str] = None,
-    symmetry_operations: Optional[List[Operation]] = None,
     is_monomer: bool = False,
-) -> NumpyExample:
+) -> NumpyDict:
     all_chain_features = [
         load_single_feature(s, monomer_feature_dir, uniprot_msa_dir, is_monomer)
         for s in sequence_ids
     ]
 
-    if label_ids is not None:
-        # load labels
-        assert len(label_ids) == len(sequence_ids)
-        assert label_dir is not None
-        if symmetry_operations is None:
-            symmetry_operations = ["I" for _ in label_ids]
-        all_chain_labels = [
-            load_single_label(l, label_dir, o)
-            for l, o in zip(label_ids, symmetry_operations)
-        ]
-        # update labels into features to calculate spatial cropping etc.
-        [f.update(l) for f, l in zip(all_chain_features, all_chain_labels)]
-
     all_chain_features = add_assembly_features(all_chain_features)
-
-    # get labels back from features, as add_assembly_features may alter the order of inputs.
-    if label_ids is not None:
-        all_chain_labels = [
-            {
-                k: f[k]
-                for k in ["aatype", "all_atom_positions", "all_atom_mask", "resolution"]
-            }
-            for f in all_chain_features
-        ]
-    else:
-        all_chain_labels = None
 
     asym_len = np.array([c["seq_length"] for c in all_chain_features], dtype=np.int64)
     if is_monomer:
@@ -167,29 +106,21 @@ def load(
     else:
         all_chain_features = pair_and_merge(all_chain_features)
         all_chain_features = post_process(all_chain_features)
+
     all_chain_features["asym_len"] = asym_len
 
-    return all_chain_features, all_chain_labels
+    return all_chain_features
 
 
 def process(
     config: mlc.ConfigDict,
-    mode: str,
     features: NumpyDict,
-    labels: Optional[List[NumpyDict]] = None,
     seed: int = 0,
-    batch_idx: Optional[int] = None,
     data_idx: Optional[int] = None,
     is_distillation: bool = False,
-) -> TorchExample:
-    if mode == "train":
-        assert batch_idx is not None
-        with numpy_seed(seed, batch_idx, key="recycling"):
-            num_iters = np.random.randint(0, config.common.max_recycling_iters + 1)
-            use_clamped_fape = np.random.rand() < config[mode].use_clamped_fape_prob
-    else:
-        num_iters = config.common.max_recycling_iters
-        use_clamped_fape = 1
+) -> TorchDict:
+    num_iters = config.common.max_recycling_iters
+    use_clamped_fape = 1
 
     features["num_recycling_iters"] = int(num_iters)
     features["use_clamped_fape"] = int(use_clamped_fape)
@@ -198,24 +129,16 @@ def process(
         features.pop("msa_chains")
 
     num_res = int(features["seq_length"])
-    cfg, feature_names = make_data_config(config, mode=mode, num_res=num_res)
-
-    if labels is not None:
-        features["resolution"] = labels[0]["resolution"].reshape(-1)
+    cfg, feature_names = make_data_config(config, mode="eval", num_res=num_res)
 
     with numpy_seed(seed, data_idx, key="protein_feature"):
         features["crop_and_fix_size_seed"] = np.random.randint(0, 63355)
         features = utils.filter(features, desired_keys=feature_names)
         features = {k: torch.tensor(v) for k, v in features.items()}
         with torch.no_grad():
-            features = process_features(features, cfg.common, cfg[mode])
+            features = process_features(features, cfg.common, cfg["eval"])
 
-    if labels is not None:
-        labels = [{k: torch.tensor(v) for k, v in l.items()} for l in labels]
-        with torch.no_grad():
-            labels = process_labels(labels)
-
-    return features, labels
+    return features
 
 
 def load_and_process(

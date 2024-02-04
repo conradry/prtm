@@ -6,16 +6,9 @@ import numpy as np
 from libmsym import libmsym as m
 
 from prtm.models.unifold.symmetry.utils.geometry_utils import (
-    ANGLE_EPS,
-    LabelType,
-    PairingFailError,
-    expand_groups,
-    get_num_AU,
-    get_rotation_from_axis_theta,
-    get_standard_syms_axes,
-    normalize_axis,
-    remainder,
-)
+    ANGLE_EPS, LabelType, PairingFailError, expand_groups, get_num_AU,
+    get_rotation_from_axis_theta, get_standard_syms_axes, normalize_axis,
+    remainder)
 
 
 def arr_to_elems(arr: np.ndarray, name: str = "C") -> List[m.Element]:

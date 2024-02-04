@@ -4,25 +4,17 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from prtm.models.unifold.modules.attentions import (
-    Attention,
-    TriangleAttentionEnding,
-    TriangleAttentionStarting,
-    gen_attn_mask,
-)
-from prtm.models.unifold.modules.common import (
-    Linear,
-    SimpleModuleList,
-    Transition,
-    bias_dropout_residual,
-    chunk_layer,
-    residual,
-    tri_mul_residual,
-)
+from prtm.models.unifold.modules.attentions import (Attention,
+                                                    TriangleAttentionEnding,
+                                                    TriangleAttentionStarting,
+                                                    gen_attn_mask)
+from prtm.models.unifold.modules.common import (Linear, SimpleModuleList,
+                                                Transition,
+                                                bias_dropout_residual,
+                                                chunk_layer, residual,
+                                                tri_mul_residual)
 from prtm.models.unifold.modules.triangle_multiplication import (
-    TriangleMultiplicationIncoming,
-    TriangleMultiplicationOutgoing,
-)
+    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
 from prtm.models.unifold.utils import checkpoint_sequential, permute_final_dims
 
 

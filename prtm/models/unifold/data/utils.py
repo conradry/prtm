@@ -98,14 +98,6 @@ def to_dense_matrix(spmat_dict: NumpyDict):
 FEATS_DTYPE = {"msa": np.int32}
 
 
-def uncompress_features(feats: NumpyDict) -> NumpyDict:
-    if "sparse_deletion_matrix_int" in feats:
-        v = feats.pop("sparse_deletion_matrix_int")
-        v = to_dense_matrix(v)
-        feats["deletion_matrix"] = v
-    return feats
-
-
 def filter(feature: NumpyDict, **kwargs) -> NumpyDict:
     assert len(kwargs) == 1, f"wrong usage of filter with kwargs: {kwargs}"
     if "desired_keys" in kwargs:
@@ -118,22 +110,3 @@ def filter(feature: NumpyDict, **kwargs) -> NumpyDict:
     else:
         raise AssertionError(f"wrong usage of filter with kwargs: {kwargs}")
     return feature
-
-
-def compress_features(features: NumpyDict):
-    change_dtype = {
-        "msa": np.uint8,
-    }
-    sparse_keys = ["deletion_matrix_int"]
-
-    compressed_features = {}
-    for k, v in features.items():
-        if k in change_dtype:
-            v = v.astype(change_dtype[k])
-        if k in sparse_keys:
-            v = sp.coo_matrix(v, dtype=v.dtype)
-            sp_v = {"shape": v.shape, "row": v.row, "col": v.col, "data": v.data}
-            k = f"sparse_{k}"
-            v = sp_v
-        compressed_features[k] = v
-    return compressed_features

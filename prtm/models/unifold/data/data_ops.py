@@ -9,13 +9,8 @@ import torch
 from prtm.models.unifold.config import N_EXTRA_MSA, N_MSA, N_RES, N_TPL
 from prtm.models.unifold.data import residue_constants as rc
 from prtm.models.unifold.modules.frame import Frame, Rotation
-from prtm.models.unifold.utils import (
-    batched_gather,
-    numpy_seed,
-    one_hot,
-    tensor_tree_map,
-    tree_map,
-)
+from prtm.models.unifold.utils import (batched_gather, numpy_seed, one_hot,
+                                       tensor_tree_map, tree_map)
 
 NumpyDict = MutableMapping[str, np.ndarray]
 TorchDict = MutableMapping[str, np.ndarray]

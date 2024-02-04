@@ -2,31 +2,23 @@ import torch
 import torch.nn as nn
 
 from prtm.models.unifold.data import residue_constants
-from prtm.models.unifold.modules.attentions import gen_msa_attn_mask, gen_tri_attn_mask
+from prtm.models.unifold.modules.attentions import (gen_msa_attn_mask,
+                                                    gen_tri_attn_mask)
 from prtm.models.unifold.modules.auxillary_heads import AuxiliaryHeads
 from prtm.models.unifold.modules.common import residual
-from prtm.models.unifold.modules.embedders import (
-    ExtraMSAEmbedder,
-    InputEmbedder,
-    RecyclingEmbedder,
-    TemplateAngleEmbedder,
-    TemplatePairEmbedder,
-)
+from prtm.models.unifold.modules.embedders import (ExtraMSAEmbedder,
+                                                   InputEmbedder,
+                                                   RecyclingEmbedder,
+                                                   TemplateAngleEmbedder,
+                                                   TemplatePairEmbedder)
 from prtm.models.unifold.modules.evoformer import EvoformerStack, ExtraMSAStack
 from prtm.models.unifold.modules.featurization import (
-    atom14_to_atom37,
-    build_extra_msa_feat,
-    build_template_angle_feat,
-    build_template_pair_feat,
-    build_template_pair_feat_v2,
-    pseudo_beta_fn,
-)
+    atom14_to_atom37, build_extra_msa_feat, build_template_angle_feat,
+    build_template_pair_feat, build_template_pair_feat_v2, pseudo_beta_fn)
 from prtm.models.unifold.modules.structure_module import StructureModule
-from prtm.models.unifold.modules.template import (
-    TemplatePairStack,
-    TemplatePointwiseAttention,
-    TemplateProjection,
-)
+from prtm.models.unifold.modules.template import (TemplatePairStack,
+                                                  TemplatePointwiseAttention,
+                                                  TemplateProjection)
 from prtm.models.unifold.utils import tensor_tree_map
 
 
