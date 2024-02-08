@@ -34,6 +34,9 @@ def make_data_config(
     config: mlc.ConfigDict,
     mode: str,
     num_res: int,
+    use_templates: bool = False,
+    is_multimer: bool = False,
+    is_supervised: bool = False,
 ) -> Tuple[mlc.ConfigDict, List[str]]:
     cfg = copy.deepcopy(config)
     mode_cfg = cfg[mode]
@@ -41,9 +44,9 @@ def make_data_config(
         if mode_cfg.crop_size is None:
             mode_cfg.crop_size = num_res
     feature_names = cfg.common.unsupervised_features + cfg.common.recycling_features
-    if cfg.common.use_templates:
+    if use_templates:
         feature_names += cfg.common.template_features
-    if cfg.common.is_multimer:
+    if is_multimer:
         feature_names += cfg.common.multimer_features
     if cfg[mode].supervised:
         feature_names += cfg.supervised.supervised_features

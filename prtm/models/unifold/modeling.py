@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import pdb
+from contextlib import nullcontext
 
 from prtm.models.unifold.config import model_config
 from prtm.models.unifold.data import process, protein, residue_constants, utils
@@ -148,7 +150,7 @@ class UniFoldForFolding:
         unpaired_msa = msa_templates_dict["msas"]
         paired_msa = msa_templates_dict.get("paired_msas", None)
 
-        all_chain_features = []
+        all_chain_features_list = []
         for chain_idx, sequence in enumerate(sequences):
             chain_name = PDB_CHAIN_IDS[chain_idx]
             sequence_features = pipeline.make_sequence_features(
@@ -163,32 +165,32 @@ class UniFoldForFolding:
             }
             monomer_feature = convert_monomer_features(feature_dict)
 
-            print("Monomer keys", monomer_feature.keys())
-
             multimer_msa = parsers.parse_a3m(paired_msa[chain_idx])
             pair_feature_dict = pipeline.make_msa_features([multimer_msa])
+
             if len(sequences) > 1:
+                pair_feature_dict = utils.convert_all_seq_feature(pair_feature_dict)
                 for key in [
                     "msa_all_seq",
                     "msa_species_identifiers_all_seq",
                     "deletion_matrix_all_seq",
                 ]:
                     monomer_feature[key] = pair_feature_dict[key]
-            else:
+            elif np.any(pair_feature_dict["msa"]):
                 monomer_feature["msa"], monomer_feature["deletion_matrix"] = merge_msas(
                     monomer_feature["msa"],
                     monomer_feature["deletion_matrix"],
                     pair_feature_dict["msa"],
                     pair_feature_dict["deletion_matrix"],
                 )
-            all_chain_features.append(monomer_feature)
+            all_chain_features_list.append(monomer_feature)
 
-        all_chain_features = add_assembly_features(all_chain_features)
+        all_chain_features = add_assembly_features(all_chain_features_list)
 
         asym_len = np.array(
             [c["seq_length"] for c in all_chain_features], dtype=np.int64
         )
-        if len(sequences) > 1:
+        if len(sequences) == 1:
             all_chain_features = all_chain_features[0]
         else:
             all_chain_features = pair_and_merge(all_chain_features)
@@ -196,7 +198,7 @@ class UniFoldForFolding:
 
         all_chain_features["asym_len"] = asym_len
 
-        num_iters = self.cfg.common.max_recycling_iters
+        num_iters = self.cfg.data.common.max_recycling_iters
         is_distillation = False
 
         all_chain_features["num_recycling_iters"] = int(num_iters)
@@ -206,9 +208,20 @@ class UniFoldForFolding:
             all_chain_features.pop("msa_chains")
 
         num_res = int(all_chain_features["seq_length"])
-        cfg, feature_names = make_data_config(self.cfg, mode="eval", num_res=num_res)
+        cfg, feature_names = make_data_config(
+            self.cfg.data, 
+            mode="predict", 
+            num_res=num_res, 
+            is_multimer=True, 
+            use_templates=self.use_templates,
+        )
 
-        with numpy_seed(self.random_seed, None, key="protein_feature"):
+        # Conditional fixed seed context
+        with (
+            numpy_seed(self.random_seed, key="protein_feature") 
+            if self.random_seed is not None 
+            else nullcontext() as _
+        ):
             all_chain_features["crop_and_fix_size_seed"] = np.random.randint(0, 63355)
             all_chain_features = utils.filter(
                 all_chain_features, desired_keys=feature_names
@@ -218,7 +231,7 @@ class UniFoldForFolding:
             }
             with torch.no_grad():
                 all_chain_features = process.process_features(
-                    all_chain_features, cfg.common, cfg["eval"]
+                    all_chain_features, self.cfg.data.common, self.cfg.data["predict"]
                 )
 
         if self.symmetry_group is not None:
@@ -231,6 +244,8 @@ class UniFoldForFolding:
             all_chain_features["num_asym"] = torch.max(all_chain_features["asym_id"])[
                 None
             ]
+
+        pdb.set_trace()
 
         return all_chain_features
 
@@ -253,6 +268,8 @@ class UniFoldForFolding:
         self.cfg.globals.max_recycling_iters = max_recycling_iters
         self.cfg.data.predict.num_ensembles = num_ensembles
         self.cfg.globals.chunk_size = chunk_size
+        self.cfg.data.common.use_templates = self.use_templates
+        self.cfg.data.common.is_multimer = len(sequences) > 1
 
         batch = self._featurize_input(sequences, self.msa_pipeline(sequences))
         batch = UnifoldDataset.collater([batch])

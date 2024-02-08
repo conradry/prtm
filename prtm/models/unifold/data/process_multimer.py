@@ -341,7 +341,6 @@ def int_id_to_str_id(num: int) -> str:
         num = num // 26 - 1
     return "".join(output)
 
-
 def add_assembly_features(
     all_chain_features,
 ):
@@ -413,6 +412,10 @@ def post_process(np_example):
 
 
 def merge_msas(msa, del_mat, new_msa, new_del_mat):
+    print("msa", msa.shape)
+    print("del_mat", del_mat.shape)
+    print("new_msa", new_msa.shape)
+    print("new_del_mat", new_del_mat.shape)
     cur_msa_set = set([tuple(m) for m in msa])
     new_rows = []
     for i, s in enumerate(new_msa):
