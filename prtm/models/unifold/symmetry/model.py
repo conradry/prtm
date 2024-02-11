@@ -132,10 +132,10 @@ class UFSymmetry(AlphaFold):  # inherit the main model. alterations implemented 
             template_1d_feat = torch.cat(
                 [pr_m.expand(expand_shape), template_1d_feat], dim=-2
             )
+            m = torch.cat([m, template_1d_feat], dim=-3)
             msa_mask = torch.cat([feats["msa_mask"], template_1d_mask], dim=-2)
 
         # compose tensors back
-        m = torch.cat([m, template_1d_feat], dim=-3)
         z_tmp = torch.cat([z[..., 1:, 0:1, :], z_in], dim=-2)
         z = torch.cat([z[..., 0:1, :, :], z_tmp], dim=-3)
 

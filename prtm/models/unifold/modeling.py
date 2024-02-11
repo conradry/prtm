@@ -17,8 +17,9 @@ from prtm.models.unifold.input_validation import validate_input
 from prtm.models.unifold.mmseqs import get_null_template, get_template
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline
-from prtm.models.unifold.symmetry import (assembly_from_prediction,
-                                          uf_symmetry_config)
+from prtm.models.unifold.symmetry import (
+    UFSymmetry, assembly_from_prediction, uf_symmetry_config
+)
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
 from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
@@ -58,7 +59,16 @@ class UniFoldForFolding:
     ):
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
-        self.model = AlphaFold(self.cfg)
+        if model_name != "uf_symmetry":
+            assert symmetry_group in [None, "C1"], (
+                "Symmetry group must be None or 'C1' for this model!"
+            )
+            self.model = AlphaFold(self.cfg)
+        else:
+            assert model_name == "uf_symmetry", (
+                "To use symmetric folding set model_name='uf_symmetry'"
+            )
+            self.model = UFSymmetry(self.cfg)
 
         self.load_weights(UNIFOLD_MODEL_URLS[model_name])
 
@@ -71,6 +81,7 @@ class UniFoldForFolding:
         self.model = self.model.to(self.device)
         self.model.inference_mode()
         self.symmetry_group = symmetry_group
+        self.is_symmetry = symmetry_group not in [None, "C1"]
         self.use_templates = use_templates
 
         self.msa_caller = MMSeqs2(
@@ -212,7 +223,7 @@ class UniFoldForFolding:
             self.cfg.data, 
             mode="predict", 
             num_res=num_res, 
-            is_multimer=True, 
+            is_multimer=(len(sequences) > 1) or self.is_symmetry, 
             use_templates=self.use_templates,
         )
 
@@ -234,7 +245,9 @@ class UniFoldForFolding:
                     all_chain_features, self.cfg.data.common, self.cfg.data["predict"]
                 )
 
+        print("Symmetry group", self.symmetry_group)
         if self.symmetry_group is not None:
+            print("Adding symmetry features")
             all_chain_features["symmetry_opers"] = torch.tensor(
                 get_transform(self.symmetry_group), dtype=float
             )[None]
@@ -244,8 +257,6 @@ class UniFoldForFolding:
             all_chain_features["num_asym"] = torch.max(all_chain_features["asym_id"])[
                 None
             ]
-
-        pdb.set_trace()
 
         return all_chain_features
 

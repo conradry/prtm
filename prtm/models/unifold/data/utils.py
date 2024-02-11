@@ -40,6 +40,14 @@ def lru_cache(maxsize=16, typed=False, copy=False, deepcopy=False):
     return decorator
 
 
+def uncompress_features(feats: NumpyDict) -> NumpyDict:
+    if "sparse_deletion_matrix_int" in feats:
+        v = feats.pop("sparse_deletion_matrix_int")
+        v = to_dense_matrix(v)
+        feats["deletion_matrix"] = v
+    return feats
+
+
 @lru_cache(maxsize=8, deepcopy=True)
 def load_pickle_safe(path: str) -> Dict[str, Any]:
     def load(path):
