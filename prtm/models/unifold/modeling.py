@@ -1,16 +1,20 @@
+import pdb
 import random
+from contextlib import nullcontext
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-import pdb
-from contextlib import nullcontext
 
 from prtm.models.unifold.config import model_config
 from prtm.models.unifold.data import process, protein, residue_constants, utils
 from prtm.models.unifold.data.process_multimer import (
-    add_assembly_features, convert_monomer_features, merge_msas,
-    pair_and_merge, post_process)
+    add_assembly_features,
+    convert_monomer_features,
+    merge_msas,
+    pair_and_merge,
+    post_process,
+)
 from prtm.models.unifold.dataset import UnifoldDataset, make_data_config
 from prtm.models.unifold.inference import automatic_chunk_size
 from prtm.models.unifold.input_validation import validate_input
@@ -18,12 +22,15 @@ from prtm.models.unifold.mmseqs import get_null_template, get_template
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline
 from prtm.models.unifold.symmetry import (
-    UFSymmetry, assembly_from_prediction, uf_symmetry_config
+    UFSymmetry,
+    assembly_from_prediction,
+    uf_symmetry_config,
 )
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
 from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
 from prtm.protein import PDB_CHAIN_IDS
+
 # from prtm import protein
 from prtm.query.mmseqs import MMSeqs2
 from prtm.utils import hub_utils
@@ -31,15 +38,39 @@ from prtm.utils import hub_utils
 __all__ = ["UniFoldForFolding"]
 
 UNIFOLD_MODEL_URLS = {
+    # UniFold trained models
     "model_2_ft": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz",
     "multimer_ft": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz",
     "uf_symmetry": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/uf_symmetry_params_2022-09-06.tar.gz",
+    # AlphaFold2 trained models
+    "model_1_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_2_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_3_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_4_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_5_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "multimer_1_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "multimer_2_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "multimer_3_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "multimer_4_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "multimer_5_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
 }
 
 UNIFOLD_MODEL_CONFIGS = {
+    # UniFold trained models
     "uf_symmetry": uf_symmetry_config(),
     "multimer_ft": model_config("multimer_ft"),
     "model_2_ft": model_config("model_2_ft"),
+    # AlphaFold2 trained models
+    "model_1_af2": model_config("model_1_af2"),
+    "model_2_af2": model_config("model_2_af2"),
+    "model_3_af2": model_config("model_3_af2"),
+    "model_4_af2": model_config("model_4_af2"),
+    "model_5_af2": model_config("model_5_af2"),
+    "multimer_1_af2_v3": model_config("multimer_af2_v3"),
+    "multimer_2_af2_v3": model_config("multimer_af2_v3"),
+    "multimer_3_af2_v3": model_config("multimer_af2_v3"),
+    "multimer_4_af2_v3": model_config("multimer_af2_model45_v3"),
+    "multimer_5_af2_v3": model_config("multimer_af2_model45_v3"),
 }
 
 
@@ -60,14 +91,15 @@ class UniFoldForFolding:
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
         if model_name != "uf_symmetry":
-            assert symmetry_group in [None, "C1"], (
-                "Symmetry group must be None or 'C1' for this model!"
-            )
+            assert symmetry_group in [
+                None,
+                "C1",
+            ], "Symmetry group must be None or 'C1' for this model!"
             self.model = AlphaFold(self.cfg)
         else:
-            assert model_name == "uf_symmetry", (
-                "To use symmetric folding set model_name='uf_symmetry'"
-            )
+            assert (
+                model_name == "uf_symmetry"
+            ), "To use symmetric folding set model_name='uf_symmetry'"
             self.model = UFSymmetry(self.cfg)
 
         self.load_weights(UNIFOLD_MODEL_URLS[model_name])
@@ -99,24 +131,42 @@ class UniFoldForFolding:
 
     @classmethod
     @property
-    def available_models(cls):
+    def available_models(cls) -> List[str]:
         return list(UNIFOLD_MODEL_URLS.keys())
 
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
-        if self.model_name == "model_2_ft":
-            extract_member = "monomer.unifold.pt"
-        elif self.model_name == "multimer_ft":
-            extract_member = "multimer.unifold.pt"
-        elif self.model_name == "uf_symmetry":
-            extract_member = "uf_symmetry.pt"
+        if self.model_name in ["model_2_ft", "multimer_ft", "uf_symmetry"]:
+            member_keys = {
+                "model_2_ft": "monomer.unifold.pt",
+                "multimer_ft": "multimer.unifold.pt",
+                "uf_symmetry": "uf_symmetry.pt",
+            }
+            extract_member = member_keys[self.model_name]
+            load_fn = hub_utils.load_state_dict_from_tar_gz_url
+        elif self.model_name in UNIFOLD_MODEL_URLS:
+            # Must be an AlphaFold2 model
+            member_keys = {
+                "model_1_af2": "params_model_1.pth",
+                "model_2_af2": "params_model_2.pth",
+                "model_3_af2": "params_model_3.pth",
+                "model_4_af2": "params_model_4.pth",
+                "model_5_af2": "params_model_5.pth",
+                "multimer_1_af2_v3": "params_model_1_multimer_v3.pth",
+                "multimer_2_af2_v3": "params_model_2_multimer_v3.pth",
+                "multimer_3_af2_v3": "params_model_3_multimer_v3.pth",
+                "multimer_4_af2_v3": "params_model_4_multimer_v3.pth",
+                "multimer_5_af2_v3": "params_model_5_multimer_v3.pth",
+            }
+            extract_member = f"unifold_converted/{member_keys[self.model_name]}"
+            load_fn = hub_utils.load_state_dict_from_gdrive_zip
         else:
             raise ValueError(f"Unknown model name {self.model_name}")
 
-        state_dict = hub_utils.load_state_dict_from_tar_gz_url(
+        state_dict = load_fn(
             weights_url,
             extract_member=extract_member,
-            model_name=f"unifold_{self.model_name}.pth",
+            name_prefix="unifold",
             map_location="cpu",
         )["ema"]["params"]
         state_dict = {".".join(k.split(".")[1:]): v for k, v in state_dict.items()}
@@ -220,17 +270,17 @@ class UniFoldForFolding:
 
         num_res = int(all_chain_features["seq_length"])
         cfg, feature_names = make_data_config(
-            self.cfg.data, 
-            mode="predict", 
-            num_res=num_res, 
-            is_multimer=(len(sequences) > 1) or self.is_symmetry, 
+            self.cfg.data,
+            mode="predict",
+            num_res=num_res,
+            is_multimer=(len(sequences) > 1) or self.is_symmetry,
             use_templates=self.use_templates,
         )
 
         # Conditional fixed seed context
         with (
-            numpy_seed(self.random_seed, key="protein_feature") 
-            if self.random_seed is not None 
+            numpy_seed(self.random_seed, key="protein_feature")
+            if self.random_seed is not None
             else nullcontext() as _
         ):
             all_chain_features["crop_and_fix_size_seed"] = np.random.randint(0, 63355)
@@ -245,9 +295,7 @@ class UniFoldForFolding:
                     all_chain_features, self.cfg.data.common, self.cfg.data["predict"]
                 )
 
-        print("Symmetry group", self.symmetry_group)
         if self.symmetry_group is not None:
-            print("Adding symmetry features")
             all_chain_features["symmetry_opers"] = torch.tensor(
                 get_transform(self.symmetry_group), dtype=float
             )[None]

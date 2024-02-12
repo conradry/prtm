@@ -134,6 +134,7 @@ def load_state_dict_from_tar_gz_url(
     extract_member: str,
     model_name: Optional[str],
     model_dir: Optional[str] = None,
+    name_prefix: Optional[str] = None,
     map_location: MAP_LOCATION = None,
 ) -> Dict[str, Any]:
     r"""Loads the Torch serialized object at the given S3 URL.
@@ -169,6 +170,8 @@ def load_state_dict_from_tar_gz_url(
 
     if model_name is None:
         model_name = os.path.basename(extract_member)
+    if name_prefix is not None:
+        model_name = f"{name_prefix}_{model_name}"
 
     cached_file = os.path.join(model_dir, model_name)
     if not os.path.exists(cached_file):
