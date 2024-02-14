@@ -5,25 +5,27 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 from prtm import protein
+from prtm.query.mmseqs import MMSeqs2
+from prtm.utils import hub_utils
 from prtm.models.unifold.config import model_config
 from prtm.models.unifold.data import process, residue_constants, utils
 from prtm.models.unifold.data.process_multimer import (
-    add_assembly_features, convert_monomer_features, merge_msas,
-    pair_and_merge, post_process)
-from prtm.models.unifold.dataset import UnifoldDataset, make_data_config
+    add_assembly_features, 
+    convert_monomer_features, 
+    merge_msas,
+    pair_and_merge, 
+    post_process,
+)
+from prtm.models.unifold.dataset import make_data_config
 from prtm.models.unifold.inference import automatic_chunk_size
 from prtm.models.unifold.input_validation import validate_input
-from prtm.models.unifold.mmseqs import get_null_template, get_template
 from prtm.models.unifold.modules.alphafold import AlphaFold
-from prtm.models.unifold.msa import parsers, pipeline
-from prtm.models.unifold.symmetry import (UFSymmetry, assembly_from_prediction,
-                                          uf_symmetry_config)
+from prtm.models.unifold.symmetry import UFSymmetry, uf_symmetry_config
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
-from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
-from prtm.protein import PDB_CHAIN_IDS
-from prtm.query.mmseqs import MMSeqs2
-from prtm.utils import hub_utils
+from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
+from prtm.models.unifold.msa import templates, pipeline, parsers
+from prtm.models.unifold.msa.tools import hhsearch
 
 __all__ = ["UniFoldForFolding"]
 
@@ -68,6 +70,63 @@ def _get_model_config(model_name: str):
     """Get the model config for a given model name."""
     # All `finetuning` models use the same config.
     return UNIFOLD_MODEL_CONFIGS[model_name]
+
+
+def get_null_template(
+    query_sequence: Union[List[str], str], num_temp: int = 1
+) -> Dict[str, Any]:
+    ln = (
+        len(query_sequence)
+        if isinstance(query_sequence, str)
+        else sum(len(s) for s in query_sequence)
+    )
+    output_templates_sequence = "A" * ln
+    output_confidence_scores = np.full(ln, 1.0)
+
+    templates_all_atom_positions = np.zeros(
+        (ln, templates.residue_constants.atom_type_num, 3)
+    )
+    templates_all_atom_masks = np.zeros((ln, templates.residue_constants.atom_type_num))
+    templates_aatype = templates.residue_constants.sequence_to_onehot(
+        output_templates_sequence, templates.residue_constants.HHBLITS_AA_TO_ID
+    )
+    template_features = {
+        "template_all_atom_positions": np.tile(
+            templates_all_atom_positions[None], [num_temp, 1, 1, 1]
+        ),
+        "template_all_atom_masks": np.tile(
+            templates_all_atom_masks[None], [num_temp, 1, 1]
+        ),
+        "template_sequence": [f"none".encode()] * num_temp,
+        "template_aatype": np.tile(np.array(templates_aatype)[None], [num_temp, 1, 1]),
+        "template_domain_names": [f"none".encode()] * num_temp,
+        "template_sum_probs": np.zeros([num_temp], dtype=np.float32),
+    }
+    return template_features
+
+
+def get_template(
+    a3m_lines: str, template_path: str, query_sequence: str
+) -> Dict[str, Any]:
+    template_featurizer = templates.HhsearchHitFeaturizer(
+        mmcif_dir=template_path,
+        max_template_date="2100-01-01",
+        max_hits=20,
+        kalign_binary_path="kalign",
+        release_dates_path=None,
+        obsolete_pdbs_path=None,
+    )
+
+    hhsearch_pdb70_runner = hhsearch.HHSearch(
+        binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
+    )
+
+    hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
+    hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
+    templates_result = template_featurizer.get_templates(
+        query_sequence=query_sequence, hits=hhsearch_hits
+    )
+    return dict(templates_result.features)
 
 
 class UniFoldForFolding:
@@ -210,7 +269,7 @@ class UniFoldForFolding:
 
         all_chain_features_list = []
         for chain_idx, sequence in enumerate(sequences):
-            chain_name = PDB_CHAIN_IDS[chain_idx]
+            chain_name = protein.PDB_CHAIN_IDS[chain_idx]
             sequence_features = pipeline.make_sequence_features(
                 sequence=sequence, chain_name=chain_name
             )
@@ -332,7 +391,7 @@ class UniFoldForFolding:
         self.cfg.data.common.is_multimer = len(sequences) > 1
 
         batch = self._featurize_input(sequences, self.msa_pipeline(sequences))
-        batch = UnifoldDataset.collater([batch])
+        batch = collate_dict([batch])
 
         seq_len = batch["aatype"].shape[-1]
         chunk_size, block_size = automatic_chunk_size(
