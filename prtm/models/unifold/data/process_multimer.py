@@ -18,7 +18,6 @@ import collections
 from typing import Iterable, List, MutableMapping
 
 import numpy as np
-
 from prtm.models.unifold.data import msa_pairing, residue_constants
 from prtm.models.unifold.data.utils import correct_template_restypes
 
@@ -340,6 +339,7 @@ def int_id_to_str_id(num: int) -> str:
         output.append(chr(num % 26 + ord("A")))
         num = num // 26 - 1
     return "".join(output)
+
 
 def add_assembly_features(
     all_chain_features,

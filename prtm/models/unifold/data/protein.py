@@ -19,7 +19,6 @@ from typing import Any, Mapping, Optional
 
 import numpy as np
 from Bio.PDB import PDBParser
-
 from prtm.models.unifold.data import residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]

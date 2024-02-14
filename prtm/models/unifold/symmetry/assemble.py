@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-
 from prtm.models.unifold.data.protein import Protein
 from prtm.models.unifold.modules.featurization import atom14_to_atom37
 from prtm.models.unifold.modules.frame import Frame

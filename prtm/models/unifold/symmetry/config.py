@@ -1,5 +1,4 @@
 import ml_collections as mlc
-
 from prtm.models.unifold.config import model_config, recursive_set
 
 

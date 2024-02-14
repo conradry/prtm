@@ -19,7 +19,6 @@ import re
 import subprocess
 
 from absl import logging
-
 from prtm.models.unifold.msa.tools import utils
 
 

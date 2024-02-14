@@ -3,7 +3,6 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
 from prtm.models.unifold.modules.common import Linear
 from prtm.models.unifold.utils import permute_final_dims
 

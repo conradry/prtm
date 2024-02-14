@@ -19,7 +19,6 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Union
 
 import numpy as np
 from absl import logging
-
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.msa import msa_identifiers, parsers, templates
 from prtm.models.unifold.msa.tools import (hhblits, hhsearch, hmmsearch,

@@ -22,7 +22,6 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 from absl import logging
 from Bio import PDB
 from Bio.PDB.MMCIFParser import MMCIFParser
-
 from prtm.models.unifold.msa import SCOPData
 
 # Type aliases:

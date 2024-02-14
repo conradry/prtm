@@ -9,7 +9,6 @@ import time
 
 import numpy as np
 import torch
-
 from prtm.models.unifold.config import model_config
 from prtm.models.unifold.data import protein, residue_constants
 from prtm.models.unifold.dataset import UnifoldDataset, load_and_process

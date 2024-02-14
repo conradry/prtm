@@ -23,7 +23,6 @@ import time
 from pathlib import Path
 
 from absl import app, flags, logging
-
 from prtm.models.unifold.data.utils import compress_features
 from prtm.models.unifold.msa import parsers, pipeline, templates
 from prtm.models.unifold.msa.tools import hmmsearch

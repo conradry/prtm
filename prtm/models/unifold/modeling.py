@@ -1,37 +1,27 @@
-import pdb
 import random
 from contextlib import nullcontext
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-
+from prtm import protein
 from prtm.models.unifold.config import model_config
-from prtm.models.unifold.data import process, protein, residue_constants, utils
+from prtm.models.unifold.data import process, residue_constants, utils
 from prtm.models.unifold.data.process_multimer import (
-    add_assembly_features,
-    convert_monomer_features,
-    merge_msas,
-    pair_and_merge,
-    post_process,
-)
+    add_assembly_features, convert_monomer_features, merge_msas,
+    pair_and_merge, post_process)
 from prtm.models.unifold.dataset import UnifoldDataset, make_data_config
 from prtm.models.unifold.inference import automatic_chunk_size
 from prtm.models.unifold.input_validation import validate_input
 from prtm.models.unifold.mmseqs import get_null_template, get_template
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline
-from prtm.models.unifold.symmetry import (
-    UFSymmetry,
-    assembly_from_prediction,
-    uf_symmetry_config,
-)
+from prtm.models.unifold.symmetry import (UFSymmetry, assembly_from_prediction,
+                                          uf_symmetry_config)
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
 from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
 from prtm.protein import PDB_CHAIN_IDS
-
-# from prtm import protein
 from prtm.query.mmseqs import MMSeqs2
 from prtm.utils import hub_utils
 
@@ -43,7 +33,7 @@ UNIFOLD_MODEL_URLS = {
     "multimer_ft": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz",
     "uf_symmetry": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/uf_symmetry_params_2022-09-06.tar.gz",
     # AlphaFold2 trained models
-    "model_1_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_1_af2": "https://drive.google.com/uc?id=1vW1oZAI2ejeVUPQXusfN55Nf1_ldjrG6",
     "model_2_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
     "model_3_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
     "model_4_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
@@ -87,6 +77,9 @@ class UniFoldForFolding:
         use_templates: bool = False,
         symmetry_group: Optional[str] = None,
         random_seed: Optional[int] = None,
+        min_sequence_length: int = 6,
+        max_monomer_length: int = 3000,
+        max_multimer_length: int = 3000,
     ):
         self.model_name = model_name
         self.cfg = _get_model_config(model_name)
@@ -115,6 +108,10 @@ class UniFoldForFolding:
         self.symmetry_group = symmetry_group
         self.is_symmetry = symmetry_group not in [None, "C1"]
         self.use_templates = use_templates
+
+        self.min_sequence_length = min_sequence_length
+        self.max_monomer_length = max_monomer_length
+        self.max_multimer_length = max_multimer_length
 
         self.msa_caller = MMSeqs2(
             user_agent="unifold_prtm", use_templates=use_templates
@@ -315,10 +312,14 @@ class UniFoldForFolding:
         max_recycling_iters: int,
         num_ensembles: int,
         chunk_size: int = 128,
-    ):  # -> Tuple[protein.Protein37, Dict[str, Any]]:
+    ) -> Tuple[protein.Protein37, Dict[str, Any]]:
         """Fold a protein sequence."""
         sequences_dict = validate_input(
-            sequences_dict, self.symmetry_group, 6, 3000, 3000
+            sequences_dict,
+            self.symmetry_group,
+            self.min_sequence_length,
+            self.max_monomer_length,
+            self.max_multimer_length,
         )[0]
         sequences = list(sequences_dict.values())
 
@@ -367,29 +368,41 @@ class UniFoldForFolding:
         plddt_b_factors = np.repeat(
             plddt[..., None], residue_constants.atom_type_num, axis=-1
         )
-        # TODO: , may need to reorder chains, based on entity_ids
+
         if self.symmetry_group is None:
-            cur_protein = protein.from_prediction(
-                features=batch, result=out, b_factors=plddt_b_factors
-            )
+            if "asym_id" in batch:
+                chain_index = batch["asym_id"] - 1
+            else:
+                chain_index = np.zeros_like((batch["aatype"]))
+
+            atom_positions = out["final_atom_positions"].copy()
+            atom_mask = out["final_atom_mask"].copy()
+            aatype = batch["aatype"]
+            residue_index = batch["residue_index"] + 1
+            b_factors = plddt_b_factors
         else:
-            plddt_b_factors_assembly = np.concatenate(
+            chain_index = out["expand_batch"]["asym_id"]
+            atom_positions = out["expand_final_atom_positions"].copy()
+            atom_mask = out["expand_final_atom_mask"].copy()
+            aatype = out["expand_batch"]["aatype"]
+            residue_index = out["expand_batch"]["residue_index"]
+            b_factors = np.concatenate(
                 [plddt_b_factors for _ in range(batch["symmetry_opers"].shape[0])]
             )
 
-            cur_protein = assembly_from_prediction(
-                result=out,
-                b_factors=plddt_b_factors_assembly,
-            )
+        # Surgery on the atom positions and mask to swap order of position of
+        # CB and O atoms to match the prtm convention; bfactors are
+        # constant for each resiude so no need to swap them
+        atom_positions[:, [3, 4]] = atom_positions[:, [4, 3]]
+        atom_mask = out["final_atom_mask"].copy()
+        atom_mask[:, [3, 4]] = atom_mask[:, [4, 3]]
+        structure = protein.Protein37(
+            aatype=batch["aatype"],
+            atom_positions=atom_positions,
+            atom_mask=atom_mask,
+            residue_index=batch["residue_index"] + 1,
+            chain_index=chain_index,
+            b_factors=100 * plddt_b_factors,
+        )
 
-        # structure = protein.Protein37(
-        #    atom_positions=res["final_atom_positions"].cpu().numpy(),
-        #    aatype=feature_dict["aatype"].cpu().numpy()[:, 0],
-        #    atom_mask=res["final_atom_mask"].cpu().numpy(),
-        #    residue_index=feature_dict["residue_index"].cpu().numpy()[:, 0] + 1,
-        #    b_factors=b_factors.cpu().numpy(),
-        #    chain_index=chain_index,
-        # )
-
-        # return structure, {"mean_plddt": mean_plddt}
-        return cur_protein, {"mean_plddt": mean_plddt}
+        return structure, {"mean_plddt": mean_plddt}

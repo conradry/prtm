@@ -19,7 +19,6 @@ import subprocess
 from typing import Optional, Sequence
 
 from absl import logging
-
 from prtm.models.unifold.msa import parsers
 from prtm.models.unifold.msa.tools import hmmbuild, utils
 

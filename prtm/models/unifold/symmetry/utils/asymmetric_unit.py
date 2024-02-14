@@ -3,7 +3,6 @@ from itertools import groupby
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-
 from prtm.models.unifold.symmetry.utils.au_span import (
     get_pair_distance_set_dict, span_au)
 from prtm.models.unifold.symmetry.utils.geometry_utils import (

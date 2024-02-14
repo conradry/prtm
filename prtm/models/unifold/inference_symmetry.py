@@ -8,7 +8,6 @@ import time
 
 import numpy as np
 import torch
-
 from prtm.models.unifold.data import protein, residue_constants
 from prtm.models.unifold.dataset import UnifoldDataset
 from prtm.models.unifold.inference import automatic_chunk_size

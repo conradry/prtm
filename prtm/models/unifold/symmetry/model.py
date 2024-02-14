@@ -1,5 +1,4 @@
 import torch.nn.functional as F
-
 from prtm.models.unifold.modules.alphafold import *
 from prtm.models.unifold.symmetry.assemble import expand_symmetry
 from prtm.models.unifold.symmetry.modules import (PseudoResidueEmbedder,

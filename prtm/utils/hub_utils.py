@@ -132,7 +132,7 @@ def load_state_dict_from_s3_url(
 def load_state_dict_from_tar_gz_url(
     url: str,
     extract_member: str,
-    model_name: Optional[str],
+    model_name: Optional[str] = None,
     model_dir: Optional[str] = None,
     name_prefix: Optional[str] = None,
     map_location: MAP_LOCATION = None,
@@ -229,7 +229,7 @@ def load_state_dict_from_gdrive_zip(
     cached_file = os.path.join(model_dir, model_name)
     if not os.path.exists(cached_file):
         print(f"Downloading model from {url}...")
-        outzip = gdown.cached_download(
+        outzip = gdown.download(
             url, path=os.path.join(model_dir, f"{file_id}.zip")
         )
         with zipfile.ZipFile(outzip) as zf:

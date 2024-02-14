@@ -2,7 +2,6 @@ from copy import deepcopy
 from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
-
 from prtm.models.unifold.symmetry.utils.geometry_utils import (
     LabelType, calc_distance_map)
 

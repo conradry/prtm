@@ -1,7 +1,6 @@
 from typing import Dict
 
 import torch.nn as nn
-
 from prtm.models.unifold.modules.common import Linear
 from prtm.models.unifold.modules.confidence import (predicted_aligned_error,
                                                     predicted_lddt,

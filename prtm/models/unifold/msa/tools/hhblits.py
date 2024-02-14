@@ -20,7 +20,6 @@ import subprocess
 from typing import Any, List, Mapping, Optional, Sequence
 
 from absl import logging
-
 from prtm.models.unifold.msa.tools import utils
 
 _HHBLITS_DEFAULT_P = 20

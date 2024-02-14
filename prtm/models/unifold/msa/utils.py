@@ -3,7 +3,6 @@ import os
 from typing import Mapping, Sequence
 
 from absl import logging
-
 from prtm.models.unifold.data import protein
 
 

@@ -6,8 +6,6 @@ from typing import *
 import ml_collections as mlc
 import numpy as np
 import torch
-from torch.utils.data import Dataset
-
 from prtm.models.unifold.data import utils
 from prtm.models.unifold.data.data_ops import NumpyDict, TorchDict
 from prtm.models.unifold.data.process import process_features, process_labels
@@ -17,6 +15,7 @@ from prtm.models.unifold.data.process_multimer import (
 from prtm.models.unifold.utils import (collate_dict,
                                        get_data_parallel_world_size,
                                        numpy_seed)
+from torch.utils.data import Dataset
 
 Rotation = Iterable[Iterable]
 Translation = Iterable

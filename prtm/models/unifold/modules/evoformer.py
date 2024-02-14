@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-
 from prtm.models.unifold.modules.attentions import (
     MSAColumnAttention, MSAColumnGlobalAttention, MSARowAttentionWithPairBias,
     TriangleAttentionEnding, TriangleAttentionStarting)

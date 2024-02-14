@@ -5,7 +5,6 @@ from typing import List, MutableMapping, Optional
 
 import numpy as np
 import torch
-
 from prtm.models.unifold.config import N_EXTRA_MSA, N_MSA, N_RES, N_TPL
 from prtm.models.unifold.data import residue_constants as rc
 from prtm.models.unifold.modules.frame import Frame, Rotation
