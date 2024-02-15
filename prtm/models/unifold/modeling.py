@@ -1,6 +1,6 @@
 import random
 from contextlib import nullcontext
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -16,8 +16,7 @@ from prtm.models.unifold.input_validation import validate_input
 from prtm.models.unifold.mmseqs import get_null_template, get_template
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline
-from prtm.models.unifold.symmetry import (UFSymmetry, assembly_from_prediction,
-                                          uf_symmetry_config)
+from prtm.models.unifold.symmetry import UFSymmetry, uf_symmetry_config
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
 from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
@@ -33,16 +32,16 @@ UNIFOLD_MODEL_URLS = {
     "multimer_ft": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.0.0/unifold_params_2022-08-01.tar.gz",
     "uf_symmetry": "https://github.com/dptech-corp/Uni-Fold/releases/download/v2.2.0/uf_symmetry_params_2022-09-06.tar.gz",
     # AlphaFold2 trained models
-    "model_1_af2": "https://drive.google.com/uc?id=1vW1oZAI2ejeVUPQXusfN55Nf1_ldjrG6",
-    "model_2_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "model_3_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "model_4_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "model_5_af2": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "multimer_1_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "multimer_2_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "multimer_3_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "multimer_4_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
-    "multimer_5_af2_v3": "https://drive.google.com/drive/folders/1eCd-fh6uf9UGp8uwx9PVxk8hFP6zDBZ6",
+    "model_1_af2": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_1.pth",
+    "model_2_af2": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_2.pth",
+    "model_3_af2": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_3.pth",
+    "model_4_af2": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_4.pth",
+    "model_5_af2": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_5.pth",
+    "multimer_1_af2_v3": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_1_multimer_v3.pth",
+    "multimer_2_af2_v3": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_2_multimer_v3.pth",
+    "multimer_3_af2_v3": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_3_multimer_v3.pth",
+    "multimer_4_af2_v3": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_4_multimer_v3.pth",
+    "multimer_5_af2_v3": "https://huggingface.co/conradry/unifold-alphafold-weights/resolve/main/params_model_5_multimer_v3.pth",
 }
 
 UNIFOLD_MODEL_CONFIGS = {
@@ -140,32 +139,21 @@ class UniFoldForFolding:
                 "uf_symmetry": "uf_symmetry.pt",
             }
             extract_member = member_keys[self.model_name]
-            load_fn = hub_utils.load_state_dict_from_tar_gz_url
+            state_dict = hub_utils.load_state_dict_from_tar_gz_url(
+                weights_url,
+                extract_member=extract_member,
+                name_prefix="unifold",
+                map_location="cpu",
+            )
         elif self.model_name in UNIFOLD_MODEL_URLS:
             # Must be an AlphaFold2 model
-            member_keys = {
-                "model_1_af2": "params_model_1.pth",
-                "model_2_af2": "params_model_2.pth",
-                "model_3_af2": "params_model_3.pth",
-                "model_4_af2": "params_model_4.pth",
-                "model_5_af2": "params_model_5.pth",
-                "multimer_1_af2_v3": "params_model_1_multimer_v3.pth",
-                "multimer_2_af2_v3": "params_model_2_multimer_v3.pth",
-                "multimer_3_af2_v3": "params_model_3_multimer_v3.pth",
-                "multimer_4_af2_v3": "params_model_4_multimer_v3.pth",
-                "multimer_5_af2_v3": "params_model_5_multimer_v3.pth",
-            }
-            extract_member = f"unifold_converted/{member_keys[self.model_name]}"
-            load_fn = hub_utils.load_state_dict_from_gdrive_zip
+            state_dict = torch.hub.load_state_dict_from_url(
+                weights_url, map_location="cpu", progress=True, file_name=f"unifold_{self.model_name}.pth"
+            )
         else:
             raise ValueError(f"Unknown model name {self.model_name}")
 
-        state_dict = load_fn(
-            weights_url,
-            extract_member=extract_member,
-            name_prefix="unifold",
-            map_location="cpu",
-        )["ema"]["params"]
+        state_dict = state_dict["ema"]["params"]
         state_dict = {".".join(k.split(".")[1:]): v for k, v in state_dict.items()}
         msg = self.model.load_state_dict(state_dict, strict=True)
 
@@ -392,17 +380,16 @@ class UniFoldForFolding:
 
         # Surgery on the atom positions and mask to swap order of position of
         # CB and O atoms to match the prtm convention; bfactors are
-        # constant for each resiude so no need to swap them
+        # constant for each residue so no need to swap them
         atom_positions[:, [3, 4]] = atom_positions[:, [4, 3]]
-        atom_mask = out["final_atom_mask"].copy()
         atom_mask[:, [3, 4]] = atom_mask[:, [4, 3]]
         structure = protein.Protein37(
-            aatype=batch["aatype"],
+            aatype=aatype,
             atom_positions=atom_positions,
             atom_mask=atom_mask,
-            residue_index=batch["residue_index"] + 1,
-            chain_index=chain_index,
-            b_factors=100 * plddt_b_factors,
+            residue_index=residue_index,
+            chain_index=chain_index.astype(int),
+            b_factors=100 * b_factors,
         )
 
         return structure, {"mean_plddt": mean_plddt}

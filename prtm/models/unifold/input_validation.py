@@ -51,11 +51,6 @@ def validate_input(
 
     if symmetry_group != "C1" and symmetry_group is not None:
         if symmetry_group.startswith("C") and symmetry_group[1:].isnumeric():
-            print(
-                f"Using UF-Symmetry with group {symmetry_group}. If you do not "
-                f"want to use UF-Symmetry, please use `C1` and copy the AU "
-                f"sequences to the count in the assembly."
-            )
             is_multimer = len(sequences) > 1
             return sequences, is_multimer, symmetry_group
         else:
