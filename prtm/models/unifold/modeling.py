@@ -8,18 +8,18 @@ import torch
 
 from prtm import protein
 from prtm.constants import residue_constants
-from prtm.models.unifold.config import model_config, make_data_config
-from prtm.models.unifold.data import process, utils
+from prtm.models.unifold.config import make_data_config, model_config
+from prtm.models.unifold.data import process
 from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
     pair_and_merge, post_process)
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline, templates
-from prtm.models.unifold.msa.tools import hhsearch
-from prtm.models.unifold.symmetry import UFSymmetry, uf_symmetry_config
-from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
+from prtm.models.unifold.symmetry.config import uf_symmetry_config
+from prtm.models.unifold.symmetry.model import UFSymmetry
 from prtm.models.unifold.symmetry.utils import get_transform
 from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
+from prtm.query import hhsearch
 from prtm.query.mmseqs import MMSeqs2
 from prtm.utils import hub_utils
 
@@ -99,6 +99,29 @@ def automatic_chunk_size(seq_len, device, is_bf16):
     return chunk_size, block_size
 
 
+def convert_all_seq_feature(feature: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    feature["msa"] = feature["msa"].astype(np.uint8)
+    if "num_alignments" in feature:
+        feature.pop("num_alignments")
+    make_all_seq_key = lambda k: f"{k}_all_seq" if not k.endswith("_all_seq") else k
+    return {make_all_seq_key(k): v for k, v in feature.items()}
+
+
+def filter_features(feature: Dict[str, np.ndarray], **kwargs) -> Dict[str, np.ndarray]:
+    assert len(kwargs) == 1, f"wrong usage of filter with kwargs: {kwargs}"
+    if "desired_keys" in kwargs:
+        feature = {k: v for k, v in feature.items() if k in kwargs["desired_keys"]}
+    elif "required_keys" in kwargs:
+        for k in kwargs["required_keys"]:
+            assert k in feature, f"cannot find required key {k}."
+    elif "ignored_keys" in kwargs:
+        feature = {k: v for k, v in feature.items() if k not in kwargs["ignored_keys"]}
+    else:
+        raise AssertionError(f"wrong usage of filter with kwargs: {kwargs}")
+
+    return feature
+
+
 def get_null_template(
     query_sequence: Union[List[str], str], num_temp: int = 1
 ) -> Dict[str, Any]:
@@ -143,16 +166,41 @@ def get_template(
         obsolete_pdbs_path=None,
     )
 
-    hhsearch_pdb70_runner = hhsearch.HHSearch(
-        binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
-    )
-
+    hhsearch_pdb70_runner = hhsearch.HHSearch(databases=[f"{template_path}/pdb70"])
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
     hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
     templates_result = template_featurizer.get_templates(
         query_sequence=query_sequence, hits=hhsearch_hits
     )
     return dict(templates_result.features)
+
+
+def get_pseudo_residue_feat(symmetry: str):
+    circ = 2.0 * np.pi
+    symmetry = "C1" if symmetry is None else symmetry
+    if symmetry == "C1":
+        ret = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0], dtype=float)
+    elif symmetry[0] == "C":
+        theta = circ / float(symmetry[1:])
+        ret = np.array(
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, np.cos(theta), np.sin(theta)], dtype=float
+        )
+    elif symmetry[0] == "D":
+        theta = circ / float(symmetry[1:])
+        ret = np.array(
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, np.cos(theta), np.sin(theta)], dtype=float
+        )
+    elif symmetry == "I":
+        ret = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0], dtype=float)
+    elif symmetry == "O":
+        ret = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0], dtype=float)
+    elif symmetry == "T":
+        ret = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0], dtype=float)
+    elif symmetry == "H":
+        raise NotImplementedError("helical structures not supported currently.")
+    else:
+        raise ValueError(f"unknown symmetry type {symmetry}")
+    return ret
 
 
 class UniFoldForFolding:
@@ -304,7 +352,7 @@ class UniFoldForFolding:
             pair_feature_dict = pipeline.make_msa_features([multimer_msa])
 
             if len(sequences) > 1:
-                pair_feature_dict = utils.convert_all_seq_feature(pair_feature_dict)
+                pair_feature_dict = convert_all_seq_feature(pair_feature_dict)
                 for key in [
                     "msa_all_seq",
                     "msa_species_identifiers_all_seq",
@@ -358,7 +406,7 @@ class UniFoldForFolding:
             else nullcontext() as _
         ):
             all_chain_features["crop_and_fix_size_seed"] = np.random.randint(0, 63355)
-            all_chain_features = utils.filter(
+            all_chain_features = filter_features(
                 all_chain_features, desired_keys=feature_names
             )
             all_chain_features = {
@@ -380,14 +428,16 @@ class UniFoldForFolding:
                 None
             ]
 
-        return all_chain_features 
+        return all_chain_features
 
     def _clean_and_validate_sequence(
         self, input_sequence: str, min_length: int, max_length: int
     ) -> str:
         """Checks that the input sequence is ok and returns a clean version of it."""
         # Remove all whitespaces, tabs and end lines; upper-case.
-        clean_sequence = input_sequence.translate(str.maketrans("", "", " \n\t")).upper()
+        clean_sequence = input_sequence.translate(
+            str.maketrans("", "", " \n\t")
+        ).upper()
         aatypes = set(residue_constants.restypes)  # 20 standard aatypes.
         if not set(clean_sequence).issubset(aatypes):
             raise ValueError(
@@ -408,7 +458,6 @@ class UniFoldForFolding:
                 f"GPU memory)."
             )
         return clean_sequence
-
 
     def _validate_input(
         self,

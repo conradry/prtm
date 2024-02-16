@@ -4,7 +4,6 @@ from typing import List
 
 import numpy as np
 import torch
-import torch.distributed as dist
 
 
 def dict_map(fn, dic, leaf_type):
@@ -150,38 +149,3 @@ def collate_dict(
     for key in keys:
         ret[key] = torch.stack([v[key] for v in values], dim=dim)
     return ret
-
-
-def get_world_size(group):
-    if dist.is_initialized():
-        return dist.get_world_size(group=group)
-    else:
-        return 1
-
-
-def get_global_group():
-    if dist.is_initialized():
-        if not hasattr(get_global_group, "_global_group"):
-            # ideally we could use torch.distributed.group.WORLD, but it seems
-            # to cause random NCCL hangs in some cases
-            get_global_group._global_group = dist.new_group()
-        return get_global_group._global_group
-    else:
-        return None
-
-
-def get_world_size(group):
-    if dist.is_initialized():
-        return dist.get_world_size(group=group)
-    else:
-        return 1
-
-
-def get_data_parallel_group():
-    """Get the data parallel group the caller rank belongs to."""
-    return get_global_group()
-
-
-def get_data_parallel_world_size():
-    """Return world size for the data parallel group."""
-    return get_world_size(get_data_parallel_group())

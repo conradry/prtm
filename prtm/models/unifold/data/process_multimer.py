@@ -18,8 +18,8 @@ import collections
 from typing import Iterable, List, MutableMapping
 
 import numpy as np
+
 from prtm.models.unifold.data import msa_pairing, residue_constants
-from prtm.models.unifold.data.utils import correct_template_restypes
 
 FeatureDict = MutableMapping[str, np.ndarray]
 
@@ -64,6 +64,14 @@ REQUIRED_FEATURES = frozenset(
 
 MAX_TEMPLATES = 4
 MSA_CROP_SIZE = 2048
+
+
+def correct_template_restypes(feature):
+    """Correct template restype to have the same order as residue_constants."""
+    feature = np.argmax(feature, axis=-1).astype(np.int32)
+    new_order_list = residue_constants.MAP_HHBLITS_AATYPE_TO_OUR_AATYPE
+    feature = np.take(new_order_list, feature.astype(np.int32), axis=0)
+    return feature
 
 
 def _is_homomer_or_monomer(chains: Iterable[FeatureDict]) -> bool:

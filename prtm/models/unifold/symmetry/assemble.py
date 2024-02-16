@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from prtm.models.unifold.modules.featurization import atom14_to_atom37
 from prtm.models.unifold.modules.frame import Frame
 

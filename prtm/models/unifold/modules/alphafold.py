@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.modules.attentions import (gen_msa_attn_mask,
                                                     gen_tri_attn_mask)

@@ -24,9 +24,10 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 from absl import logging
+
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.msa import mmcif, parsers
-from prtm.models.unifold.msa.tools import kalign
+from prtm.query import kalign
 
 
 class Error(Exception):
@@ -1017,96 +1018,6 @@ class HhsearchHitFeaturizer(TemplateHitFeaturizer):
                 # Make sure the feature has correct dtype even if empty.
                 template_features[name] = np.array([], dtype=TEMPLATE_FEATURES[name])
 
-        return TemplateSearchResult(
-            features=template_features, errors=errors, warnings=warnings
-        )
-
-
-class HmmsearchHitFeaturizer(TemplateHitFeaturizer):
-    """A class for turning a3m hits from hmmsearch to template features."""
-
-    def get_templates(
-        self, query_sequence: str, hits: Sequence[parsers.TemplateHit]
-    ) -> TemplateSearchResult:
-        """Computes the templates for given query sequence (more details above)."""
-        logging.info("Searching for template for: %s", query_sequence)
-
-        template_features = {}
-        for template_feature_name in TEMPLATE_FEATURES:
-            template_features[template_feature_name] = []
-
-        already_seen = set()
-        errors = []
-        warnings = []
-
-        if not hits or hits[0].sum_probs is None:
-            sorted_hits = hits
-        else:
-            sorted_hits = sorted(hits, key=lambda x: x.sum_probs, reverse=True)
-
-        for hit in sorted_hits:
-            # We got all the templates we wanted, stop processing hits.
-            if len(already_seen) >= self._max_hits:
-                break
-
-            result = _process_single_hit(
-                query_sequence=query_sequence,
-                hit=hit,
-                mmcif_dir=self._mmcif_dir,
-                max_template_date=self._max_template_date,
-                release_dates=self._release_dates,
-                obsolete_pdbs=self._obsolete_pdbs,
-                strict_error_check=self._strict_error_check,
-                kalign_binary_path=self._kalign_binary_path,
-            )
-
-            if result.error:
-                errors.append(result.error)
-
-            # There could be an error even if there are some results, e.g. thrown by
-            # other unparsable chains in the same mmCIF file.
-            if result.warning:
-                warnings.append(result.warning)
-
-            if result.features is None:
-                logging.debug(
-                    "Skipped invalid hit %s, error: %s, warning: %s",
-                    hit.name,
-                    result.error,
-                    result.warning,
-                )
-            else:
-                already_seen_key = result.features["template_sequence"]
-                if already_seen_key in already_seen:
-                    continue
-                # Increment the hit counter, since we got features out of this hit.
-                already_seen.add(already_seen_key)
-                for k in template_features:
-                    template_features[k].append(result.features[k])
-
-        if already_seen:
-            for name in template_features:
-                template_features[name] = np.stack(
-                    template_features[name], axis=0
-                ).astype(TEMPLATE_FEATURES[name])
-        else:
-            num_res = len(query_sequence)
-            # Construct a default template with all zeros.
-            template_features = {
-                "template_aatype": np.zeros(
-                    (1, num_res, len(residue_constants.restypes_with_x_and_gap)),
-                    np.float32,
-                ),
-                "template_all_atom_mask": np.zeros(
-                    (1, num_res, residue_constants.atom_type_num), np.float32
-                ),
-                "template_all_atom_positions": np.zeros(
-                    (1, num_res, residue_constants.atom_type_num, 3), np.float32
-                ),
-                "template_domain_names": np.array(["".encode()], dtype=np.object),
-                "template_sequence": np.array(["".encode()], dtype=np.object),
-                "template_sum_probs": np.array([0], dtype=np.float32),
-            }
         return TemplateSearchResult(
             features=template_features, errors=errors, warnings=warnings
         )

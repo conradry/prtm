@@ -5,6 +5,7 @@ from typing import List, MutableMapping, Optional
 
 import numpy as np
 import torch
+
 from prtm.models.unifold.config import N_EXTRA_MSA, N_MSA, N_RES, N_TPL
 from prtm.models.unifold.data import residue_constants as rc
 from prtm.models.unifold.modules.frame import Frame, Rotation
@@ -314,7 +315,7 @@ def block_delete_msa(protein, config):
     ).long()
     uniques, counts = combined.unique(return_counts=True)
     difference = uniques[counts == 1]
-    intersection = uniques[counts > 1]
+    uniques[counts > 1]
     keep_indices = difference.view(-1)
     keep_indices = torch.hstack([torch.zeros(1).long()[None], keep_indices[None]]).view(
         -1

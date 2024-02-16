@@ -3,6 +3,7 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
+
 from prtm.models.unifold.data.residue_constants import (
     restype_atom14_mask, restype_atom14_rigid_group_positions,
     restype_atom14_to_rigid_group, restype_rigid_group_default_frame)

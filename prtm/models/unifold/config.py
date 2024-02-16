@@ -534,7 +534,6 @@ def model_config(name, train=False):
         pass
     elif name == "model_init_af2":
         c.globals.alphafold_original_mode = True
-        pass
     elif name == "model_2_ft":
         recursive_set(c, "max_extra_msa", 1024)
         recursive_set(c, "max_msa_clusters", 512)

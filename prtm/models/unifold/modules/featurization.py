@@ -1,7 +1,6 @@
-from typing import Dict
-
 import torch
 import torch.nn as nn
+
 from prtm.models.unifold.data import residue_constants as rc
 from prtm.models.unifold.modules.frame import Frame
 from prtm.models.unifold.utils import batched_gather, one_hot

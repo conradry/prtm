@@ -16,10 +16,11 @@
 
 import collections
 import functools
-import os
 from typing import List, Mapping, Tuple
 
 import numpy as np
+
+from prtm.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
 from prtm.models.unifold.utils import tree_map
 
 # Distance from one CA to next CA [trans configuration: omega = 180].
@@ -433,12 +434,7 @@ def load_stereo_chemical_props() -> (
         residue_virtual_bonds: Dict that maps resname -> list of Bond tuples.
         residue_bond_angles: Dict that maps resname -> list of BondAngle tuples.
     """
-    stereo_chemical_props_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "stereo_chemical_props.txt"
-    )
-    with open(stereo_chemical_props_path, "rt") as f:
-        stereo_chemical_props = f.read()
-    lines_iter = iter(stereo_chemical_props.splitlines())
+    lines_iter = iter(STEREO_CHEMICAL_PROPS.splitlines())
     # Load bond lengths.
     residue_bonds = {}
     next(lines_iter)  # Skip header line.

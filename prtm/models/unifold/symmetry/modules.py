@@ -3,6 +3,7 @@ from typing import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from prtm.models.unifold.modules.common import Linear
 from prtm.models.unifold.modules.embedders import InputEmbedder
 from prtm.models.unifold.modules.structure_module import *

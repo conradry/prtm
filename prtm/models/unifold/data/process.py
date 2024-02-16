@@ -2,6 +2,7 @@ from typing import Optional
 
 import numpy as np
 import torch
+
 from prtm.models.unifold.data import data_ops
 
 

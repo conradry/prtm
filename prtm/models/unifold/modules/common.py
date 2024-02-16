@@ -1,10 +1,11 @@
 from functools import partial
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
+
 from prtm.models.unifold.utils import tensor_tree_map
 
 

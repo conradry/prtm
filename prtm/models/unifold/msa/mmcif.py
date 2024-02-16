@@ -21,8 +21,8 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from absl import logging
 from Bio import PDB
+from Bio.Data import PDBData
 from Bio.PDB.MMCIFParser import MMCIFParser
-from prtm.models.unifold.msa import SCOPData
 
 # Type aliases:
 ChainId = str
@@ -188,7 +188,7 @@ def fast_parse(
     try:
         parser = MMCIFParser(QUIET=True)
         handle = io.StringIO(mmcif_string)
-        full_structure = parser.get_structure("", handle)
+        parser.get_structure("", handle)
         parsed_info = parser._mmcif_dict  # pylint:disable=protected-access
 
         # Ensure all values are lists, even if singletons.
@@ -207,7 +207,6 @@ def fast_parse(
             )
 
         mmcif_to_author_chain_id = {}
-        seq_to_structure_mappings = {}
         for atom in _get_atom_site_list(parsed_info):
             if atom.model_num != "1":
                 # We only process the first model at the moment.
@@ -335,7 +334,7 @@ def parse(
             author_chain = mmcif_to_author_chain_id[chain_id]
             seq = []
             for monomer in seq_info:
-                code = SCOPData.protein_letters_3to1.get(monomer.id, "X")
+                code = PDBData.protein_letters_3to1_extended.get(monomer.id, "X")
                 seq.append(code if len(code) == 1 else "X")
             seq = "".join(seq)
             author_chain_to_sequence[author_chain] = seq

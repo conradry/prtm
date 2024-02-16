@@ -1,9 +1,8 @@
-import string
-from functools import reduce
 from typing import *
 
 import numpy as np
 from libmsym import libmsym as m
+
 from prtm.models.unifold.symmetry.utils.geometry_utils import (
     ANGLE_EPS, LabelType, PairingFailError, expand_groups, get_num_AU,
     get_rotation_from_axis_theta, get_standard_syms_axes, normalize_axis,
