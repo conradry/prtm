@@ -1,6 +1,6 @@
 from typing import Dict, Sequence, Tuple
 
-from prtm.models.unifold.data import residue_constants
+from prtm.constants import residue_constants
 
 
 def clean_and_validate_sequence(

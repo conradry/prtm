@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from prtm.models.unifold.data.protein import Protein
 from prtm.models.unifold.modules.featurization import atom14_to_atom37
 from prtm.models.unifold.modules.frame import Frame
 
@@ -116,21 +115,3 @@ def expand_symmetry(sm_out, batch):
     symm_out["expand_final_atom_mask"] = symm_feats["atom37_atom_exists"]
 
     return symm_feats, symm_out
-
-
-def assembly_from_prediction(result, b_factors=None) -> Protein:
-    chain_index = result["expand_batch"]["asym_id"]
-    aatype = result["expand_batch"]["aatype"]
-    residue_index = result["expand_batch"]["residue_index"]
-    atom_positions = result["expand_final_atom_positions"]
-    atom_mask = result["expand_final_atom_mask"]
-    if b_factors is None:
-        b_factors = np.zeros_like(atom_mask)
-    return Protein(
-        aatype=aatype,
-        atom_positions=atom_positions,
-        atom_mask=atom_mask,
-        residue_index=residue_index + 1,
-        chain_index=chain_index - 1,
-        b_factors=b_factors,
-    )

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from prtm.models.unifold.data import utils
 from prtm.models.unifold.data.data_ops import NumpyDict, TorchDict
-from prtm.models.unifold.data.process import process_features, process_labels
+from prtm.models.unifold.data.process import process_features
 from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
     pair_and_merge, post_process)

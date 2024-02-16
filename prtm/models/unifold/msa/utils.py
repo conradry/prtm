@@ -1,9 +1,8 @@
 import json
 import os
-from typing import Mapping, Sequence
+from typing import Sequence
 
-from absl import logging
-from prtm.models.unifold.data import protein
+from prtm import protein
 
 
 def get_chain_id_map(
@@ -67,10 +66,6 @@ def divide_multi_chains(
     chain_order_path = os.path.join(output_dir, "chains.txt")
     with open(chain_order_path, "w") as f:
         f.write(" ".join(chain_order))
-
-    logging.info(
-        "Mapping multi-chains fasta with chain order: %s", " ".join(chain_order)
-    )
 
     temp_names = []
     temp_paths = []

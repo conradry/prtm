@@ -1,3 +1,4 @@
+import math
 import random
 from contextlib import nullcontext
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -6,22 +7,19 @@ import numpy as np
 import torch
 
 from prtm import protein
-from prtm.models.unifold.config import model_config
-from prtm.models.unifold.data import process, residue_constants, utils
+from prtm.constants import residue_constants
+from prtm.models.unifold.config import model_config, make_data_config
+from prtm.models.unifold.data import process, utils
 from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
     pair_and_merge, post_process)
-from prtm.models.unifold.dataset import UnifoldDataset, make_data_config
-from prtm.models.unifold.inference import automatic_chunk_size
-from prtm.models.unifold.input_validation import validate_input
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.msa import parsers, pipeline, templates
 from prtm.models.unifold.msa.tools import hhsearch
 from prtm.models.unifold.symmetry import UFSymmetry, uf_symmetry_config
 from prtm.models.unifold.symmetry.dataset import get_pseudo_residue_feat
 from prtm.models.unifold.symmetry.utils import get_transform
-from prtm.models.unifold.utils import numpy_seed, tensor_tree_map
-from prtm.protein import PDB_CHAIN_IDS
+from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
 from prtm.query.mmseqs import MMSeqs2
 from prtm.utils import hub_utils
 
@@ -68,6 +66,37 @@ def _get_model_config(model_name: str):
     """Get the model config for a given model name."""
     # All `finetuning` models use the same config.
     return UNIFOLD_MODEL_CONFIGS[model_name]
+
+
+def get_device_mem(device):
+    if device != "cpu" and torch.cuda.is_available():
+        cur_device = torch.cuda.current_device()
+        prop = torch.cuda.get_device_properties("cuda:{}".format(cur_device))
+        total_memory_in_GB = prop.total_memory / 1024 / 1024 / 1024
+        return total_memory_in_GB
+    else:
+        return 40
+
+
+def automatic_chunk_size(seq_len, device, is_bf16):
+    total_mem_in_GB = get_device_mem(device)
+    factor = math.sqrt(total_mem_in_GB / 40.0 * (0.55 * is_bf16 + 0.45)) * 0.95
+    if seq_len < int(1024 * factor):
+        chunk_size = 256
+        block_size = None
+    elif seq_len < int(2048 * factor):
+        chunk_size = 128
+        block_size = None
+    elif seq_len < int(3072 * factor):
+        chunk_size = 64
+        block_size = None
+    elif seq_len < int(4096 * factor):
+        chunk_size = 32
+        block_size = 512
+    else:
+        chunk_size = 4
+        block_size = 256
+    return chunk_size, block_size
 
 
 def get_null_template(
@@ -258,7 +287,7 @@ class UniFoldForFolding:
 
         all_chain_features_list = []
         for chain_idx, sequence in enumerate(sequences):
-            chain_name = PDB_CHAIN_IDS[chain_idx]
+            chain_name = protein.PDB_CHAIN_IDS[chain_idx]
             sequence_features = pipeline.make_sequence_features(
                 sequence=sequence, chain_name=chain_name
             )
@@ -351,7 +380,80 @@ class UniFoldForFolding:
                 None
             ]
 
-        return all_chain_features
+        return all_chain_features 
+
+    def _clean_and_validate_sequence(
+        self, input_sequence: str, min_length: int, max_length: int
+    ) -> str:
+        """Checks that the input sequence is ok and returns a clean version of it."""
+        # Remove all whitespaces, tabs and end lines; upper-case.
+        clean_sequence = input_sequence.translate(str.maketrans("", "", " \n\t")).upper()
+        aatypes = set(residue_constants.restypes)  # 20 standard aatypes.
+        if not set(clean_sequence).issubset(aatypes):
+            raise ValueError(
+                f"Input sequence contains non-amino acid letters: "
+                f"{set(clean_sequence) - aatypes}. AlphaFold only supports 20 standard "
+                "amino acids as inputs."
+            )
+        if len(clean_sequence) < min_length:
+            raise ValueError(
+                f"Input sequence is too short: {len(clean_sequence)} amino acids, "
+                f"while the minimum is {min_length}"
+            )
+        if len(clean_sequence) > max_length:
+            raise ValueError(
+                f"Input sequence is too long: {len(clean_sequence)} amino acids, while "
+                f"the maximum is {max_length}. You may be able to run it with the full "
+                f"Uni-Fold system depending on your resources (system memory, "
+                f"GPU memory)."
+            )
+        return clean_sequence
+
+
+    def _validate_input(
+        self,
+        input_sequences: Dict[str, str],
+        symmetry_group: str,
+        min_length: int,
+        max_length: int,
+        max_multimer_length: int,
+    ) -> Dict[str, str]:
+        """Validates and cleans input sequences and determines which model to use."""
+        sequences = {}
+        for chain_id, input_sequence in input_sequences.items():
+            if input_sequence.strip():
+                input_sequence = self._clean_and_validate_sequence(
+                    input_sequence=input_sequence,
+                    min_length=min_length,
+                    max_length=max_length,
+                )
+                sequences[chain_id] = input_sequence
+
+        if symmetry_group != "C1" and symmetry_group is not None:
+            if not (symmetry_group.startswith("C") and symmetry_group[1:].isnumeric()):
+                raise ValueError(
+                    f"UF-Symmetry does not support symmetry group "
+                    f"{symmetry_group} currently. Cyclic groups (Cx) are "
+                    f"supported only."
+                )
+            return sequences
+        elif len(sequences) == 1:
+            return sequences
+        elif len(sequences) > 1:
+            total_multimer_length = sum([len(seq) for seq in sequences.values()])
+            if total_multimer_length > max_multimer_length:
+                raise ValueError(
+                    f"The total length of multimer sequences is too long: "
+                    f"{total_multimer_length}, while the maximum is "
+                    f"{max_multimer_length}. Please use the full AlphaFold "
+                    f"system for long multimers."
+                )
+            return sequences
+        else:
+            raise ValueError(
+                "No input amino acid sequence provided, please provide at "
+                "least one sequence."
+            )
 
     @torch.no_grad()
     def __call__(
@@ -371,13 +473,13 @@ class UniFoldForFolding:
                 len(sequences_dict) > 1
             ), "Use monomer or symmetry model for inputs with a single sequence!"
 
-        sequences_dict = validate_input(
+        sequences_dict = self._validate_input(
             sequences_dict,
             self.symmetry_group,
             self.min_sequence_length,
             self.max_monomer_length,
             self.max_multimer_length,
-        )[0]
+        )
         sequences = list(sequences_dict.values())
 
         # TODO: Actually need to update the model with these params?
@@ -389,7 +491,7 @@ class UniFoldForFolding:
         self.cfg.data.common.is_multimer = len(sequences) > 1
 
         batch = self._featurize_input(sequences, self.msa_pipeline(sequences))
-        batch = UnifoldDataset.collater([batch])
+        batch = collate_dict([batch], dim=1)
 
         seq_len = batch["aatype"].shape[-1]
         chunk_size, block_size = automatic_chunk_size(

@@ -1,5 +1,5 @@
 import copy
-from typing import Any
+from typing import Any, List, Tuple
 
 import ml_collections as mlc
 
@@ -670,3 +670,26 @@ def model_config(name, train=False):
     recursive_set(c, "inf", 3e4)
     recursive_set(c, "eps", 1e-5, "loss")
     return c
+
+
+def make_data_config(
+    config: mlc.ConfigDict,
+    mode: str,
+    num_res: int,
+    use_templates: bool = False,
+    is_multimer: bool = False,
+) -> Tuple[mlc.ConfigDict, List[str]]:
+    cfg = copy.deepcopy(config)
+    mode_cfg = cfg[mode]
+    with cfg.unlocked():
+        if mode_cfg.crop_size is None:
+            mode_cfg.crop_size = num_res
+    feature_names = cfg.common.unsupervised_features + cfg.common.recycling_features
+    if use_templates:
+        feature_names += cfg.common.template_features
+    if is_multimer:
+        feature_names += cfg.common.multimer_features
+    if cfg[mode].supervised:
+        feature_names += cfg.supervised.supervised_features
+
+    return cfg, feature_names
