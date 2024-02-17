@@ -3,7 +3,7 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
-from prtm.models.unifold.symmetry.utils.geometry_utils import (
+from prtm.models.unifold.symmetry.geometry_utils import (
     LabelType, calc_distance_map)
 
 

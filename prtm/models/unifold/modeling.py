@@ -13,10 +13,10 @@ from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
     pair_and_merge, post_process)
 from prtm.models.unifold.modules.alphafold import AlphaFold
-from prtm.models.unifold.msa import pipeline, templates
+from prtm.models.unifold.data import pipeline, templates
 from prtm.models.unifold.symmetry.config import uf_symmetry_config
 from prtm.models.unifold.symmetry.model import UFSymmetry
-from prtm.models.unifold.symmetry.utils import get_transform
+from prtm.models.unifold.symmetry.geometry_utils import get_transform
 from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
 from prtm.query import hhsearch
 from prtm.query.mmseqs import MMSeqs2

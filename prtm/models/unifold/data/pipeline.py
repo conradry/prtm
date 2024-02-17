@@ -20,7 +20,7 @@ import numpy as np
 
 from prtm import parsers
 from prtm.models.unifold.data import residue_constants
-from prtm.models.unifold.msa import msa_identifiers
+from prtm.models.unifold.data import msa_identifiers
 
 FeatureDict = MutableMapping[str, np.ndarray]
 

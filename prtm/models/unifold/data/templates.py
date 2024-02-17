@@ -26,8 +26,7 @@ import numpy as np
 from absl import logging
 
 from prtm import parsers
-from prtm.models.unifold.data import residue_constants
-from prtm.models.unifold.msa import mmcif
+from prtm.models.unifold.data import mmcif, residue_constants
 from prtm.query import kalign
 
 
