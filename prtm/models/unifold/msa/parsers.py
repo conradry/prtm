@@ -133,26 +133,6 @@ def parse_a3m(a3m_string: str) -> Msa:
     )
 
 
-def _keep_line(line: str, seqnames: Set[str]) -> bool:
-    """Function to decide which lines to keep."""
-    if not line.strip():
-        return True
-    if line.strip() == "//":  # End tag
-        return True
-    if line.startswith("# STOCKHOLM"):  # Start tag
-        return True
-    if line.startswith("#=GC RF"):  # Reference Annotation Line
-        return True
-    if line[:4] == "#=GS":  # Description lines - keep if sequence in list.
-        _, seqname, _ = line.split(maxsplit=2)
-        return seqname in seqnames
-    elif line.startswith("#"):  # Other markup - filter out
-        return False
-    else:  # Alignment data - keep if sequence in list.
-        seqname = line.partition(" ")[0]
-        return seqname in seqnames
-
-
 def _get_hhr_line_regex_groups(
     regex_pattern: str, line: str
 ) -> Sequence[Optional[str]]:

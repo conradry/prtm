@@ -6,15 +6,14 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 
-from prtm import protein
-from prtm.constants import residue_constants
+from prtm import parsers, protein
 from prtm.models.unifold.config import make_data_config, model_config
-from prtm.models.unifold.data import process
+from prtm.models.unifold.data import process, residue_constants
 from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
     pair_and_merge, post_process)
 from prtm.models.unifold.modules.alphafold import AlphaFold
-from prtm.models.unifold.msa import parsers, pipeline, templates
+from prtm.models.unifold.msa import pipeline, templates
 from prtm.models.unifold.symmetry.config import uf_symmetry_config
 from prtm.models.unifold.symmetry.model import UFSymmetry
 from prtm.models.unifold.symmetry.utils import get_transform

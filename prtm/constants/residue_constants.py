@@ -23,6 +23,7 @@ import Bio.PDB
 import numpy as np
 import tree
 from Bio.Data import PDBData
+
 from prtm.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
 
 # Internal import (35fd).
@@ -455,7 +456,6 @@ def load_stereo_chemical_props() -> (
       residue_virtual_bonds: dict that maps resname --> list of Bond tuples
       residue_bond_angles: dict that maps resname --> list of BondAngle tuples
     """
-    # TODO: this file should be downloaded in a setup script
     stereo_chemical_props = STEREO_CHEMICAL_PROPS
 
     lines_iter = iter(stereo_chemical_props.splitlines())
@@ -1521,6 +1521,50 @@ def _make_atom14_ambiguity_feats():
 
 
 _make_atom14_ambiguity_feats()
+
+
+def _make_atom14_is_ambiguous():
+    # Create an ambiguous atoms mask.    shape: (21, 14).
+    restype_atom14_is_ambiguous = np.zeros((21, 14))
+    for resname, swap in residue_atom_renaming_swaps.items():
+        for atom_name1, atom_name2 in swap.items():
+            restype = restype_order[restype_3to1[resname]]
+            atom_idx1 = restype_name_to_atom14_names[resname].index(atom_name1)
+            atom_idx2 = restype_name_to_atom14_names[resname].index(atom_name2)
+            restype_atom14_is_ambiguous[restype, atom_idx1] = 1
+            restype_atom14_is_ambiguous[restype, atom_idx2] = 1
+    return restype_atom14_is_ambiguous
+
+
+restype_atom14_is_ambiguous = _make_atom14_is_ambiguous()
+
+
+def get_chi_atom_indices():
+    """Returns atom indices needed to compute chi angles for all residue types.
+
+    Returns:
+      A tensor of shape [residue_types=21, chis=4, atoms=4]. The residue types are
+      in the order specified in restypes + unknown residue type
+      at the end. For chi angles which are not defined on the residue, the
+      positions indices are by default set to 0.
+    """
+    chi_atom_indices = []
+    for residue_name in restypes:
+        residue_name = restype_1to3[residue_name]
+        residue_chi_angles = chi_angles_atoms[residue_name]
+        atom_indices = []
+        for chi_angle in residue_chi_angles:
+            atom_indices.append([atom_order[atom] for atom in chi_angle])
+        for _ in range(4 - len(atom_indices)):
+            atom_indices.append([0, 0, 0, 0])  # For chi angles not defined on the AA.
+        chi_atom_indices.append(atom_indices)
+
+    chi_atom_indices.append([[0, 0, 0, 0]] * 4)  # For UNKNOWN residue.
+
+    return chi_atom_indices
+
+
+chi_atom_indices = get_chi_atom_indices()
 
 
 def aatype_to_str_sequence(aatype):

@@ -1,6 +1,12 @@
+import torch
 import torch.nn.functional as F
 
-from prtm.models.unifold.modules.alphafold import *
+from prtm.models.unifold.data import residue_constants
+from prtm.models.unifold.modules.alphafold import (AlphaFold, atom14_to_atom37,
+                                                   build_extra_msa_feat,
+                                                   gen_msa_attn_mask,
+                                                   gen_tri_attn_mask,
+                                                   pseudo_beta_fn, residual)
 from prtm.models.unifold.symmetry.assemble import expand_symmetry
 from prtm.models.unifold.symmetry.modules import (PseudoResidueEmbedder,
                                                   SymmInputEmbedder,

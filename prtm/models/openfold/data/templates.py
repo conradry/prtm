@@ -24,6 +24,7 @@ import re
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
+
 from prtm import parsers
 from prtm.constants import residue_constants
 from prtm.models.openfold.data import mmcif_parsing
@@ -409,9 +410,10 @@ def _realign_pdb_template_to_query(
             )
 
     try:
-        (old_aligned_template, new_aligned_template), _ = parsers.parse_a3m(
+        parsed_a3m = parsers.parse_a3m(
             aligner.align([old_template_sequence, new_template_sequence])
         )
+        old_aligned_template, new_aligned_template = parsed_a3m.sequences
     except Exception as e:
         raise QueryToTemplateAlignError(
             "Could not align old template %s to template %s (%s_%s). Error: %s"
