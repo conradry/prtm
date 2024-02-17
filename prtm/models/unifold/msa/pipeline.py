@@ -18,8 +18,9 @@ from typing import MutableMapping, Sequence
 
 import numpy as np
 
+from prtm import parsers
 from prtm.models.unifold.data import residue_constants
-from prtm.models.unifold.msa import msa_identifiers, parsers
+from prtm.models.unifold.msa import msa_identifiers
 
 FeatureDict = MutableMapping[str, np.ndarray]
 
