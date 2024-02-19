@@ -7,10 +7,6 @@ import numpy as np
 import torch
 
 from prtm import parsers, protein
-#from prtm.models.unifold.config import make_data_config, model_config
-#from prtm.models.unifold.config import (
-#    make_data_config_dataclass, Model2FT, DataConfig
-#)
 from prtm.models.unifold import config
 from prtm.models.unifold.data import process, residue_constants
 from prtm.models.unifold.data.process_multimer import (
@@ -18,7 +14,6 @@ from prtm.models.unifold.data.process_multimer import (
     pair_and_merge, post_process)
 from prtm.models.unifold.modules.alphafold import AlphaFold
 from prtm.models.unifold.data import pipeline, templates
-from prtm.models.unifold.symmetry.config import uf_symmetry_config
 from prtm.models.unifold.symmetry.model import UFSymmetry
 from prtm.models.unifold.symmetry.geometry_utils import get_transform
 from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
@@ -48,7 +43,7 @@ UNIFOLD_MODEL_URLS = {
 
 UNIFOLD_MODEL_CONFIGS = {
     # UniFold trained models
-    #"uf_symmetry": uf_symmetry_config(),
+    "uf_symmetry": config.UniFoldSymmetry(),
     "multimer_ft": config.MultimerFT(),
     "model_2_ft": config.Model2FT(),
     # AlphaFold2 trained models

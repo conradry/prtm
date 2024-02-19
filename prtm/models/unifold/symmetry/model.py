@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from dataclasses import asdict
+from prtm.models.unifold.config import UniFoldSymmetry
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.modules.alphafold import (AlphaFold, atom14_to_atom37,
                                                    build_extra_msa_feat,
@@ -15,18 +17,18 @@ from prtm.models.unifold.utils import tensor_tree_map
 
 
 class UFSymmetry(AlphaFold):  # inherit the main model. alterations implemented here.
-    def __init__(self, config):
+    def __init__(self, config: UniFoldSymmetry):
         assert not config.globals.alphafold_original_mode
         super(UFSymmetry, self).__init__(config)
         # replace input embedder with symm input embedder
         self.input_embedder = SymmInputEmbedder(
-            **config.model["input_embedder"], use_chain_relative=True
+            **asdict(config.model.input_embedder), use_chain_relative=True
         )
         self.pseudo_residue_embedder = PseudoResidueEmbedder(
-            **config.model["pseudo_residue_embedder"]
+            **asdict(config.model.pseudo_residue_embedder)
         )
         self.structure_module = SymmStructureModule(
-            **config.model["structure_module"],
+            **asdict(config.model.structure_module),
         )
 
     def __make_input_float__(self):

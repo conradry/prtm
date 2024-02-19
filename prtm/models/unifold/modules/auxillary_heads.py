@@ -60,7 +60,7 @@ class AuxiliaryHeads(nn.Module):
             aux_out.update(
                 predicted_aligned_error(
                     pae_logits,
-                    **self.config.pae,
+                    **asdict(self.config.pae),
                 )
             )
             aux_out["ptm"] = predicted_tm_score(
