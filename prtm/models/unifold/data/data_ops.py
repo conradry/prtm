@@ -25,6 +25,8 @@ MSA_FEATURE_NAMES = [
     "bert_mask",
     "true_msa",
     "msa_chains",
+    "msa_has_deletion",
+    "msa_deletion_value",
 ]
 
 

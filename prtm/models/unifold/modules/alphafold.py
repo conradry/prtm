@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from dataclasses import asdict
 from prtm.models.unifold.data import residue_constants
 from prtm.models.unifold.modules.attentions import (gen_msa_attn_mask,
                                                     gen_tri_attn_mask)
@@ -20,65 +21,67 @@ from prtm.models.unifold.modules.template import (TemplatePairStack,
                                                   TemplatePointwiseAttention,
                                                   TemplateProjection)
 from prtm.models.unifold.utils import tensor_tree_map
+from prtm.models.unifold.config import UniFoldConfig
 
 
 class AlphaFold(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: UniFoldConfig):
         super(AlphaFold, self).__init__()
 
         self.globals = config.globals
-        config = config.model
-        template_config = config.template
-        extra_msa_config = config.extra_msa
+        model_config = config.model
+        template_config = model_config.template
+        extra_msa_config = model_config.extra_msa
 
         self.input_embedder = InputEmbedder(
-            **config["input_embedder"],
-            use_chain_relative=config.is_multimer,
+            **asdict(model_config.input_embedder),
+            use_chain_relative=model_config.is_multimer,
         )
         self.recycling_embedder = RecyclingEmbedder(
-            **config["recycling_embedder"],
+            **asdict(model_config.recycling_embedder),
         )
-        if config.template.enabled:
+        if model_config.template.enabled:
             self.template_angle_embedder = TemplateAngleEmbedder(
-                **template_config["template_angle_embedder"],
+                **asdict(template_config.template_angle_embedder),
             )
             self.template_pair_embedder = TemplatePairEmbedder(
-                **template_config["template_pair_embedder"],
+                **asdict(template_config.template_pair_embedder),
             )
             self.template_pair_stack = TemplatePairStack(
-                **template_config["template_pair_stack"],
+                **asdict(template_config.template_pair_stack),
             )
         else:
             self.template_pair_stack = None
-        self.enable_template_pointwise_attention = template_config[
-            "template_pointwise_attention"
-        ].enabled
+
+        self.enable_template_pointwise_attention = (
+            template_config.template_pointwise_attention.enabled
+        )
         if self.enable_template_pointwise_attention:
             self.template_pointwise_att = TemplatePointwiseAttention(
-                **template_config["template_pointwise_attention"],
+                **asdict(template_config.template_pointwise_attention),
             )
         else:
             self.template_proj = TemplateProjection(
-                **template_config["template_pointwise_attention"],
+                **asdict(template_config.template_pointwise_attention),
             )
         self.extra_msa_embedder = ExtraMSAEmbedder(
-            **extra_msa_config["extra_msa_embedder"],
+            **asdict(extra_msa_config.extra_msa_embedder),
         )
         self.extra_msa_stack = ExtraMSAStack(
-            **extra_msa_config["extra_msa_stack"],
+            **asdict(extra_msa_config.extra_msa_stack),
         )
         self.evoformer = EvoformerStack(
-            **config["evoformer_stack"],
+            **asdict(model_config.evoformer_stack),
         )
         self.structure_module = StructureModule(
-            **config["structure_module"],
+            **asdict(model_config.structure_module),
         )
 
         self.aux_heads = AuxiliaryHeads(
-            config["heads"],
+            model_config.heads,
         )
 
-        self.config = config
+        self.config = model_config
         self.dtype = torch.float
         self.inf = self.globals.inf
         if self.globals.alphafold_original_mode:
@@ -145,7 +148,7 @@ class AlphaFold(nn.Module):
                 inf=self.config.template.inf,
                 eps=self.config.template.eps,
                 multichain_mask_2d=multichain_mask_2d,
-                **self.config.template.distogram,
+                **asdict(self.config.template.distogram),
             )
             num_template = t[0].shape[-4]
             single_templates = [
@@ -157,7 +160,7 @@ class AlphaFold(nn.Module):
                 batch,
                 inf=self.config.template.inf,
                 eps=self.config.template.eps,
-                **self.config.template.distogram,
+                **asdict(self.config.template.distogram),
             )
             single_templates = [
                 self.template_pair_embedder(x, z)

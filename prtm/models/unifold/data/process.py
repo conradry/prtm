@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 
+from prtm.models.unifold.config import SHAPE_SCHEMA, CommonData, PredictData
 from prtm.models.unifold.data import data_ops
 
 
@@ -54,19 +55,21 @@ def nonensembled_fns(common_cfg, mode_cfg):
     return operators
 
 
-def crop_and_fix_size_fns(common_cfg, mode_cfg, crop_and_fix_size_seed):
+def crop_and_fix_size_fns(
+    common_cfg: CommonData, mode_cfg: PredictData, crop_and_fix_size_seed: int
+):
     operators = []
     if common_cfg.reduce_msa_clusters_by_max_templates:
         pad_msa_clusters = mode_cfg.max_msa_clusters - mode_cfg.max_templates
     else:
         pad_msa_clusters = mode_cfg.max_msa_clusters
-    crop_feats = dict(common_cfg.features)
+
     if mode_cfg.fixed_size:
         if mode_cfg.crop:
             if common_cfg.is_multimer:
                 crop_fn = data_ops.crop_to_size_multimer(
                     crop_size=mode_cfg.crop_size,
-                    shape_schema=crop_feats,
+                    shape_schema=SHAPE_SCHEMA,
                     seed=crop_and_fix_size_seed,
                     spatial_crop_prob=mode_cfg.spatial_crop_prob,
                     ca_ca_threshold=mode_cfg.ca_ca_threshold,
@@ -74,16 +77,16 @@ def crop_and_fix_size_fns(common_cfg, mode_cfg, crop_and_fix_size_seed):
             else:
                 crop_fn = data_ops.crop_to_size_single(
                     crop_size=mode_cfg.crop_size,
-                    shape_schema=crop_feats,
+                    shape_schema=SHAPE_SCHEMA,
                     seed=crop_and_fix_size_seed,
                 )
             operators.append(crop_fn)
 
-        operators.append(data_ops.select_feat(crop_feats))
+        operators.append(data_ops.select_feat(SHAPE_SCHEMA))
 
         operators.append(
             data_ops.make_fixed_size(
-                crop_feats,
+                SHAPE_SCHEMA,
                 pad_msa_clusters,
                 common_cfg.max_extra_msa,
                 mode_cfg.crop_size,
@@ -93,7 +96,7 @@ def crop_and_fix_size_fns(common_cfg, mode_cfg, crop_and_fix_size_seed):
     return operators
 
 
-def ensembled_fns(common_cfg, mode_cfg):
+def ensembled_fns(common_cfg: CommonData, mode_cfg: PredictData):
     """Input pipeline data transformers that can be ensembled and averaged."""
     operators = []
     multimer_mode = common_cfg.is_multimer
@@ -101,7 +104,7 @@ def ensembled_fns(common_cfg, mode_cfg):
     # multimer don't use block delete msa
     if mode_cfg.block_delete_msa and not multimer_mode:
         operators.append(data_ops.block_delete_msa(common_cfg.block_delete_msa))
-    if "max_distillation_msa_clusters" in mode_cfg:
+    if hasattr(mode_cfg, "max_distillation_msa_clusters"):
         operators.append(
             data_ops.sample_msa_distillation(mode_cfg.max_distillation_msa_clusters)
         )
@@ -125,7 +128,7 @@ def ensembled_fns(common_cfg, mode_cfg):
         )
     )
 
-    if "masked_msa" in common_cfg:
+    if hasattr(common_cfg, "masked_msa"):
         # Masked MSA should come *before* MSA clustering so that
         # the clustering and full MSA profile do not leak information about
         # the masked locations and secret corrupted locations.
@@ -161,7 +164,7 @@ def ensembled_fns(common_cfg, mode_cfg):
     return operators
 
 
-def process_features(tensors, common_cfg, mode_cfg):
+def process_features(tensors, common_cfg: CommonData, mode_cfg: PredictData):
     """Based on the config, apply filters and transformations to the data."""
     is_distillation = bool(tensors.get("is_distillation", 0))
     multimer_mode = common_cfg.is_multimer

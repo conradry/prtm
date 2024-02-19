@@ -7,7 +7,11 @@ import numpy as np
 import torch
 
 from prtm import parsers, protein
-from prtm.models.unifold.config import make_data_config, model_config
+#from prtm.models.unifold.config import make_data_config, model_config
+#from prtm.models.unifold.config import (
+#    make_data_config_dataclass, Model2FT, DataConfig
+#)
+from prtm.models.unifold import config
 from prtm.models.unifold.data import process, residue_constants
 from prtm.models.unifold.data.process_multimer import (
     add_assembly_features, convert_monomer_features, merge_msas,
@@ -44,24 +48,24 @@ UNIFOLD_MODEL_URLS = {
 
 UNIFOLD_MODEL_CONFIGS = {
     # UniFold trained models
-    "uf_symmetry": uf_symmetry_config(),
-    "multimer_ft": model_config("multimer_ft"),
-    "model_2_ft": model_config("model_2_ft"),
+    #"uf_symmetry": uf_symmetry_config(),
+    "multimer_ft": config.MultimerFT(),
+    "model_2_ft": config.Model2FT(),
     # AlphaFold2 trained models
-    "model_1_af2": model_config("model_1_af2"),
-    "model_2_af2": model_config("model_2_af2"),
-    "model_3_af2": model_config("model_3_af2"),
-    "model_4_af2": model_config("model_4_af2"),
-    "model_5_af2": model_config("model_5_af2"),
-    "multimer_1_af2_v3": model_config("multimer_af2_v3"),
-    "multimer_2_af2_v3": model_config("multimer_af2_v3"),
-    "multimer_3_af2_v3": model_config("multimer_af2_v3"),
-    "multimer_4_af2_v3": model_config("multimer_af2_model45_v3"),
-    "multimer_5_af2_v3": model_config("multimer_af2_model45_v3"),
+    "model_1_af2": config.Model1AF2(),
+    "model_2_af2": config.Model2AF2(),
+    "model_3_af2": config.Model3AF2(),
+    "model_4_af2": config.Model3AF2(),  # Model 4 uses the same config as Model 3
+    "model_5_af2": config.Model5AF2(),
+    "multimer_1_af2_v3": config.MultimerAF2V3(),
+    "multimer_2_af2_v3": config.MultimerAF2V3(),
+    "multimer_3_af2_v3": config.MultimerAF2V3(),
+    "multimer_4_af2_v3": config.MultimerAF2Model45V3(),
+    "multimer_5_af2_v3": config.MultimerAF2Model45V3(),
 }
 
 
-def _get_model_config(model_name: str):
+def _get_model_config(model_name: str) -> config.UniFoldConfig:
     """Get the model config for a given model name."""
     # All `finetuning` models use the same config.
     return UNIFOLD_MODEL_CONFIGS[model_name]
@@ -239,14 +243,19 @@ class UniFoldForFolding:
         self.model.inference_mode()
         self.symmetry_group = symmetry_group
         self.is_symmetry = symmetry_group not in [None, "C1"]
-        self.use_templates = use_templates
+
+        if model_name in ["model_3_af2", "model_4_af2", "model_5_af2"]:
+            print("Chosen model is trained without templates, setting use_templates=False.")
+            self.use_templates = False
+        else:
+            self.use_templates = use_templates
 
         self.min_sequence_length = min_sequence_length
         self.max_monomer_length = max_monomer_length
         self.max_multimer_length = max_multimer_length
 
         self.msa_caller = MMSeqs2(
-            user_agent="unifold_prtm", use_templates=use_templates
+            user_agent="unifold_prtm", use_templates=self.use_templates
         )
         self.paired_msa_caller = MMSeqs2(
             user_agent="unifold_prtm", use_templates=False, use_pairing=True
@@ -390,13 +399,13 @@ class UniFoldForFolding:
             all_chain_features.pop("msa_chains")
 
         num_res = int(all_chain_features["seq_length"])
-        cfg, feature_names = make_data_config(
+        data_cfg, feature_names = config.make_data_config_dataclass(
             self.cfg.data,
-            mode="predict",
             num_res=num_res,
             is_multimer=(len(sequences) > 1) or self.is_symmetry,
             use_templates=self.use_templates,
         )
+        data_cfg: config.DataConfig = data_cfg
 
         # Conditional fixed seed context
         with (
@@ -413,7 +422,7 @@ class UniFoldForFolding:
             }
             with torch.no_grad():
                 all_chain_features = process.process_features(
-                    all_chain_features, self.cfg.data.common, self.cfg.data["predict"]
+                    all_chain_features, data_cfg.common, data_cfg.predict
                 )
 
         if self.symmetry_group is not None:

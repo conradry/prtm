@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+from dataclasses import asdict
+from prtm.models.unifold.config import HeadsConfig
 from prtm.models.unifold.modules.common import Linear
 from prtm.models.unifold.modules.confidence import (predicted_aligned_error,
                                                     predicted_lddt,
@@ -7,29 +9,29 @@ from prtm.models.unifold.modules.confidence import (predicted_aligned_error,
 
 
 class AuxiliaryHeads(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: HeadsConfig):
         super(AuxiliaryHeads, self).__init__()
 
         self.plddt = PredictedLDDTHead(
-            **config["plddt"],
+            **asdict(config.plddt),
         )
 
         self.distogram = DistogramHead(
-            **config["distogram"],
+            **asdict(config.distogram),
         )
 
         self.masked_msa = MaskedMSAHead(
-            **config["masked_msa"],
+            **asdict(config.masked_msa),
         )
 
         if config.experimentally_resolved.enabled:
             self.experimentally_resolved = ExperimentallyResolvedHead(
-                **config["experimentally_resolved"],
+                **asdict(config.experimentally_resolved),
             )
 
         if config.pae.enabled:
             self.pae = PredictedAlignedErrorHead(
-                **config.pae,
+                **asdict(config.pae),
             )
 
         self.config = config
@@ -62,16 +64,16 @@ class AuxiliaryHeads(nn.Module):
                 )
             )
             aux_out["ptm"] = predicted_tm_score(
-                pae_logits, interface=False, **self.config.pae
+                pae_logits, interface=False, **asdict(self.config.pae)
             )
 
-            iptm_weight = self.config.pae.get("iptm_weight", 0.0)
+            iptm_weight = self.config.pae.iptm_weight
             if iptm_weight > 0.0:
                 aux_out["iptm"] = predicted_tm_score(
                     pae_logits,
                     interface=True,
                     asym_id=outputs["asym_id"],
-                    **self.config.pae,
+                    **asdict(self.config.pae),
                 )
                 aux_out["iptm+ptm"] = (
                     iptm_weight * aux_out["iptm"] + (1.0 - iptm_weight) * aux_out["ptm"]
