@@ -92,7 +92,7 @@ we may decide to subsume the `OpenFold` models under `Uni-Fold`.
 | AlphaFold/Uni-Fold | Folding | [Notebook](./notebooks/model_notebooks/Uni-Fold.ipynb) | https://github.com/dptech-corp/Uni-Fold | [Apache 2.0](https://github.com/dptech-corp/Uni-Fold/blob/main/LICENSE) |
 | AlphaFold/UniFold-Multimer | Folding | [Notebook](./notebooks/model_notebooks/Uni-Fold.ipynb) | https://github.com/dptech-corp/Uni-Fold | [Apache 2.0](https://github.com/dptech-corp/Uni-Fold/blob/main/LICENSE) |
 | OpenFold | Folding | [Notebook](./notebooks/model_notebooks/OpenFold.ipynb) | https://github.com/aqlaboratory/openfold | [Apache 2.0](https://github.com/aqlaboratory/openfold/blob/main/LICENSE) |
-| ESMFold | Folding |[Notebook](./notebooks/model_notebooks/ESMFold.ipynb) | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
+| ESMFold | Folding |[Notebook](./notebooks/model_notebooks/ESM.ipynb) | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
 | RoseTTAFold| Folding | [Notebook](./notebooks/model_notebooks/RoseTTAFold.ipynb) | https://github.com/RosettaCommons/RoseTTAFold | [MIT License](https://github.com/RosettaCommons/RoseTTAFold/blob/main/LICENSE) |
 | OmegaFold | Folding | [Notebook](./notebooks/model_notebooks/OmegaFold.ipynb) | https://github.com/HeliXonProtein/OmegaFold | [Apache 2.0](https://github.com/HeliXonProtein/OmegaFold/blob/main/LICENSE) |
 | DMPfold2 | Folding | [Notebook](./notebooks/model_notebooks/DMPfold.ipynb) | https://github.com/psipred/DMPfold2 | [GPL v3.0](https://github.com/psipred/DMPfold2/blob/master/LICENSE) |
