@@ -8,14 +8,17 @@ import torch
 
 from prtm import parsers, protein
 from prtm.models.unifold import config
-from prtm.models.unifold.data import process, residue_constants
+from prtm.models.unifold.data import pipeline, process, residue_constants, templates
 from prtm.models.unifold.data.process_multimer import (
-    add_assembly_features, convert_monomer_features, merge_msas,
-    pair_and_merge, post_process)
+    add_assembly_features,
+    convert_monomer_features,
+    merge_msas,
+    pair_and_merge,
+    post_process,
+)
 from prtm.models.unifold.modules.alphafold import AlphaFold
-from prtm.models.unifold.data import pipeline, templates
-from prtm.models.unifold.symmetry.model import UFSymmetry
 from prtm.models.unifold.symmetry.geometry_utils import get_transform
+from prtm.models.unifold.symmetry.model import UFSymmetry
 from prtm.models.unifold.utils import collate_dict, numpy_seed, tensor_tree_map
 from prtm.query import hhsearch
 from prtm.query.mmseqs import MMSeqs2
@@ -240,7 +243,9 @@ class UniFoldForFolding:
         self.is_symmetry = symmetry_group not in [None, "C1"]
 
         if model_name in ["model_3_af2", "model_4_af2", "model_5_af2"]:
-            print("Chosen model is trained without templates, setting use_templates=False.")
+            print(
+                "Chosen model is trained without templates, setting use_templates=False."
+            )
             self.use_templates = False
         else:
             self.use_templates = use_templates
@@ -510,12 +515,24 @@ class UniFoldForFolding:
     @torch.no_grad()
     def __call__(
         self,
-        sequences_dict: Dict[str, str],
+        sequences: Union[str, List[str], Dict[str, str]],
         max_recycling_iters: int = 3,
         num_ensembles: int = 2,
         chunk_size: int = 128,
     ) -> Tuple[protein.Protein37, Dict[str, Any]]:
         """Fold a protein sequence."""
+        if isinstance(sequences, str):
+            sequences_dict = {"A": sequences}
+        elif isinstance(sequences, list):
+            sequences_dict = {
+                protein.PDB_CHAIN_IDS[i]: seq for i, seq in enumerate(sequences)
+            }
+        else:
+            assert isinstance(sequences, dict), "Input must be a string, list, or dict!"
+            sequences_dict = sequences
+
+        print("Sequences dict", sequences_dict)
+
         if "multimer" not in self.model_name:
             assert (
                 len(sequences_dict) == 1
@@ -615,4 +632,4 @@ class UniFoldForFolding:
             b_factors=100 * b_factors,
         )
 
-        return structure, {"mean_plddt": mean_plddt}
+        return structure, {"mean_plddt": 100 * mean_plddt}

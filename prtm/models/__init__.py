@@ -16,6 +16,7 @@ from prtm.models.proteinsolver import *
 from prtm.models.rfdiffusion import *
 from prtm.models.rosettafold import *
 from prtm.models.se3_diffusion import *
+from prtm.models.unifold import *
 
 if importlib.util.find_spec("pyrosetta"):
     from prtm.models.protein_seq_des import *

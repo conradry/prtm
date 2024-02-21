@@ -6,11 +6,21 @@ from typing import List, MutableMapping, Optional
 import numpy as np
 import torch
 
-from prtm.models.unifold.config import N_EXTRA_MSA, N_MSA, N_RES, N_TPL
+from prtm.models.unifold.config import (
+    NUM_EXTRA_SEQ,
+    NUM_MSA_SEQ,
+    NUM_RES,
+    NUM_TEMPLATES,
+)
 from prtm.models.unifold.data import residue_constants as rc
 from prtm.models.unifold.modules.frame import Frame, Rotation
-from prtm.models.unifold.utils import (batched_gather, numpy_seed, one_hot,
-                                       tensor_tree_map, tree_map)
+from prtm.models.unifold.utils import (
+    batched_gather,
+    numpy_seed,
+    one_hot,
+    tensor_tree_map,
+    tree_map,
+)
 
 NumpyDict = MutableMapping[str, np.ndarray]
 TorchDict = MutableMapping[str, np.ndarray]
@@ -628,11 +638,12 @@ def make_fixed_size(
         input_extra_msa_size = protein["extra_msa_mask"].shape[0]
         if input_extra_msa_size != extra_msa_size:
             extra_msa_size = get_pad_size(input_extra_msa_size, 8)
+
     pad_size_map = {
-        N_RES: num_res,
-        N_MSA: msa_cluster_size,
-        N_EXTRA_MSA: extra_msa_size,
-        N_TPL: num_templates,
+        NUM_RES: num_res,
+        NUM_MSA_SEQ: msa_cluster_size,
+        NUM_EXTRA_SEQ: extra_msa_size,
+        NUM_TEMPLATES: num_templates,
     }
 
     for k, v in protein.items():

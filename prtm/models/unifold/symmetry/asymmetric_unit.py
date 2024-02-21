@@ -4,14 +4,21 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from prtm.models.unifold.symmetry.au_span import (
-    get_pair_distance_set_dict, span_au)
+from prtm.models.unifold.symmetry.au_span import get_pair_distance_set_dict, span_au
 from prtm.models.unifold.symmetry.geometry_utils import (
-    LabelType, MaskNotEnoughError, PairingFailError, RotatingFailError,
-    au_with_axes, get_standard_syms_axes, get_transform)
-from prtm.models.unifold.symmetry.inertia import (best_inertia_gap_id,
-                                                        get_ref_idx,
-                                                        inertia_gap)
+    LabelType,
+    MaskNotEnoughError,
+    PairingFailError,
+    RotatingFailError,
+    au_with_axes,
+    get_standard_syms_axes,
+    get_transform,
+)
+from prtm.models.unifold.symmetry.inertia import (
+    best_inertia_gap_id,
+    get_ref_idx,
+    inertia_gap,
+)
 from prtm.models.unifold.symmetry.msym_utils import au_with_axes_msym
 from prtm.models.unifold.symmetry.quaternion import quaternion_rotate
 

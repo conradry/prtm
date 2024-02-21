@@ -4,8 +4,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from prtm.models.unifold.modules.common import (Linear, chunk_layer,
-                                                softmax_dropout)
+from prtm.models.unifold.modules.common import Linear, chunk_layer, softmax_dropout
 from prtm.models.unifold.utils import permute_final_dims
 
 

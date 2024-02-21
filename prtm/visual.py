@@ -101,7 +101,7 @@ def view_aligned_structures_grid(
     structures: List["protein.ProteinBase"],
     cmap: str = "viridis",
     max_grid_cols: int = 5,
-    bfactor_is_confidence: bool = False,
+    bfactor_is_confidence: bool = True,
     show_sidechains: bool = True,
 ):
     # Make sure the all structures have the same sequence length

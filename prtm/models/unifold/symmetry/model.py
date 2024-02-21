@@ -1,18 +1,25 @@
+from dataclasses import asdict
+
 import torch
 import torch.nn.functional as F
 
-from dataclasses import asdict
 from prtm.models.unifold.config import UniFoldSymmetry
 from prtm.models.unifold.data import residue_constants
-from prtm.models.unifold.modules.alphafold import (AlphaFold, atom14_to_atom37,
-                                                   build_extra_msa_feat,
-                                                   gen_msa_attn_mask,
-                                                   gen_tri_attn_mask,
-                                                   pseudo_beta_fn, residual)
+from prtm.models.unifold.modules.alphafold import (
+    AlphaFold,
+    atom14_to_atom37,
+    build_extra_msa_feat,
+    gen_msa_attn_mask,
+    gen_tri_attn_mask,
+    pseudo_beta_fn,
+    residual,
+)
 from prtm.models.unifold.symmetry.assemble import expand_symmetry
-from prtm.models.unifold.symmetry.modules import (PseudoResidueEmbedder,
-                                                  SymmInputEmbedder,
-                                                  SymmStructureModule)
+from prtm.models.unifold.symmetry.modules import (
+    PseudoResidueEmbedder,
+    SymmInputEmbedder,
+    SymmStructureModule,
+)
 from prtm.models.unifold.utils import tensor_tree_map
 
 

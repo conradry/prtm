@@ -3,8 +3,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from prtm.models.unifold.modules.common import (Linear, SimpleModuleList,
-                                                residual)
+from prtm.models.unifold.modules.common import Linear, SimpleModuleList, residual
 from prtm.models.unifold.utils import one_hot
 
 

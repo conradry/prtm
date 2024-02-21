@@ -1,6 +1,5 @@
 from typing import Optional
 
-import numpy as np
 import torch
 
 from prtm.models.unifold.config import SHAPE_SCHEMA, CommonData, PredictData

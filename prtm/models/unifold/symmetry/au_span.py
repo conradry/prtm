@@ -3,8 +3,7 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
-from prtm.models.unifold.symmetry.geometry_utils import (
-    LabelType, calc_distance_map)
+from prtm.models.unifold.symmetry.geometry_utils import LabelType, calc_distance_map
 
 
 def span_au(au_labels: List[LabelType], symmetry_opers: np.ndarray):

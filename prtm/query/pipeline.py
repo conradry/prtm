@@ -37,8 +37,6 @@ def _unpack_jackhmmer_results(
 
             msas.append(db_msas)
             deletion_matrices.append(db_deletion_matrices)
-            msa_size = len(set(db_msas))
-            print(f"{msa_size} sequences found in {db_name}")
 
     return msas, deletion_matrices
 

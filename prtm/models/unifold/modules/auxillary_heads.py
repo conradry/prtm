@@ -1,11 +1,14 @@
+from dataclasses import asdict
+
 import torch.nn as nn
 
-from dataclasses import asdict
 from prtm.models.unifold.config import HeadsConfig
 from prtm.models.unifold.modules.common import Linear
-from prtm.models.unifold.modules.confidence import (predicted_aligned_error,
-                                                    predicted_lddt,
-                                                    predicted_tm_score)
+from prtm.models.unifold.modules.confidence import (
+    predicted_aligned_error,
+    predicted_lddt,
+    predicted_tm_score,
+)
 
 
 class AuxiliaryHeads(nn.Module):

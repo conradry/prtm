@@ -5,14 +5,25 @@ import torch
 import torch.nn as nn
 
 from prtm.models.unifold.modules.attentions import (
-    MSAColumnAttention, MSAColumnGlobalAttention, MSARowAttentionWithPairBias,
-    TriangleAttentionEnding, TriangleAttentionStarting)
-from prtm.models.unifold.modules.common import (Linear, OuterProductMean,
-                                                SimpleModuleList, Transition,
-                                                bias_dropout_residual,
-                                                residual, tri_mul_residual)
+    MSAColumnAttention,
+    MSAColumnGlobalAttention,
+    MSARowAttentionWithPairBias,
+    TriangleAttentionEnding,
+    TriangleAttentionStarting,
+)
+from prtm.models.unifold.modules.common import (
+    Linear,
+    OuterProductMean,
+    SimpleModuleList,
+    Transition,
+    bias_dropout_residual,
+    residual,
+    tri_mul_residual,
+)
 from prtm.models.unifold.modules.triangle_multiplication import (
-    TriangleMultiplicationIncoming, TriangleMultiplicationOutgoing)
+    TriangleMultiplicationIncoming,
+    TriangleMultiplicationOutgoing,
+)
 from prtm.models.unifold.utils import checkpoint_sequential
 
 

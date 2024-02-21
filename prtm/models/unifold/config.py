@@ -1,9 +1,8 @@
 import copy
-from dataclasses import dataclass, field, fields, is_dataclass, _MISSING_TYPE
+from dataclasses import _MISSING_TYPE, dataclass, field, fields, is_dataclass
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
-
 
 NUM_RES = "num residues placeholder"
 NUM_MSA_SEQ = "msa placeholder"
@@ -96,72 +95,6 @@ SHAPE_SCHEMA = {
     "asym_len": [None],
     "cluster_bias_mask": [NUM_MSA_SEQ],
 }
-
-
-@dataclass
-class Features:
-    aatype: Optional[np.ndarray] = None
-    all_atom_mask: Optional[np.ndarray] = None
-    all_atom_positions: Optional[np.ndarray] = None
-    alt_chi_angles: Optional[np.ndarray] = None
-    assembly_num_chains: Optional[np.ndarray] = None
-    asym_id: Optional[np.ndarray] = None
-    asym_len: Optional[np.ndarray] = None
-    atom14_alt_gt_exists: Optional[np.ndarray] = None
-    atom14_alt_gt_positions: Optional[np.ndarray] = None
-    atom14_atom_exists: Optional[np.ndarray] = None
-    atom14_atom_is_ambiguous: Optional[np.ndarray] = None
-    atom14_gt_exists: Optional[np.ndarray] = None
-    atom14_gt_positions: Optional[np.ndarray] = None
-    atom37_atom_exists: Optional[np.ndarray] = None
-    bert_mask: Optional[np.ndarray] = None
-    chi_angles_sin_cos: Optional[np.ndarray] = None
-    chi_mask: Optional[np.ndarray] = None
-    cluster_bias_mask: Optional[np.ndarray] = None
-    entity_id: Optional[np.ndarray] = None
-    extra_msa_deletion_value: Optional[np.ndarray] = None
-    extra_msa_has_deletion: Optional[np.ndarray] = None
-    extra_msa: Optional[np.ndarray] = None
-    extra_msa_mask: Optional[np.ndarray] = None
-    extra_msa_row_mask: Optional[np.ndarray] = None
-    frame_mask: Optional[np.ndarray] = None
-    is_distillation: Optional[np.ndarray] = None
-    msa_chains: Optional[np.ndarray] = None
-    msa_feat: Optional[np.ndarray] = None
-    msa_mask: Optional[np.ndarray] = None
-    msa_row_mask: Optional[np.ndarray] = None
-    num_recycling_iters: Optional[np.ndarray] = None
-    num_sym: Optional[np.ndarray] = None
-    pseudo_beta: Optional[np.ndarray] = None
-    pseudo_beta_mask: Optional[np.ndarray] = None
-    residue_index: Optional[np.ndarray] = None
-    residx_atom14_to_atom37: Optional[np.ndarray] = None
-    residx_atom37_to_atom14: Optional[np.ndarray] = None
-    resolution: Optional[np.ndarray] = None
-    rigidgroups_alt_gt_frames: Optional[np.ndarray] = None
-    rigidgroups_group_exists: Optional[np.ndarray] = None
-    rigidgroups_group_is_ambiguous: Optional[np.ndarray] = None
-    rigidgroups_gt_exists: Optional[np.ndarray] = None
-    rigidgroups_gt_frames: Optional[np.ndarray] = None
-    seq_length: Optional[np.ndarray] = None
-    seq_mask: Optional[np.ndarray] = None
-    sym_id: Optional[np.ndarray] = None
-    target_feat: Optional[np.ndarray] = None
-    template_aatype: Optional[np.ndarray] = None
-    template_all_atom_mask: Optional[np.ndarray] = None
-    template_all_atom_positions: Optional[np.ndarray] = None
-    template_alt_torsion_angles_sin_cos: Optional[np.ndarray] = None
-    template_frame_tensor: Optional[np.ndarray] = None
-    template_frame_mask: Optional[np.ndarray] = None
-    template_mask: Optional[np.ndarray] = None
-    template_pseudo_beta: Optional[np.ndarray] = None
-    template_pseudo_beta_mask: Optional[np.ndarray] = None
-    template_sum_probs: Optional[np.ndarray] = None
-    template_torsion_angles_mask: Optional[np.ndarray] = None
-    template_torsion_angles_sin_cos: Optional[np.ndarray] = None
-    true_msa: Optional[np.ndarray] = None
-    true_frame_tensor: Optional[np.ndarray] = None
-    use_clamped_fape: Optional[np.ndarray] = None
 
 
 @dataclass
@@ -260,15 +193,9 @@ class PredictData:
 
 
 @dataclass
-class DataModule:
-    use_small_bfd: bool = False
-
-
-@dataclass
 class DataConfig:
     common: CommonData = CommonData()
     predict: PredictData = PredictData()
-    # Train and Eval and Supervised modes?
 
 
 @dataclass
@@ -281,7 +208,7 @@ class GlobalsConfig:
     d_single: int = 384
     chunk_size: int = 4
     eps: float = 1e-8
-    inf: float = 1e9
+    inf: float = 3e4
     max_recycling_iters: int = 3
     alphafold_original_mode: bool = False
 
@@ -303,8 +230,7 @@ class RecyclingEmbedderConfig:
     min_bin: float = 3.25
     max_bin: float = 20.75
     num_bins: int = 15
-    inf: float = 1e8
-
+    inf: float = 3e4
 
 
 @dataclass
@@ -331,7 +257,7 @@ class TemplatePairStack:
     num_heads: int = 4
     pair_transition_n: int = 2
     dropout_rate: float = 0.25
-    inf: float = 1e9
+    inf: float = 3e4
     tri_attn_first: bool = True
 
 
@@ -341,7 +267,7 @@ class TemplatePointwiseAttention:
     d_pair: int = 128
     d_hid: int = 16
     num_heads: int = 4
-    inf: float = 1e5
+    inf: float = 3e4
     enabled: bool = True
 
 
@@ -361,7 +287,7 @@ class TemplateConfig:
     template_pointwise_attention: TemplatePointwiseAttention = (
         TemplatePointwiseAttention()
     )
-    inf: float = 1e9
+    inf: float = 3e4
     eps: float = 1e-6
     enabled: bool = True
     embed_angles: bool = True
@@ -388,7 +314,7 @@ class ExtraMsaStack:
     msa_dropout: float = 0.15
     pair_dropout: float = 0.25
     outer_product_mean_first: bool = False
-    inf: float = 1e9
+    inf: float = 3e4
     eps: float = 1e-8
 
 
@@ -414,7 +340,7 @@ class EvoformerStack:
     transition_n: int = 4
     msa_dropout: float = 0.15
     pair_dropout: float = 0.25
-    inf: float = 1e9
+    inf: float = 3e4
     eps: float = 1e-8
     outer_product_mean_first: bool = False
 
@@ -435,7 +361,7 @@ class StructureModule:
     num_angles: int = 7
     trans_scale_factor: int = 10
     epsilon: float = 1e-8
-    inf: float = 1e5
+    inf: float = 3e4
     separate_kv: bool = False
     ipa_bias: bool = True
 
@@ -445,7 +371,6 @@ class HeadsPlddt:
     num_bins: int = 50
     d_in: int = 384
     d_hid: int = 128
-
 
 
 @dataclass
@@ -505,15 +430,6 @@ class ModelConfig:
     structure_module: StructureModule = StructureModule()
     heads: HeadsConfig = HeadsConfig()
     is_multimer: bool = False
-
-
-@dataclass
-class RelaxConfig:
-    max_iterations: int = 0
-    tolerance: float = 2.39
-    stiffness: float = 10.0
-    max_outer_iterations: int = 20
-    exclude_residues: Tuple[int, ...] = ()
 
 
 @dataclass
@@ -639,54 +555,26 @@ class LossConfig:
 
 
 @dataclass
-class EmaConfig:
-    decay: float = 0.999
-    warmup: int = 1000
-    enabled: bool = True
-
-
-def recursive_set_dataclass(
-    data_cls: _MISSING_TYPE, key: str, value: Any, ignore: Optional[str] = None
-):
-    for k in fields(data_cls):
-        if k.name == ignore:
-            continue
-        # Check if the value is a dataclass
-        if is_dataclass(getattr(data_cls, k.name)):
-            recursive_set_dataclass(getattr(data_cls, k.name), key, value)
-        elif k.name == key:
-            setattr(data_cls, key, value)
-
-
-@dataclass
 class UniFoldConfig:
     data: DataConfig = DataConfig()
     globals: GlobalsConfig = GlobalsConfig()
     model: ModelConfig = ModelConfig()
     loss: LossConfig = LossConfig()
 
-    def __post_init__(self):
-        recursive_set_dataclass(self, "inf", 3e4)
-        recursive_set_dataclass(self, "eps", 1e-5, "loss")
-
 
 @dataclass
 class Model2FT(UniFoldConfig):
     data: DataConfig = DataConfig(
-        common=CommonData(max_extra_msa=1024),
-        predict=PredictData(max_msa_clusters=512)
+        common=CommonData(max_extra_msa=1024), predict=PredictData(max_msa_clusters=512)
     )
 
 
 @dataclass
 class Model1AF2(UniFoldConfig):
     data: DataConfig = DataConfig(
-        common=CommonData(max_extra_msa=5120),
-        predict=PredictData(max_msa_clusters=512)
+        common=CommonData(max_extra_msa=5120), predict=PredictData(max_msa_clusters=512)
     )
-    globals: GlobalsConfig = GlobalsConfig(
-        alphafold_original_mode=True
-    )
+    globals: GlobalsConfig = GlobalsConfig(alphafold_original_mode=True)
     model: ModelConfig = ModelConfig(
         heads=HeadsConfig(
             experimentally_resolved=HeadsExperimentallyResolved(enabled=True)
@@ -695,7 +583,7 @@ class Model1AF2(UniFoldConfig):
     loss: LossConfig = LossConfig(
         violation=ViolationLoss(weight=0.02),
         repr_norm=ReprNormLoss(weight=0),
-        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.01)
+        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.01),
     )
 
 
@@ -716,14 +604,16 @@ class Model3AF2(Model1AF2):
         template=TemplateConfig(embed_angles=False, enabled=False),
         heads=HeadsConfig(
             experimentally_resolved=HeadsExperimentallyResolved(enabled=True)
-        )
+        ),
     )
 
 
 @dataclass
 class Model5AF2(Model3AF2):
     data: DataConfig = DataConfig(
-        common=CommonData(max_extra_msa=1024, use_templates=False, use_template_torsion_angles=False),
+        common=CommonData(
+            max_extra_msa=1024, use_templates=False, use_template_torsion_angles=False
+        ),
         predict=PredictData(max_msa_clusters=512),
     )
 
@@ -731,7 +621,9 @@ class Model5AF2(Model3AF2):
 @dataclass
 class MultimerFT(UniFoldConfig):
     data: DataConfig = DataConfig(
-        common=CommonData(is_multimer=True, max_extra_msa=1024, v2_feature=True, gumbel_sample=True),
+        common=CommonData(
+            is_multimer=True, max_extra_msa=1024, v2_feature=True, gumbel_sample=True
+        ),
         predict=PredictData(max_msa_clusters=512),
     )
     model: ModelConfig = ModelConfig(
@@ -740,7 +632,9 @@ class MultimerFT(UniFoldConfig):
             masked_msa=HeadsMaskedMsa(d_out=22),
         ),
         input_embedder=InputEmbedderConfig(tf_dim=21),
-        structure_module=StructureModule(separate_kv=True, ipa_bias=False, trans_scale_factor=20),
+        structure_module=StructureModule(
+            separate_kv=True, ipa_bias=False, trans_scale_factor=20
+        ),
         template=TemplateConfig(
             template_angle_embedder=TemplateAngleEmbedder(d_in=34),
             template_pair_stack=TemplatePairStack(tri_attn_first=False),
@@ -759,20 +653,26 @@ class MultimerFT(UniFoldConfig):
 @dataclass
 class MultimerAF2V3(UniFoldConfig):
     data: DataConfig = DataConfig(
-        common=CommonData(is_multimer=True, max_extra_msa=2048, v2_feature=True, gumbel_sample=True),
+        common=CommonData(
+            is_multimer=True, max_extra_msa=2048, v2_feature=True, gumbel_sample=True
+        ),
         predict=PredictData(max_msa_clusters=512),
     )
     globals: GlobalsConfig = GlobalsConfig(alphafold_original_mode=True)
     model: ModelConfig = ModelConfig(
         evoformer_stack=EvoformerStack(outer_product_mean_first=True),
-        extra_msa=ExtraMsaConfig(extra_msa_stack=ExtraMsaStack(outer_product_mean_first=True)),
+        extra_msa=ExtraMsaConfig(
+            extra_msa_stack=ExtraMsaStack(outer_product_mean_first=True)
+        ),
         heads=HeadsConfig(
             pae=HeadsPAE(enabled=True),
             masked_msa=HeadsMaskedMsa(d_out=22),
             experimentally_resolved=HeadsExperimentallyResolved(enabled=True),
         ),
         input_embedder=InputEmbedderConfig(tf_dim=21),
-        structure_module=StructureModule(separate_kv=True, ipa_bias=False, trans_scale_factor=20),
+        structure_module=StructureModule(
+            separate_kv=True, ipa_bias=False, trans_scale_factor=20
+        ),
         template=TemplateConfig(
             template_angle_embedder=TemplateAngleEmbedder(d_in=34),
             template_pair_stack=TemplatePairStack(tri_attn_first=False),
@@ -786,16 +686,19 @@ class MultimerAF2V3(UniFoldConfig):
         violation=ViolationLoss(weight=0.5),
         chain_centre_mass=ChainCentreMassLoss(weight=1.0),
         repr_norm=ReprNormLoss(weight=0),
-        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.01)
+        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.01),
     )
 
 
 @dataclass
 class MultimerAF2Model45V3(MultimerAF2V3):
     data: DataConfig = DataConfig(
-        common=CommonData(is_multimer=True, max_extra_msa=1152, v2_feature=True, gumbel_sample=True),
+        common=CommonData(
+            is_multimer=True, max_extra_msa=1152, v2_feature=True, gumbel_sample=True
+        ),
         predict=PredictData(max_msa_clusters=512),
     )
+
 
 @dataclass
 class SymmetryInputEmbedderConfig(InputEmbedderConfig):
@@ -830,12 +733,14 @@ class SymmetryModelConfig(ModelConfig):
     )
     pseudo_residue_embedder: PseudoResidueEmbedder = PseudoResidueEmbedder()
     is_multimer: bool = True
-                                                        
+
 
 @dataclass
 class UniFoldSymmetry(MultimerFT):
     data: DataConfig = DataConfig(
-        common=CommonData(is_multimer=True, max_extra_msa=1024, v2_feature=True, gumbel_sample=True),
+        common=CommonData(
+            is_multimer=True, max_extra_msa=1024, v2_feature=True, gumbel_sample=True
+        ),
         predict=PredictData(max_msa_clusters=256),
     )
     model: SymmetryModelConfig = SymmetryModelConfig()
@@ -843,7 +748,7 @@ class UniFoldSymmetry(MultimerFT):
         pae=PAELoss(weight=0.0),
         violation=ViolationLoss(weight=0.5),
         chain_centre_mass=ChainCentreMassLoss(weight=1.0),
-        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.0)
+        experimentally_resolved=ExperimentallyResolvedLoss(weight=0.0),
     )
 
 
@@ -853,6 +758,17 @@ def make_data_config_dataclass(
     use_templates: bool = False,
     is_multimer: bool = False,
 ) -> Tuple[DataConfig, List[str]]:
+    """Make a data config dataclass with the given number of residues.
+
+    Args:
+        config: The data config dataclass.
+        num_res: The number of residues.
+        use_templates: Whether to use templates.
+        is_multimer: Whether the model is a multimer.
+
+    Returns:
+        The data config dataclass and the list of feature names.
+    """
     cfg = copy.deepcopy(config)
     mode_cfg = cfg.predict
     common_cfg = cfg.common
