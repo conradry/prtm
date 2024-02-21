@@ -1,11 +1,10 @@
-# Copyright 2021 AlQuraishi Laboratory
 # Copyright 2021 DeepMind Technologies Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#            http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,15 +18,10 @@ import collections
 import functools
 from typing import List, Mapping, Tuple
 
-import Bio.PDB
 import numpy as np
-import tree
-from Bio.Data import PDBData
 
 from prtm.constants.stereo_chemical_props import STEREO_CHEMICAL_PROPS
-
-# Internal import (35fd).
-
+from prtm.models.unifold.utils import tree_map
 
 # Distance from one CA to next CA [trans configuration: omega = 180].
 ca_ca = 3.80209737096
@@ -104,7 +98,6 @@ chi_angles_mask = [
     [1.0, 1.0, 0.0, 0.0],  # TRP
     [1.0, 1.0, 0.0, 0.0],  # TYR
     [1.0, 0.0, 0.0, 0.0],  # VAL
-    [0.0, 0.0, 0.0, 0.0],  # UNK
 ]
 
 # The following chi angles are pi periodic: they can be rotated by a multiple
@@ -391,20 +384,7 @@ residue_atoms = {
         "NE1",
         "O",
     ],
-    "TYR": [
-        "C",
-        "CA",
-        "CB",
-        "CG",
-        "CD1",
-        "CD2",
-        "CE1",
-        "CE2",
-        "CZ",
-        "N",
-        "O",
-        "OH",
-    ],
+    "TYR": ["C", "CA", "CB", "CG", "CD1", "CD2", "CE1", "CE2", "CZ", "N", "O", "OH"],
     "VAL": ["C", "CA", "CB", "CG1", "CG2", "N", "O"],
 }
 
@@ -414,7 +394,6 @@ residue_atoms = {
 # (The LDDT paper lists 7 amino acids as ambiguous, but the naming ambiguities
 # in LEU, VAL and ARG can be resolved by using the 3d constellations of
 # the 'ambiguous' atoms and their neighbours)
-# TODO: ^ interpret this
 residue_atom_renaming_swaps = {
     "ASP": {"OD1": "OD2"},
     "GLU": {"OE1": "OE2"},
@@ -432,8 +411,7 @@ van_der_waals_radius = {
 
 Bond = collections.namedtuple("Bond", ["atom1_name", "atom2_name", "length", "stddev"])
 BondAngle = collections.namedtuple(
-    "BondAngle",
-    ["atom1_name", "atom2_name", "atom3name", "angle_rad", "stddev"],
+    "BondAngle", ["atom1_name", "atom2_name", "atom3name", "angle_rad", "stddev"]
 )
 
 
@@ -452,13 +430,11 @@ def load_stereo_chemical_props() -> (
     ("residue_virtual_bonds").
 
     Returns:
-      residue_bonds:  dict that maps resname --> list of Bond tuples
-      residue_virtual_bonds: dict that maps resname --> list of Bond tuples
-      residue_bond_angles: dict that maps resname --> list of BondAngle tuples
+        residue_bonds: Dict that maps resname -> list of Bond tuples.
+        residue_virtual_bonds: Dict that maps resname -> list of Bond tuples.
+        residue_bond_angles: Dict that maps resname -> list of BondAngle tuples.
     """
-    stereo_chemical_props = STEREO_CHEMICAL_PROPS
-
-    lines_iter = iter(stereo_chemical_props.splitlines())
+    lines_iter = iter(STEREO_CHEMICAL_PROPS.splitlines())
     # Load bond lengths.
     residue_bonds = {}
     next(lines_iter)  # Skip header line.
@@ -551,8 +527,8 @@ atom_types = [
     "N",
     "CA",
     "C",
-    "O",
     "CB",
+    "O",
     "CG",
     "CG1",
     "CG2",
@@ -610,71 +586,11 @@ restype_name_to_atom14_names = {
         "",
         "",
     ],
-    "ASN": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "OD1",
-        "ND2",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "ASP": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "OD1",
-        "OD2",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
+    "ASN": ["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2", "", "", "", "", "", ""],
+    "ASP": ["N", "CA", "C", "O", "CB", "CG", "OD1", "OD2", "", "", "", "", "", ""],
     "CYS": ["N", "CA", "C", "O", "CB", "SG", "", "", "", "", "", "", "", ""],
-    "GLN": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "CD",
-        "OE1",
-        "NE2",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "GLU": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "CD",
-        "OE1",
-        "OE2",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
+    "GLN": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2", "", "", "", "", ""],
+    "GLU": ["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "OE2", "", "", "", "", ""],
     "GLY": ["N", "CA", "C", "O", "", "", "", "", "", "", "", "", "", ""],
     "HIS": [
         "N",
@@ -692,70 +608,10 @@ restype_name_to_atom14_names = {
         "",
         "",
     ],
-    "ILE": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG1",
-        "CG2",
-        "CD1",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "LEU": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "CD1",
-        "CD2",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "LYS": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "CD",
-        "CE",
-        "NZ",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "MET": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG",
-        "SD",
-        "CE",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
+    "ILE": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "CD1", "", "", "", "", "", ""],
+    "LEU": ["N", "CA", "C", "O", "CB", "CG", "CD1", "CD2", "", "", "", "", "", ""],
+    "LYS": ["N", "CA", "C", "O", "CB", "CG", "CD", "CE", "NZ", "", "", "", "", ""],
+    "MET": ["N", "CA", "C", "O", "CB", "CG", "SD", "CE", "", "", "", "", "", ""],
     "PHE": [
         "N",
         "CA",
@@ -774,22 +630,7 @@ restype_name_to_atom14_names = {
     ],
     "PRO": ["N", "CA", "C", "O", "CB", "CG", "CD", "", "", "", "", "", "", ""],
     "SER": ["N", "CA", "C", "O", "CB", "OG", "", "", "", "", "", "", "", ""],
-    "THR": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "OG1",
-        "CG2",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
+    "THR": ["N", "CA", "C", "O", "CB", "OG1", "CG2", "", "", "", "", "", "", ""],
     "TRP": [
         "N",
         "CA",
@@ -822,138 +663,11 @@ restype_name_to_atom14_names = {
         "",
         "",
     ],
-    "VAL": [
-        "N",
-        "CA",
-        "C",
-        "O",
-        "CB",
-        "CG1",
-        "CG2",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ],
+    "VAL": ["N", "CA", "C", "O", "CB", "CG1", "CG2", "", "", "", "", "", "", ""],
     "UNK": ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
 }
 # pylint: enable=line-too-long
 # pylint: enable=bad-whitespace
-restype_name_to_hydrogen_atom_names = {
-    "ALA": ["H", "HA", "1HB", "2HB", "3HB", "", "", "", "", "", "", "", ""],
-    "ARG": [
-        "H",
-        "HA",
-        "1HB",
-        "2HB",
-        "1HG",
-        "2HG",
-        "1HD",
-        "2HD",
-        "HE",
-        "1HH1",
-        "2HH1",
-        "1HH2",
-        "2HH2",
-    ],
-    "ASN": ["H", "HA", "1HB", "2HB", "1HD2", "2HD2", "", "", "", "", "", "", ""],
-    "ASP": ["H", "HA", "1HB", "2HB", "", "", "", "", "", "", "", "", ""],
-    "CYS": ["H", "HA", "1HB", "2HB", "HG", "", "", "", "", "", "", "", ""],
-    "GLN": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "1HE2", "2HE2", "", "", "", "", ""],
-    "GLU": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "", "", "", "", "", "", ""],
-    "GLY": ["H", "1HA", "2HA", "", "", "", "", "", "", "", "", "", ""],
-    "HIS": ["H", "HA", "1HB", "2HB", "HD2", "HE1", "HE2", "", "", "", "", "", ""],
-    "ILE": [
-        "H",
-        "HA",
-        "HB",
-        "1HG2",
-        "2HG2",
-        "3HG2",
-        "1HG1",
-        "2HG1",
-        "1HD1",
-        "2HD1",
-        "3HD1",
-        "",
-        "",
-    ],
-    "LEU": [
-        "H",
-        "HA",
-        "1HB",
-        "2HB",
-        "HG",
-        "1HD1",
-        "2HD1",
-        "3HD1",
-        "1HD2",
-        "2HD2",
-        "3HD2",
-        "",
-        "",
-    ],
-    "LYS": [
-        "H",
-        "HA",
-        "1HB",
-        "2HB",
-        "1HG",
-        "2HG",
-        "1HD",
-        "2HD",
-        "1HE",
-        "2HE",
-        "1HZ",
-        "2HZ",
-        "3HZ",
-    ],
-    "MET": ["H", "HA", "1HB", "2HB", "1HG", "2HG", "1HE", "2HE", "3HE", "", "", "", ""],
-    "PHE": ["H", "HA", "1HB", "2HB", "HD1", "HD2", "HE1", "HE2", "HZ", "", "", "", ""],
-    "PRO": ["HA", "1HB", "2HB", "1HG", "2HG", "1HD", "2HD", "", "", "", "", "", ""],
-    "SER": ["H", "HG", "HA", "1HB", "2HB", "", "", "", "", "", "", "", ""],
-    "THR": ["H", "HG1", "HA", "HB", "1HG2", "2HG2", "3HG2", "", "", "", "", "", ""],
-    "TRP": [
-        "H",
-        "HA",
-        "1HB",
-        "2HB",
-        "HD1",
-        "HE1",
-        "HZ2",
-        "HH2",
-        "HZ3",
-        "HE3",
-        "",
-        "",
-        "",
-    ],
-    "TYR": ["H", "HA", "1HB", "2HB", "HD1", "HE1", "HE2", "HD2", "HH", "", "", "", ""],
-    "VAL": [
-        "H",
-        "HA",
-        "HB",
-        "1HG1",
-        "2HG1",
-        "3HG1",
-        "1HG2",
-        "2HG2",
-        "3HG2",
-        "",
-        "",
-        "",
-        "",
-    ],
-    "UNK": ["H", "HA", "1HB", "2HB", "3HB", "", "", "", "", "", "", "", ""],
-}
-
-restype_name_to_atom27_names = {
-    aa: atom_names + restype_name_to_hydrogen_atom_names[aa]
-    for aa, atom_names in restype_name_to_atom14_names.items()
-}
 
 
 # This is the standard residue order when coding AA type as a number.
@@ -984,16 +698,8 @@ restype_order = {restype: i for i, restype in enumerate(restypes)}
 restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
-proteinmppn_restypes = sorted(restypes) + ["X"]
-proteinmpnn_restype_order = {
-    restype: i for i, restype in enumerate(proteinmppn_restypes)
-}
 restypes_with_x = restypes + ["X"]
-restypes_with_x_dash = restypes_with_x + ["-"]
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
-restype_order_with_x_dash = {
-    restype: i for i, restype in enumerate(restypes_with_x_dash)
-}
 
 
 def sequence_to_onehot(
@@ -1002,20 +708,20 @@ def sequence_to_onehot(
     """Maps the given sequence into a one-hot encoded matrix.
 
     Args:
-      sequence: An amino acid sequence.
-      mapping: A dictionary mapping amino acids to integers.
-      map_unknown_to_x: If True, any amino acid that is not in the mapping will be
-        mapped to the unknown amino acid 'X'. If the mapping doesn't contain
-        amino acid 'X', an error will be thrown. If False, any amino acid not in
-        the mapping will throw an error.
+        sequence: An amino acid sequence.
+        mapping: A dictionary mapping amino acids to integers.
+        map_unknown_to_x: If True, any amino acid that is not in the mapping will be
+            mapped to the unknown amino acid 'X'. If the mapping doesn't contain
+            amino acid 'X', an error will be thrown. If False, any amino acid not in
+            the mapping will throw an error.
 
     Returns:
-      A numpy array of shape (seq_len, num_unique_aas) with one-hot encoding of
-      the sequence.
+        A numpy array of shape (seq_len, num_unique_aas) with one-hot encoding of
+        the sequence.
 
     Raises:
-      ValueError: If the mapping doesn't contain values from 0 to
-        num_unique_aas - 1 without any gaps.
+        ValueError: If the mapping doesn't contain values from 0 to
+            num_unique_aas - 1 without any gaps.
     """
     num_entries = max(mapping.values()) + 1
 
@@ -1061,7 +767,6 @@ restype_1to3 = {
     "W": "TRP",
     "Y": "TYR",
     "V": "VAL",
-    "X": "UNK",
 }
 
 
@@ -1071,34 +776,6 @@ restype_1to3 = {
 # to the same one letter name (including 'X' and 'U' which we don't use here).
 restype_3to1 = {v: k for k, v in restype_1to3.items()}
 
-restype2atom14_mask = np.zeros([len(restypes_with_x), 14])
-for k, v in restype_name_to_atom14_names.items():
-    for i, atom in enumerate(v):
-        restype2atom14_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
-
-restype2atom27_mask = np.zeros([len(restypes_with_x), 27])
-for k, v in restype_name_to_atom27_names.items():
-    for i, atom in enumerate(v):
-        restype2atom27_mask[restype_order_with_x[restype_3to1[k]]][i] = len(atom) > 0
-
-restype_rigidgroup_mask = np.zeros([21, 8], dtype=np.float32)
-restype_rigidgroup_mask[:, 0] = 1
-restype_rigidgroup_mask[:, 3] = 1
-restype_rigidgroup_mask[:, 4:] = np.array(chi_angles_mask).astype(np.float32)
-
-
-# Needed for RFDiffusion
-restype1_to_atom14_names = {
-    restype: restype_name_to_atom14_names[restype_1to3[restype]] for restype in restypes
-} | {"X": restype_name_to_atom14_names["UNK"]}
-
-
-# Compute a mask whether the group exists.
-# (N, 8)
-def residx_to_3(idx):
-    return restype_1to3[restypes[idx]]
-
-
 # Define a restype name for all unknown residues.
 unk_restype = "UNK"
 
@@ -1106,37 +783,11 @@ resnames = [restype_1to3[r] for r in restypes] + [unk_restype]
 resname_to_idx = {resname: i for i, resname in enumerate(resnames)}
 
 
-def get_chi_angle_atom_indices():
-    """Returns atom indices needed to compute chi angles for all residue types.
-    Returns:
-      A tensor of shape [residue_types=21, chis=4, atoms=4]. The residue
-      types are in the order specified in residue_constants.restypes +
-      unknown residue type at the end. For chi angles which are not defined
-      on the residue, the positions indices are by default set to 0.
-    """
-    chi_atom_indices = []
-    for residue_name in restypes:
-        residue_name = restype_1to3[residue_name]
-        residue_chi_angles = chi_angles_atoms[residue_name]
-        atom_indices = []
-        for chi_angle in residue_chi_angles:
-            atom_indices.append([atom_order[_atom] for _atom in chi_angle])
-        for _ in range(4 - len(atom_indices)):
-            atom_indices.append([0, 0, 0, 0])  # For those not defined on AA.
-        chi_atom_indices.append(atom_indices)
-
-    chi_atom_indices.append([[0, 0, 0, 0]] * 4)  # For UNKNOWN residue.
-
-    return np.array(chi_atom_indices)
-
-
-chi_angle_atom_indices = get_chi_angle_atom_indices()
-
 # The mapping here uses hhblits convention, so that B is mapped to D, J and O
 # are mapped to X, U is mapped to C, and Z is mapped to E. Other than that the
 # remaining 20 amino acids are kept in alphabetical order.
 # There are 2 non-amino acid codes, X (representing any amino acid) and
-# "-" representing a missing amino acid in an alignment.  The id for these
+# "-" representing a missing amino acid in an alignment.    The id for these
 # codes is put at the end (20 and 21) so that they can easily be ignored if
 # desired.
 HHBLITS_AA_TO_ID = {
@@ -1247,13 +898,13 @@ chi_atom_2_one_hot = chi_angle_atom(2)
 
 # An array like chi_angles_atoms but using indices rather than names.
 chi_angles_atom_indices = [chi_angles_atoms[restype_1to3[r]] for r in restypes]
-chi_angles_atom_indices = tree.map_structure(
-    lambda atom_name: atom_order[atom_name], chi_angles_atom_indices
+chi_angles_atom_indices = tree_map(
+    lambda n: atom_order[n], chi_angles_atom_indices, leaf_type=str
 )
 chi_angles_atom_indices = np.array(
     [
         chi_atoms + ([[0, 0, 0, 0]] * (4 - len(chi_atoms)))
-        for chi_atoms in chi_angles_atom_indices  # type: ignore
+        for chi_atoms in chi_angles_atom_indices
     ]
 )
 
@@ -1287,10 +938,10 @@ def _make_rigid_transformation_4x4(ex, ey, translation):
 # and an array with (restype, atomtype, coord) for the atom positions
 # and compute affine transformation matrices (4,4) from one rigid group to the
 # previous group
-restype_atom37_to_rigid_group = np.zeros([21, 37], dtype=int)
+restype_atom37_to_rigid_group = np.zeros([21, 37], dtype=np.int_)
 restype_atom37_mask = np.zeros([21, 37], dtype=np.float32)
 restype_atom37_rigid_group_positions = np.zeros([21, 37, 3], dtype=np.float32)
-restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=int)
+restype_atom14_to_rigid_group = np.zeros([21, 14], dtype=np.int_)
 restype_atom14_mask = np.zeros([21, 14], dtype=np.float32)
 restype_atom14_rigid_group_positions = np.zeros([21, 14, 3], dtype=np.float32)
 restype_rigid_group_default_frame = np.zeros([21, 8, 4, 4], dtype=np.float32)
@@ -1368,63 +1019,6 @@ def _make_rigid_group_constants():
 
 
 _make_rigid_group_constants()
-"""Construct denser atom positions (14 dimensions instead of 37)."""
-restype_atom14_to_atom37 = []  # mapping (restype, atom14) --> atom37
-restype_atom37_to_atom14 = []  # mapping (restype, atom37) --> atom14
-
-for rt in restypes:
-    atom_names = restype_name_to_atom14_names[restype_1to3[rt]]
-
-    restype_atom14_to_atom37.append(
-        [(atom_order[name] if name else 0) for name in atom_names]
-    )
-
-    atom_name_to_idx14 = {name: i for i, name in enumerate(atom_names)}
-    restype_atom37_to_atom14.append(
-        [
-            (atom_name_to_idx14[name] if name in atom_name_to_idx14 else 0)
-            for name in atom_types
-        ]
-    )
-
-# Add dummy mapping for restype "UNK"
-restype_atom14_to_atom37.append([0] * 14)
-restype_atom37_to_atom14.append([0] * 37)
-
-restype_atom14_to_atom37 = np.array(restype_atom14_to_atom37, dtype=np.int64)
-restype_atom37_to_atom14 = np.array(restype_atom37_to_atom14, dtype=np.int64)
-chi_pi_periodic = np.array(
-    [
-        [0.0, 0.0, 0.0, 0.0],  # ALA
-        [0.0, 0.0, 0.0, 0.0],  # ARG
-        [0.0, 0.0, 0.0, 0.0],  # ASN
-        [0.0, 1.0, 0.0, 0.0],  # ASP
-        [0.0, 0.0, 0.0, 0.0],  # CYS
-        [0.0, 0.0, 0.0, 0.0],  # GLN
-        [0.0, 0.0, 1.0, 0.0],  # GLU
-        [0.0, 0.0, 0.0, 0.0],  # GLY
-        [0.0, 0.0, 0.0, 0.0],  # HIS
-        [0.0, 0.0, 0.0, 0.0],  # ILE
-        [0.0, 0.0, 0.0, 0.0],  # LEU
-        [0.0, 0.0, 0.0, 0.0],  # LYS
-        [0.0, 0.0, 0.0, 0.0],  # MET
-        [0.0, 1.0, 0.0, 0.0],  # PHE
-        [0.0, 0.0, 0.0, 0.0],  # PRO
-        [0.0, 0.0, 0.0, 0.0],  # SER
-        [0.0, 0.0, 0.0, 0.0],  # THR
-        [0.0, 0.0, 0.0, 0.0],  # TRP
-        [0.0, 1.0, 0.0, 0.0],  # TYR
-        [0.0, 0.0, 0.0, 0.0],  # VAL
-        [0.0, 0.0, 0.0, 0.0],  # UNK
-    ]
-)
-
-residue_atom_renaming_swaps = {
-    "ASP": {"OD1": "OD2"},
-    "GLU": {"OE1": "OE2"},
-    "PHE": {"CD1": "CD2", "CE1": "CE2"},
-    "TYR": {"CD1": "CD2", "CE1": "CE2"},
-}
 
 
 def make_atom14_dists_bounds(overlap_tolerance=1.5, bond_length_tolerance_factor=15):
@@ -1472,55 +1066,69 @@ def make_atom14_dists_bounds(overlap_tolerance=1.5, bond_length_tolerance_factor
     }
 
 
-restype_atom14_ambiguous_atoms = np.zeros((21, 14), dtype=np.float32)
-restype_atom14_ambiguous_atoms_swap_idx = np.tile(np.arange(14, dtype=int), (21, 1))
+def _make_atom14_and_atom37_constants():
+    restype_atom14_to_atom37 = []
+    restype_atom37_to_atom14 = []
+    restype_atom14_mask = []
 
-# Create an ambiguous atoms mask.  shape: (21, 14).
-mask_ambiguous = np.zeros((21, 14), dtype="bool")
-for resname, swap in residue_atom_renaming_swaps.items():
-    for atom_name1, atom_name2 in swap.items():
-        restype = restype_order[restype_3to1[resname]]
-        atom_idx1 = restype_name_to_atom14_names[resname].index(atom_name1)
-        atom_idx2 = restype_name_to_atom14_names[resname].index(atom_name2)
-        mask_ambiguous[restype, atom_idx1] = 1
-        mask_ambiguous[restype, atom_idx2] = 1
+    for rt in restypes:
+        atom_names = restype_name_to_atom14_names[restype_1to3[rt]]
+        restype_atom14_to_atom37.append(
+            [(atom_order[name] if name else 0) for name in atom_names]
+        )
+        atom_name_to_idx14 = {name: i for i, name in enumerate(atom_names)}
+        restype_atom37_to_atom14.append(
+            [
+                (atom_name_to_idx14[name] if name in atom_name_to_idx14 else 0)
+                for name in atom_types
+            ]
+        )
 
-restype_3 = [restype_1to3[res] for res in restypes]
-restype_3 += ["UNK"]
+        restype_atom14_mask.append([(1.0 if name else 0.0) for name in atom_names])
 
-all_matrices = {res: np.eye(14, dtype=np.float32) for res in restype_3}
-for resname, swap in residue_atom_renaming_swaps.items():
-    correspondences = np.arange(14)
-    renaming_matrix = np.empty([14, 14], dtype=np.float32)
-    for source_atom_swap, target_atom_swap in swap.items():
-        source_index = restype_name_to_atom14_names[resname].index(source_atom_swap)
-        target_index = restype_name_to_atom14_names[resname].index(target_atom_swap)
-        correspondences[source_index] = target_index
-        correspondences[target_index] = source_index
-        renaming_matrix = np.zeros((14, 14), dtype=np.float32)
-        for index, correspondence in enumerate(correspondences):
-            renaming_matrix[index, correspondence] = 1.0
+    # Add dummy mapping for restype 'UNK'
+    restype_atom14_to_atom37.append([0] * 14)
+    restype_atom37_to_atom14.append([0] * 37)
+    restype_atom14_mask.append([0.0] * 14)
 
-    all_matrices[resname] = renaming_matrix.astype(np.float32)
+    restype_atom14_to_atom37 = np.array(restype_atom14_to_atom37, dtype=np.int32)
+    restype_atom37_to_atom14 = np.array(restype_atom37_to_atom14, dtype=np.int32)
+    restype_atom14_mask = np.array(restype_atom14_mask, dtype=np.float32)
 
-renaming_matrices = np.stack(
-    tuple(all_matrices[restype] for restype in restype_3), axis=0
-)
+    return restype_atom14_to_atom37, restype_atom37_to_atom14, restype_atom14_mask
 
 
-def _make_atom14_ambiguity_feats():
-    for res, pairs in residue_atom_renaming_swaps.items():
-        res_idx = restype_order[restype_3to1[res]]
-        for atom1, atom2 in pairs.items():
-            atom1_idx = restype_name_to_atom14_names[res].index(atom1)
-            atom2_idx = restype_name_to_atom14_names[res].index(atom2)
-            restype_atom14_ambiguous_atoms[res_idx, atom1_idx] = 1
-            restype_atom14_ambiguous_atoms[res_idx, atom2_idx] = 1
-            restype_atom14_ambiguous_atoms_swap_idx[res_idx, atom1_idx] = atom2_idx
-            restype_atom14_ambiguous_atoms_swap_idx[res_idx, atom2_idx] = atom1_idx
+(
+    restype_atom14_to_atom37,
+    restype_atom37_to_atom14,
+    restype_atom14_mask,
+) = _make_atom14_and_atom37_constants()
 
 
-_make_atom14_ambiguity_feats()
+def _make_renaming_matrices():
+    # As the atom naming is ambiguous for 7 of the 20 amino acids, provide
+    # alternative ground truth coordinates where the naming is swapped
+    restype_3 = [restype_1to3[res] for res in restypes]
+    restype_3 += ["UNK"]
+
+    # Matrices for renaming ambiguous atoms.
+    all_matrices = {res: np.eye(14) for res in restype_3}
+    for resname, swap in residue_atom_renaming_swaps.items():
+        correspondences = np.arange(14)
+        for source_atom_swap, target_atom_swap in swap.items():
+            source_index = restype_name_to_atom14_names[resname].index(source_atom_swap)
+            target_index = restype_name_to_atom14_names[resname].index(target_atom_swap)
+            correspondences[source_index] = target_index
+            correspondences[target_index] = source_index
+            renaming_matrix = np.zeros((14, 14))
+            for index, correspondence in enumerate(correspondences):
+                renaming_matrix[index, correspondence] = 1.0
+        all_matrices[resname] = renaming_matrix
+    renaming_matrices = np.stack([all_matrices[restype] for restype in restype_3])
+    return renaming_matrices
+
+
+renaming_matrices = _make_renaming_matrices()
 
 
 def _make_atom14_is_ambiguous():
@@ -1565,55 +1173,3 @@ def get_chi_atom_indices():
 
 
 chi_atom_indices = get_chi_atom_indices()
-
-
-def aatype_to_str_sequence(aatype):
-    return "".join([restypes_with_x[aatype[i]] for i in range(len(aatype))])
-
-
-def substitute(res: str):
-    if Bio.PDB.is_aa(res):
-        if res in resnames:
-            return res
-        else:
-            res = PDBData.protein_letters_3to1[res]
-            if res in restype_1to3.keys():
-                return restype_1to3[res]
-            elif res == "X":
-                return "UNK"
-            else:
-                # did not get anything that works
-                return None
-
-
-esm_proteinseq_toks = {
-    "toks": [
-        "L",
-        "A",
-        "G",
-        "V",
-        "S",
-        "E",
-        "R",
-        "T",
-        "I",
-        "D",
-        "P",
-        "K",
-        "Q",
-        "N",
-        "F",
-        "Y",
-        "M",
-        "H",
-        "W",
-        "C",
-        "X",
-        "B",
-        "U",
-        "Z",
-        "O",
-        ".",
-        "-",
-    ]
-}

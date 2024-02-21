@@ -24,6 +24,36 @@ DeletionMatrix = Sequence[Sequence[int]]
 
 
 @dataclasses.dataclass(frozen=True)
+class Msa:
+    """Class representing a parsed MSA file."""
+
+    sequences: Sequence[str]
+    deletion_matrix: DeletionMatrix
+    descriptions: Sequence[str]
+
+    def __post_init__(self):
+        if not (
+            len(self.sequences) == len(self.deletion_matrix) == len(self.descriptions)
+        ):
+            raise ValueError(
+                "All fields for an MSA must have the same length. "
+                f"Got {len(self.sequences)} sequences, "
+                f"{len(self.deletion_matrix)} rows in the deletion matrix and "
+                f"{len(self.descriptions)} descriptions."
+            )
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def truncate(self, max_seqs: int):
+        return Msa(
+            sequences=self.sequences[:max_seqs],
+            deletion_matrix=self.deletion_matrix[:max_seqs],
+            descriptions=self.descriptions[:max_seqs],
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class TemplateHit:
     """Class representing a template hit."""
 
@@ -143,7 +173,7 @@ def parse_a3m(a3m_string: str) -> Tuple[Sequence[str], DeletionMatrix]:
                 at `deletion_matrix[i][j]` is the number of residues deleted from
                 the aligned sequence i at residue position j.
     """
-    sequences, _ = parse_fasta(a3m_string)
+    sequences, descriptions = parse_fasta(a3m_string)
     deletion_matrix = []
     for msa_sequence in sequences:
         deletion_vec = []
@@ -159,7 +189,11 @@ def parse_a3m(a3m_string: str) -> Tuple[Sequence[str], DeletionMatrix]:
     # Make the MSA matrix out of aligned (deletion-free) sequences.
     deletion_table = str.maketrans("", "", string.ascii_lowercase)
     aligned_sequences = [s.translate(deletion_table) for s in sequences]
-    return aligned_sequences, deletion_matrix
+    return Msa(
+        sequences=aligned_sequences,
+        deletion_matrix=deletion_matrix,
+        descriptions=descriptions,
+    )
 
 
 def _convert_sto_seq_to_a3m(

@@ -81,26 +81,35 @@ be obtained for free for academic use. For installation instructions, see
 
 **Note**: Most, but not all models, allow commerial use. Please check the license of each model.
 
-| Model Name | Function | Source Code | License |
-|------------|----------|-------------|---------|
-| OpenFold | Folding | https://github.com/aqlaboratory/openfold | [Apache 2.0](https://github.com/aqlaboratory/openfold/blob/main/LICENSE) |
-| ESMFold | Folding | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
-| RoseTTAFold| Folding | https://github.com/RosettaCommons/RoseTTAFold | [MIT License](https://github.com/RosettaCommons/RoseTTAFold/blob/main/LICENSE) |
-| OmegaFold | Folding | https://github.com/HeliXonProtein/OmegaFold | [Apache 2.0](https://github.com/HeliXonProtein/OmegaFold/blob/main/LICENSE) |
-| DMPfold2 | Folding | https://github.com/psipred/DMPfold2 | [GPL v3.0](https://github.com/psipred/DMPfold2/blob/master/LICENSE) |
-| IgFold | Antibody Folding | https://github.com/Graylab/IgFold | [JHU License](https://github.com/Graylab/IgFold/blob/main/LICENSE.md) |
-| ESM-IF | Inverse Folding | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
-| ProteinMPNN| Inverse Folding | https://github.com/dauparas/ProteinMPNN | [MIT License](https://github.com/dauparas/ProteinMPNN/blob/main/LICENSE) |
-| PiFold | Inverse Folding | https://github.com/A4Bio/PiFold | [MIT License](https://github.com/A4Bio/PiFold/blob/main/license) |
-| ProteinSeqDes| Inverse Folding| https://github.com/nanand2/protein_seq_des | [BSD-3](https://github.com/nanand2/protein_seq_des/blob/master/LICENSE) |
-| ProteinSolver| Inverse Folding| https://github.com/ostrokach/proteinsolver | [MIT License](https://github.com/ostrokach/proteinsolver/blob/master/LICENSE) |
-| RFDiffusion | Design | https://github.com/RosettaCommons/RFdiffusion | [BSD](https://github.com/RosettaCommons/RFdiffusion/blob/main/LICENSE) |
-| ProteinGenerator | Design | https://github.com/RosettaCommons/protein_generator | [MIT License](https://github.com/RosettaCommons/protein_generator/blob/main/LICENSE) |
-| Genie | Design | https://github.com/aqlaboratory/genie | [Apache 2.0](https://github.com/aqlaboratory/genie/blob/main/LICENSE.md) |
-| FoldingDiff | Design | https://github.com/microsoft/foldingdiff | [MIT License](https://github.com/microsoft/foldingdiff/blob/main/LICENSE) |
-| SE3-Diffusion | Design | https://github.com/jasonkyuyim/se3_diffusion | [MIT License](https://github.com/jasonkyuyim/se3_diffusion/blob/master/LICENSE) |
-| EigenFold | Fold sampling | https://github.com/bjing2016/EigenFold | [MIT License](https://github.com/bjing2016/EigenFold/blob/master/LICENSE) |
-| AntiBERTy | Antibody language modeling | https://github.com/jeffreyruffolo/AntiBERTy | [MIT License](https://github.com/jeffreyruffolo/AntiBERTy/blob/main/LICENSE.MD) |
+AlphaFold is written and JAX but all other models are written in PyTorch, therefore we chose not
+to directly integrate the AlphaFold inference code into this repo. Both `OpenFold` and `Uni-Fold`
+allow for the conversion of the AlphaFold JAX weights into PyTorch. The `Uni-Fold` implementation
+is designed to work with `MMSeqs2` and has support for multimers which is why we adopted it. Eventually,
+we may decide to subsume the `OpenFold` models under `Uni-Fold`.
+
+| Model Name | Function | Notebook | Source Code | License |
+|------------|----------|----------|-------------|---------|
+| AlphaFold/Uni-Fold | Folding | [Notebook](./notebooks/model_notebooks/Uni-Fold.ipynb) | https://github.com/dptech-corp/Uni-Fold | [Apache 2.0](https://github.com/dptech-corp/Uni-Fold/blob/main/LICENSE) |
+| AlphaFold/UniFold-Multimer | Folding | [Notebook](./notebooks/model_notebooks/Uni-Fold.ipynb) | https://github.com/dptech-corp/Uni-Fold | [Apache 2.0](https://github.com/dptech-corp/Uni-Fold/blob/main/LICENSE) |
+| OpenFold | Folding | [Notebook](./notebooks/model_notebooks/OpenFold.ipynb) | https://github.com/aqlaboratory/openfold | [Apache 2.0](https://github.com/aqlaboratory/openfold/blob/main/LICENSE) |
+| ESMFold | Folding |[Notebook](./notebooks/model_notebooks/ESM.ipynb) | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
+| RoseTTAFold| Folding | [Notebook](./notebooks/model_notebooks/RoseTTAFold.ipynb) | https://github.com/RosettaCommons/RoseTTAFold | [MIT License](https://github.com/RosettaCommons/RoseTTAFold/blob/main/LICENSE) |
+| OmegaFold | Folding | [Notebook](./notebooks/model_notebooks/OmegaFold.ipynb) | https://github.com/HeliXonProtein/OmegaFold | [Apache 2.0](https://github.com/HeliXonProtein/OmegaFold/blob/main/LICENSE) |
+| DMPfold2 | Folding | [Notebook](./notebooks/model_notebooks/DMPfold.ipynb) | https://github.com/psipred/DMPfold2 | [GPL v3.0](https://github.com/psipred/DMPfold2/blob/master/LICENSE) |
+| Uni-Fold Symmetry | Folding | [Notebook](./notebooks/model_notebooks/Uni-Fold.ipynb) | https://github.com/dptech-corp/Uni-Fold | [GPL v3.0](https://github.com/dptech-corp/Uni-Fold/blob/main/LICENSE) |
+| IgFold | Antibody Folding | [Notebook](./notebooks/model_notebooks/IgFold.ipynb) | https://github.com/Graylab/IgFold | [JHU License](https://github.com/Graylab/IgFold/blob/main/LICENSE.md) |
+| ESM-IF | Inverse Folding | [Notebook](./notebooks/model_notebooks/ESM-IF.ipynb) | https://github.com/facebookresearch/esm | [MIT License](https://github.com/facebookresearch/esm/blob/main/LICENSE) |
+| ProteinMPNN| Inverse Folding | [Notebook](./notebooks/model_notebooks/ProteinMPNN.ipynb) | https://github.com/dauparas/ProteinMPNN | [MIT License](https://github.com/dauparas/ProteinMPNN/blob/main/LICENSE) |
+| PiFold | Inverse Folding | [Notebook](./notebooks/model_notebooks/PiFold.ipynb) | https://github.com/A4Bio/PiFold | [MIT License](https://github.com/A4Bio/PiFold/blob/main/license) |
+| ProteinSeqDes| Inverse Folding| [Notebook](./notebooks/model_notebooks/ProteinSeqDes.ipynb) | https://github.com/nanand2/protein_seq_des | [BSD-3](https://github.com/nanand2/protein_seq_des/blob/master/LICENSE) |
+| ProteinSolver| Inverse Folding| [Notebook](./notebooks/model_notebooks/ProteinSolver.ipynb) | https://github.com/ostrokach/proteinsolver | [MIT License](https://github.com/ostrokach/proteinsolver/blob/master/LICENSE) |
+| RFDiffusion | Design | [Notebook](./notebooks/model_notebooks/RFDiffusion.ipynb) | https://github.com/RosettaCommons/RFdiffusion | [BSD](https://github.com/RosettaCommons/RFdiffusion/blob/main/LICENSE) |
+| ProteinGenerator | Design | [Notebook](./notebooks/model_notebooks/ProteinGenerator.ipynb) | https://github.com/RosettaCommons/protein_generator | [MIT License](https://github.com/RosettaCommons/protein_generator/blob/main/LICENSE) |
+| Genie | Design | [Notebook](./notebooks/model_notebooks/Genie.ipynb) | https://github.com/aqlaboratory/genie | [Apache 2.0](https://github.com/aqlaboratory/genie/blob/main/LICENSE.md) |
+| FoldingDiff | Design | [Notebook](./notebooks/model_notebooks/FoldingDiff.ipynb) | https://github.com/microsoft/foldingdiff | [MIT License](https://github.com/microsoft/foldingdiff/blob/main/LICENSE) |
+| SE3-Diffusion | Design | [Notebook](./notebooks/model_notebooks/SE3Diffusion.ipynb) | https://github.com/jasonkyuyim/se3_diffusion | [MIT License](https://github.com/jasonkyuyim/se3_diffusion/blob/master/LICENSE) |
+| EigenFold | Fold sampling | [Notebook](./notebooks/model_notebooks/EigenFold.ipynb) | https://github.com/bjing2016/EigenFold | [MIT License](https://github.com/bjing2016/EigenFold/blob/master/LICENSE) |
+| AntiBERTy | Antibody language modeling | [Notebook](./notebooks/model_notebooks/AntiBERTy.ipynb) | https://github.com/jeffreyruffolo/AntiBERTy | [MIT License](https://github.com/jeffreyruffolo/AntiBERTy/blob/main/LICENSE.MD) |
 
 Links for papers can be found on the Github repos for each model.
 
