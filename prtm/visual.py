@@ -57,7 +57,7 @@ def make_visualization_pdb(
     color_map = {i: band_colors_hex[i] for i in range(len(band_edges))}
 
     # Update the b-factors in the PDB string to be band indices
-    to_viz_pdb = overwrite_b_factors(structure.to_pdb(), banded_b_factors)
+    to_viz_pdb = overwrite_b_factors(structure.to_pdb(write_hetatoms=False), banded_b_factors)
 
     return to_viz_pdb, color_map
 

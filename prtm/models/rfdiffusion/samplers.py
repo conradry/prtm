@@ -9,6 +9,7 @@ from prtm.common_modules.rosetta import util
 from prtm.common_modules.rosetta.contigs import ContigMap
 from prtm.common_modules.rosetta.kinematics import get_init_xyz, xyz_to_t2d
 from prtm.common_modules.rosetta.util import ComputeAllAtomCoords
+from prtm.constants.residue_constants import PDB_CHAIN_IDS
 from prtm.models.rfdiffusion import config
 from prtm.models.rfdiffusion import inference_utils as iu
 from prtm.models.rfdiffusion import symmetry
@@ -1096,7 +1097,7 @@ class ScaffoldedSampler(SelfConditioningSampler):
                 pdb_idx = list(
                     zip(
                         [
-                            protein.PDB_CHAIN_IDS[i]
+                            PDB_CHAIN_IDS[i]
                             for i in self.target_struct.chain_index
                         ],
                         self.target_struct.residue_index,

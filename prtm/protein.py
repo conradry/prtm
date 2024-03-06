@@ -20,7 +20,7 @@ import io
 import os
 import string
 from collections import namedtuple
-from typing import Any, Dict, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 import modelcif
 import modelcif.alignment
@@ -49,11 +49,7 @@ except:
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
-PICO_TO_ANGSTROM = 0.01
 
-PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
-assert PDB_MAX_CHAINS == 62
 
 """
 Some notes about number of atoms:
@@ -138,6 +134,10 @@ def parse_pdb_string(
     if parse_hetatom:
         hetatom_positions = []
         hetatom_names = []
+        hetatom_types = []
+        hetatom_index = []
+        hetatom_chain_ids = []
+        hetatom_b_factors = []
 
     for chain in model:
         if chain_id is not None and chain.id != chain_id:
@@ -158,6 +158,10 @@ def parse_pdb_string(
                     for atom in res:
                         hetatom_positions.append(atom.coord)
                         hetatom_names.append(res.id[0].lstrip("H_"))
+                        hetatom_types.append(atom.fullname.strip())
+                        hetatom_index.append(res.id[1])
+                        hetatom_chain_ids.append(chain.id.strip())
+                        hetatom_b_factors.append(atom.bfactor)
                     continue
             else:
                 if len(res.id[0].strip()) > 0:
@@ -207,9 +211,17 @@ def parse_pdb_string(
     if parse_hetatom:
         hetatom_positions = np.array(hetatom_positions)
         hetatom_names = np.array(hetatom_names)
+        hetatom_types = np.array(hetatom_types)
+        hetatom_index = np.array(hetatom_index)
+        hetatom_chain_ids = np.array(hetatom_chain_ids)
+        hetatom_b_factors = np.array(hetatom_b_factors)
     else:
         hetatom_positions = None
         hetatom_names = None
+        hetatom_types = None
+        hetatom_index = None
+        hetatom_chain_ids = None
+        hetatom_b_factors = None
 
     protein_dict = dict(
         atom_positions=np.array(atom_positions),
@@ -222,6 +234,10 @@ def parse_pdb_string(
         parents_chain_index=parents_chain_index,
         hetatom_positions=hetatom_positions,
         hetatom_names=hetatom_names,
+        hetatom_types=hetatom_types,
+        hetatom_index=hetatom_index,
+        hetatom_chain_ids=hetatom_chain_ids,
+        hetatom_b_factors=hetatom_b_factors,
     )
 
     return protein_dict
@@ -287,6 +303,10 @@ class ProteinBase:
         parents_chain_index: Optional[Sequence[int]] = None,
         hetatom_positions: Optional[Union[np.ndarray, torch.Tensor]] = None,
         hetatom_names: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        hetatom_types: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        hetatom_index: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        hetatom_chain_ids: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        hetatom_b_factors: Optional[Union[np.ndarray, torch.Tensor]] = None,
         remark: Optional[str] = None,
     ):
         """
@@ -322,6 +342,14 @@ class ProteinBase:
                 HETATM positions. Defaults to None. Expected shape is [num_hetatoms, 3].
             hetatom_names (Optional[Union[np.ndarray, torch.Tensor]], optional):
                 HETATM names. Defaults to None. Expected shape is [num_hetatoms].
+            hetatom_types (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                HETATM types. Defaults to None. Expected shape is [num_hetatoms].
+            hetatom_index (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                HETATM index as used in PDB. Defaults to None. Expected shape is [num_hetatoms]. The lowest index value is 1.
+            hetatom_chain_ids (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                Chain IDs for each HETATM. Defaults to None. Expected shape is [num_hetatoms].
+            hetatom_b_factors (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                B-factors, or temperature factors, of each HETATM. Defaults to None. Expected shape is [num_hetatoms].
         """
         self.atom_positions = atom_positions
         self.aatype = aatype
@@ -333,6 +361,10 @@ class ProteinBase:
         self.parents_chain_index = parents_chain_index
         self.hetatom_positions = hetatom_positions
         self.hetatom_names = hetatom_names
+        self.hetatom_types = hetatom_types
+        self.hetatom_index = hetatom_index
+        self.hetatom_chain_ids = hetatom_chain_ids
+        self.hetatom_b_factors = hetatom_b_factors
         self.remark = remark
 
         self.fields = [
@@ -346,6 +378,10 @@ class ProteinBase:
             "parents_chain_index",
             "hetatom_positions",
             "hetatom_names",
+            "hetatom_types",
+            "hetatom_index",
+            "hetatom_chain_ids",
+            "hetatom_b_factors",
             "remark",
         ]
 
@@ -375,7 +411,9 @@ class ProteinBase:
             if arr is not None:
                 assert arr.shape[1] == num_atom_type
 
-        assert self.chain_index.max() < PDB_MAX_CHAINS, "Chain index must be < 62"
+        assert (
+            self.chain_index.max() < residue_constants.PDB_MAX_CHAINS
+        ), "Chain index must be < 62"
 
     def to_torch(self) -> ProteinBase:
         """Converts a `Protein` instance to torch tensors."""
@@ -429,7 +467,7 @@ class ProteinBase:
 
         return pdb_headers
 
-    def _to_pdb_from_atom37(self) -> str:
+    def _to_pdb_from_atom37(self, write_hetatoms=True) -> str:
         """Converts this `Protein` instance to a PDB string.
         This is a private method because children should have
         an appropriate to_pdb method that makes sure there are 37
@@ -458,11 +496,11 @@ class ProteinBase:
         chain_ids = {}
         unique_fn = np.unique if isinstance(chain_index, np.ndarray) else torch.unique
         for i in unique_fn(chain_index):
-            if i >= PDB_MAX_CHAINS:
+            if i >= residue_constants.PDB_MAX_CHAINS:
                 raise ValueError(
-                    f"The PDB format supports at most {PDB_MAX_CHAINS} chains."
+                    f"The PDB format supports at most {residue_constants.PDB_MAX_CHAINS} chains."
                 )
-            chain_ids[i] = PDB_CHAIN_IDS[i]
+            chain_ids[i] = residue_constants.PDB_CHAIN_IDS[i]
 
         headers = self.get_pdb_headers()
         if len(headers) > 0:
@@ -546,13 +584,43 @@ class ProteinBase:
                     pdb_lines.extend(self.get_pdb_headers(prev_chain_index))
 
         pdb_lines.append("ENDMDL")
+
+        # Add all HETATM sites.
+        if write_hetatoms and self.hetatom_positions is not None:
+            for name, pos, atom_type, res_index, chain_id, b_factor in zip(
+                self.hetatom_names,
+                self.hetatom_positions,
+                self.hetatom_types,
+                self.hetatom_index,
+                self.hetatom_chain_ids,
+                self.hetatom_b_factors,
+            ):
+                atom_index += 1
+                record_type = "HETATM"
+                name = name if len(name) == 4 else f" {name}"
+                alt_loc = ""
+                insertion_code = ""
+                occupancy = 1.00
+                element = atom_type[0]
+                atom_line = (
+                    f"{record_type:<6}{atom_index:>5} {atom_type:<4}{alt_loc:>1}"
+                    # TODO: check this refactor, chose main branch version
+                    # f"{res_name_3:>3} {chain_ids[chain_index[i]]:>1}"
+                    f"{name:>3} {chain_id:>1}"
+                    f"{res_index:>4}{insertion_code:>1}   "
+                    f"{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}"
+                    f"{occupancy:>6.2f}{b_factor:>6.2f}          "
+                    f"{element:>2}{charge:>2}"
+                )
+                pdb_lines.append(atom_line)
+
         pdb_lines.append("END")
 
         # Pad all lines to 80 characters
         pdb_lines = [line.ljust(80) for line in pdb_lines]
         return "\n".join(pdb_lines) + "\n"  # Add terminating newline.
 
-    def to_pdb(self):
+    def to_pdb(self, write_hetatoms=True):
         raise NotImplementedError
 
     def _to_modelcif_from_atom37(self) -> str:
@@ -784,6 +852,10 @@ class ProteinBase:
             remark=protein.remark,
             hetatom_positions=protein.hetatom_positions,
             hetatom_names=protein.hetatom_names,
+            hetatom_types=protein.hetatom_types,
+            hetatom_index=protein.hetatom_index,
+            hetatom_chain_ids=protein.hetatom_chain_ids,
+            hetatom_b_factors=protein.hetatom_b_factors,
         )
 
     def _crop_n_atoms(self, n: int) -> Dict[str, np.ndarray]:
@@ -805,6 +877,10 @@ class ProteinBase:
             remark=protein.remark,
             hetatom_positions=protein.hetatom_positions,
             hetatom_names=protein.hetatom_names,
+            hetatom_types=protein.hetatom_types,
+            hetatom_index=protein.hetatom_index,
+            hetatom_chain_ids=protein.hetatom_chain_ids,
+            hetatom_b_factors=protein.hetatom_b_factors,
         )
 
     def to_protein37(self) -> Protein37:
@@ -843,11 +919,17 @@ class ProteinBase:
             remark=self.remark,
             hetatom_positions=self.hetatom_positions,
             hetatom_names=self.hetatom_names,
+            hetatom_types=self.hetatom_types,
+            hetatom_index=self.hetatom_index,
+            hetatom_chain_ids=self.hetatom_chain_ids,
+            hetatom_b_factors=self.hetatom_b_factors,
         )
 
     def get_chain(self, chain_id: str) -> ProteinBase:
-        assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
-        chain_index = PDB_CHAIN_IDS.index(chain_id)
+        assert (
+            chain_id in residue_constants.PDB_CHAIN_IDS
+        ), f"Invalid chain_id: {chain_id}"
+        chain_index = residue_constants.PDB_CHAIN_IDS.index(chain_id)
         # Get the mask for indices in this chain
         chain_mask = self.chain_index == chain_index
         # Create a new Protein instance that only includes the
@@ -864,13 +946,24 @@ class ProteinBase:
             remark=self.remark,
             hetatom_positions=self.hetatom_positions,
             hetatom_names=self.hetatom_names,
+            hetatom_types=self.hetatom_types,
+            hetatom_index=self.hetatom_index,
+            hetatom_chain_ids=self.hetatom_chain_ids,
+            hetatom_b_factors=self.hetatom_b_factors,
         )
+
+    def get_all_chains(self) -> List[ProteinBase]:
+        return [self.get_chain(chain_id) for chain_id in self.chains]
 
     def sequence(self, chain_id: Optional[str] = None) -> str:
         # Decode the aatype sequence to a string
         if chain_id is not None:
-            assert chain_id in PDB_CHAIN_IDS, f"Invalid chain_id: {chain_id}"
-            aatypes = self.aatype[self.chain_index == PDB_CHAIN_IDS.index(chain_id)]
+            assert (
+                chain_id in residue_constants.PDB_CHAIN_IDS
+            ), f"Invalid chain_id: {chain_id}"
+            aatypes = self.aatype[
+                self.chain_index == residue_constants.PDB_CHAIN_IDS.index(chain_id)
+            ]
         else:
             aatypes = self.aatype
 
@@ -904,7 +997,9 @@ class ProteinBase:
     @property
     def chains(self):
         """Returns a string with all available chains."""
-        return "".join(PDB_CHAIN_IDS[i] for i in np.unique(self.chain_index))
+        return "".join(
+            residue_constants.PDB_CHAIN_IDS[i] for i in np.unique(self.chain_index)
+        )
 
     def superimpose(self, other: ProteinBase) -> ProteinBase:
         """Superimposes another protein onto this protein."""
@@ -917,8 +1012,8 @@ class Protein37(ProteinBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def to_pdb(self) -> str:
-        return self._to_pdb_from_atom37()
+    def to_pdb(self, write_hetatoms=True) -> str:
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         return self._to_modelcif_from_atom37()
@@ -956,6 +1051,10 @@ class Protein37(ProteinBase):
             remark=protein37.remark,
             hetatom_positions=protein37.hetatom_positions,
             hetatom_names=protein37.hetatom_names,
+            hetatom_types=protein37.hetatom_types,
+            hetatom_index=protein37.hetatom_index,
+            hetatom_chain_ids=protein37.hetatom_chain_ids,
+            hetatom_b_factors=protein37.hetatom_b_factors,
         )
 
     def to_protein27(self) -> Protein27:
@@ -1026,6 +1125,10 @@ class Protein14(ProteinBase):
             remark=protein14.remark,
             hetatom_positions=protein14.hetatom_positions,
             hetatom_names=protein14.hetatom_names,
+            hetatom_types=protein14.hetatom_types,
+            hetatom_index=protein14.hetatom_index,
+            hetatom_chain_ids=protein14.hetatom_chain_ids,
+            hetatom_b_factors=protein14.hetatom_b_factors,
         )
 
     def to_protein27(self) -> Protein27:
@@ -1034,9 +1137,9 @@ class Protein14(ProteinBase):
     def to_protein14(self) -> Protein14:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1082,9 +1185,9 @@ class Protein27(ProteinBase):
     def to_protein27(self) -> Protein27:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1134,9 +1237,9 @@ class Protein5(ProteinBase):
     def to_protein5(self) -> Protein5:
         return self
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein37 = self.to_protein37()
-        return protein37.to_pdb()
+        return self._to_pdb_from_atom37(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein37 = self.to_protein37()
@@ -1270,11 +1373,15 @@ class ProteinCATrace(ProteinBase):
             remark=protein_ca.remark,
             hetatom_positions=protein_ca.hetatom_positions,
             hetatom_names=protein_ca.hetatom_names,
+            hetatom_types=protein_ca.hetatom_types,
+            hetatom_index=protein_ca.hetatom_index,
+            hetatom_chain_ids=protein_ca.hetatom_chain_ids,
+            hetatom_b_factors=protein_ca.hetatom_b_factors,
         )
 
-    def to_pdb(self) -> str:
+    def to_pdb(self, write_hetatoms=True) -> str:
         protein3 = self.to_protein3()
-        return protein3.to_pdb()
+        return protein3.to_pdb()(write_hetatoms)
 
     def to_modelcif(self) -> str:
         protein3 = self.to_protein3()
