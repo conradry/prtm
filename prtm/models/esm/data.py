@@ -4,10 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import itertools
-import os
-import pickle
 import re
-import shutil
 from typing import List, Sequence, Tuple, Union
 
 import torch
