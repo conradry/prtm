@@ -21,7 +21,8 @@ import numpy as np
 
 deepspeed_is_installed = importlib.util.find_spec("deepspeed") is not None
 if deepspeed_is_installed:
-    import deepspeed
+    #import deepspeed
+    pass
 
 fa_is_installed = importlib.util.find_spec("flash_attn") is not None
 if fa_is_installed:
