@@ -62,6 +62,22 @@ def make_visualization_pdb(
     return to_viz_pdb, color_map
 
 
+def view_ligand(ligand: "ligand.Ligand") -> py3Dmol.view:
+    """Renders a ligand structure.
+
+    Args:
+        ligand: The ligand structure to render.
+
+    Returns:
+        A py3Dmol.view object with the ligand rendered.
+    """
+    view = py3Dmol.view(width=800, height=600)
+    view.addModel(ligand.to_pdb(), "pdb")
+    view.setStyle({"stick": {}})
+    view.zoomTo()
+    return view
+
+
 def view_protein_with_bfactors(
     structure: "protein.ProteinBase",
     cmap: str,
