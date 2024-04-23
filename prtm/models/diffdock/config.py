@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
 @dataclass
@@ -9,7 +10,6 @@ class InferenceConfig:
     confidence_model_dir: str = "./workdir/v1.1/confidence_model"
     model_dir: str = "./workdir/v1.1/score_model"
 
-    different_schedules: bool = False
     inf_sched_alpha: int = 1
     inf_sched_beta: int = 1
     inference_steps: int = 20
@@ -21,7 +21,6 @@ class InferenceConfig:
     no_random_pocket: bool = False
     ode: bool = False
     resample_rdkit: bool = False
-    samples_per_complex: int = 10
     sigma_schedule: str = "expbeta"
     temp_psi_rot: float = 0.9022615585677628
     temp_psi_tor: float = 0.5946212391366862
@@ -32,3 +31,122 @@ class InferenceConfig:
     temp_sigma_data_rot: float = 0.7464326999906034
     temp_sigma_data_tor: float = 0.6943254174849822
     temp_sigma_data_tr: float = 0.9299802531572672
+
+
+@dataclass
+class ScoreModelConfig:
+    all_atoms: bool = False
+    asyncronous_noise_schedule: bool = False
+    atom_max_neighbors: int = 8
+    atom_radius: int = 5
+    backbone_loss_weight: int = 0
+    batch_size: int = 12
+    c_alpha_max_neighbors: int = 24
+    confidence_dropout: float = 0.0
+    confidence_no_batchnorm: bool = False
+    confidence_weight: float = 0.33
+    crop_beyond: int = 20
+    cross_distance_embed_dim: int = 64
+    cross_max_distance: int = 80
+    dataset: str = "generalisation"
+    depthwise_convolution: bool = False
+    distance_embed_dim: int = 64
+    dropout: float = 0.1
+    dynamic_max_cross: bool = True
+    embed_also_ligand: bool = True
+    embedding_scale: int = 1000
+    embedding_type: str = "sinusoidal"
+    include_miscellaneous_atoms: bool = False
+    inf_pocket_cutoff: int = 5
+    inf_pocket_knowledge: bool = False
+    inf_sched_alpha: int = 1
+    inf_sched_beta: int = 1
+    inference_steps: int = 20
+    limit_complexes: int = 0
+    max_radius: float = 5.0
+    no_aminoacid_identities: bool = False
+    no_batch_norm: bool = False
+    no_differentiate_convolutions: bool = False
+    no_torsion: bool = False
+    norm_by_sigma: bool = False
+    not_fixed_center_conv: bool = False
+    ns: int = 48
+    num_conformers: int = 1
+    num_conv_layers: int = 11
+    num_dataloader_workers: int = 1
+    num_inference_complexes: int = 500
+    num_prot_emb_layers: int = 3
+    nv: int = 10
+    odd_parity: bool = False
+    receptor_radius: float = 15.0
+    reduce_pseudoscalars: bool = True
+    remove_hs: bool = True
+    rot_sigma_max: float = 1.55
+    rot_sigma_min: float = 0.03
+    scale_by_sigma: bool = True
+    sh_lmax: int = 2
+    sidechain_loss_weight: int = 0
+    sigma_embed_dim: int = 64
+    sigma_schedule: str = "expbeta"
+    smooth_edges: bool = False
+    tor_sigma_max: float = 3.14
+    tor_sigma_min: float = 0.0314
+    tp_weights_layers: int = 2
+    tr_sigma_max: float = 19.0
+    tr_sigma_min: float = 0.1
+    tr_weight: float = 0.33
+    use_second_order_repr: bool = False
+
+
+@dataclass
+class ConfidenceModelConfig:
+    affinity_prediction: bool = False
+    all_atoms: bool = True
+    asyncronous_noise_schedule: bool = False
+    atom_max_neighbors: int = 8
+    atom_radius: int = 5
+    c_alpha_max_neighbors: int = 24
+    confidence_dropout: float = 0.0
+    confidence_no_batchnorm: bool = False
+    cross_distance_embed_dim: int = 32
+    cross_max_distance: int = 80
+    distance_embed_dim: int = 32
+    dropout: float = 0.1
+    dynamic_max_cross: bool = True
+    embedding_scale: int = 10000
+    embedding_type: str = "sinusoidal"
+    high_confidence_threshold: float = 5.0
+    inf_sched_alpha: float = 1.0
+    inf_sched_beta: float = 1.0
+    inference_steps: int = 20
+    limit_complexes: int = 0
+    max_lig_size: Optional[None] = None
+    max_radius: float = 5.0
+    no_batch_norm: bool = False
+    no_torsion: bool = False
+    norm_by_sigma: bool = False
+    ns: int = 24
+    num_conformers: int = 1
+    num_conv_layers: int = 5
+    nv: int = 6
+    odd_parity: bool = False
+    parallel: int = 1
+    parallel_aggregators: str = "mean max min std"
+    receptor_radius: float = 15.0
+    remove_hs: bool = True
+    rmsd_classification_cutoff: List[float] = field(default_factory=lambda: [2.0])
+    rot_sigma_max: float = 1.55
+    rot_sigma_min: float = 0.03
+    sampling_alpha: int = 1
+    sampling_beta: int = 1
+    scale_by_sigma: bool = True
+    separate_noise_schedule: bool = False
+    sigma_embed_dim: int = 32
+    sigma_schedule: str = "expbeta"
+    smooth_edges: bool = False
+    tor_sigma_max: float = 3.14
+    tor_sigma_min: float = 0.0314
+    tr_sigma_max: float = 34.0
+    tr_sigma_min: float = 0.1
+    tr_weight: float = 0.33
+    use_second_order_repr: bool = False

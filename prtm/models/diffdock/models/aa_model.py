@@ -1,6 +1,12 @@
 import numpy as np
 import torch
 from e3nn import o3
+from torch import nn
+from torch.nn import functional as F
+from torch_cluster import radius, radius_graph
+from torch_geometric.utils import subgraph
+from torch_scatter import scatter_mean
+
 from prtm.models.diffdock.datasets.process_mols import (
     lig_feature_dims,
     rec_atom_feature_dims,
@@ -12,11 +18,6 @@ from prtm.models.diffdock.models.tensor_layers import (
     get_irrep_seq,
 )
 from prtm.models.diffdock.utils import so3, torus
-from torch import nn
-from torch.nn import functional as F
-from torch_cluster import radius, radius_graph
-from torch_geometric.utils import subgraph
-from torch_scatter import scatter_mean
 
 AGGREGATORS = {
     "mean": lambda x: torch.mean(x, dim=1),
@@ -154,6 +155,7 @@ class AAModel(torch.nn.Module):
             nn.Dropout(dropout),
             nn.Linear(ns, ns),
         )
+        print("Rec node args", ns, rec_residue_feature_dims, lm_embedding_dim)
         self.rec_node_embedding = atom_encoder_class(
             emb_dim=ns,
             feature_dims=rec_residue_feature_dims,

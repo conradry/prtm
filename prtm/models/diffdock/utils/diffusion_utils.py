@@ -3,6 +3,9 @@ import math
 import numpy as np
 import torch
 import torch.nn.functional as F
+from scipy.stats import beta
+from torch import nn
+
 from prtm.models.diffdock.utils.geometry import (
     axis_angle_to_matrix,
     rigid_transform_Kabsch_3D_torch,
@@ -12,8 +15,6 @@ from prtm.models.diffdock.utils.torsion import (
     modify_conformer_torsion_angles,
     modify_conformer_torsion_angles_batch,
 )
-from scipy.stats import beta
-from torch import nn
 
 
 def sigmoid(t):
@@ -23,18 +24,6 @@ def sigmoid(t):
 def sigmoid_schedule(t, k=10, m=0.5):
     s = lambda t: sigmoid(k * (t - m))
     return (s(t) - s(0)) / (s(1) - s(0))
-
-
-def t_to_sigma_individual(
-    t, schedule_type, sigma_min, sigma_max, schedule_k=10, schedule_m=0.4
-):
-    if schedule_type == "exponential":
-        return sigma_min ** (1 - t) * sigma_max**t
-    elif schedule_type == "sigmoid":
-        return (
-            sigmoid_schedule(t, k=schedule_k, m=schedule_m) * (sigma_max - sigma_min)
-            + sigma_min
-        )
 
 
 def t_to_sigma(t_tr, t_rot, t_tor, args):
