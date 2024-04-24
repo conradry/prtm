@@ -39,20 +39,12 @@ class AtomEncoder(torch.nn.Module):
         self.additional_features_dim = (
             feature_dims[1] + sigma_embed_dim + lm_embedding_dim
         )
-        print(
-            "Additional features dim: ",
-            self.additional_features_dim,
-            feature_dims,
-            sigma_embed_dim,
-            lm_embedding_dim,
-        )
         for i, dim in enumerate(feature_dims[0]):
             emb = torch.nn.Embedding(dim, emb_dim)
             torch.nn.init.xavier_uniform_(emb.weight.data)
             self.atom_embedding_list.append(emb)
 
         if self.additional_features_dim > 0:
-            print("Making additional features")
             self.additional_features_embedder = torch.nn.Linear(
                 self.additional_features_dim + emb_dim, emb_dim
             )

@@ -2,7 +2,6 @@ import torch
 from torch_geometric.nn.data_parallel import DataParallel
 from torch_geometric.utils import subgraph
 
-from prtm.models.diffdock.models.aa_model import AAModel
 from prtm.models.diffdock.models.cg_model import CGModel
 from prtm.models.diffdock.utils.diffusion_utils import get_timestep_embedding
 
@@ -12,7 +11,6 @@ def get_model(
     device,
     t_to_sigma,
     no_parallel=False,
-    confidence_mode=False,
 ):
     timestep_emb_func = get_timestep_embedding(
         embedding_type=(
@@ -22,11 +20,7 @@ def get_model(
         embedding_scale=args.embedding_scale if "embedding_type" in args else 10000,
     )
 
-    if "all_atoms" in args and args.all_atoms:
-        model_class = AAModel
-    else:
-        model_class = CGModel
-
+    model_class = CGModel
     model = model_class(
         t_to_sigma=t_to_sigma,
         device=device,
@@ -49,7 +43,7 @@ def get_model(
         smooth_edges=args.smooth_edges if "smooth_edges" in args else False,
         odd_parity=args.odd_parity if "odd_parity" in args else False,
         lm_embedding_type="precomputed",
-        confidence_mode=confidence_mode,
+        confidence_mode=False,
         affinity_prediction=(
             args.affinity_prediction if "affinity_prediction" in args else False
         ),

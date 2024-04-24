@@ -5,11 +5,6 @@ from typing import List, Optional
 @dataclass
 class InferenceConfig:
     actual_steps: int = 19
-    ckpt: str = "best_ema_inference_epoch_model.pt"
-    confidence_ckpt: str = "best_model_epoch75.pt"
-    confidence_model_dir: str = "./workdir/v1.1/confidence_model"
-    model_dir: str = "./workdir/v1.1/score_model"
-
     inf_sched_alpha: int = 1
     inf_sched_beta: int = 1
     inference_steps: int = 20
@@ -93,60 +88,6 @@ class ScoreModelConfig:
     tor_sigma_min: float = 0.0314
     tp_weights_layers: int = 2
     tr_sigma_max: float = 19.0
-    tr_sigma_min: float = 0.1
-    tr_weight: float = 0.33
-    use_second_order_repr: bool = False
-
-
-@dataclass
-class ConfidenceModelConfig:
-    affinity_prediction: bool = False
-    all_atoms: bool = True
-    asyncronous_noise_schedule: bool = False
-    atom_max_neighbors: int = 8
-    atom_radius: int = 5
-    c_alpha_max_neighbors: int = 24
-    confidence_dropout: float = 0.0
-    confidence_no_batchnorm: bool = False
-    cross_distance_embed_dim: int = 32
-    cross_max_distance: int = 80
-    distance_embed_dim: int = 32
-    dropout: float = 0.1
-    dynamic_max_cross: bool = True
-    embedding_scale: int = 10000
-    embedding_type: str = "sinusoidal"
-    high_confidence_threshold: float = 5.0
-    inf_sched_alpha: float = 1.0
-    inf_sched_beta: float = 1.0
-    inference_steps: int = 20
-    limit_complexes: int = 0
-    max_lig_size: Optional[None] = None
-    max_radius: float = 5.0
-    no_batch_norm: bool = False
-    no_torsion: bool = False
-    norm_by_sigma: bool = False
-    ns: int = 24
-    num_conformers: int = 1
-    num_conv_layers: int = 5
-    nv: int = 6
-    odd_parity: bool = False
-    parallel: int = 1
-    parallel_aggregators: str = "mean max min std"
-    receptor_radius: float = 15.0
-    remove_hs: bool = True
-    rmsd_classification_cutoff: List[float] = field(default_factory=lambda: [2.0])
-    rot_sigma_max: float = 1.55
-    rot_sigma_min: float = 0.03
-    sampling_alpha: int = 1
-    sampling_beta: int = 1
-    scale_by_sigma: bool = True
-    separate_noise_schedule: bool = False
-    sigma_embed_dim: int = 32
-    sigma_schedule: str = "expbeta"
-    smooth_edges: bool = False
-    tor_sigma_max: float = 3.14
-    tor_sigma_min: float = 0.0314
-    tr_sigma_max: float = 34.0
     tr_sigma_min: float = 0.1
     tr_weight: float = 0.33
     use_second_order_repr: bool = False

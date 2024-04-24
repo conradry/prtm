@@ -119,39 +119,17 @@ def sampling(
     no_random=False,
     ode=False,
     visualization_list=None,
-    confidence_model=None,
-    confidence_data_list=None,
-    confidence_model_args=None,
     t_schedule=None,
     batch_size=32,
     no_final_step_noise=False,
-    pivot=None,
-    return_full_trajectory=False,
     temp_sampling=1.0,
     temp_psi=0.0,
     temp_sigma_data=0.5,
-    return_features=False,
 ):
     N = len(data_list)
-    trajectory = []
-    if return_features:
-        lig_features, rec_features = [], []
-        assert batch_size >= N, "Not implemented yet"
 
     loader = DataLoader(data_list, batch_size=batch_size)
-    assert not (
-        return_full_trajectory or return_features or pivot
-    ), "Not implemented yet in new inference version"
-
     mask_rotate = torch.from_numpy(data_list[0]["ligand"].mask_rotate[0]).to(device)
-
-    confidence = None
-    if confidence_model is not None:
-        confidence_loader = iter(
-            DataLoader(confidence_data_list, batch_size=batch_size)
-        )
-        confidence = []
-
     with torch.no_grad():
         for batch_id, complex_graph_batch in enumerate(loader):
             b = complex_graph_batch.num_graphs
@@ -186,7 +164,6 @@ def sampling(
                     hasattr(model_args, "crop_beyond")
                     and model_args.crop_beyond is not None
                 ):
-                    # print('Cropping beyond', tr_sigma * 3 + model_args.crop_beyond, 'for score model')
                     mod_complex_graph_batch = copy.deepcopy(
                         complex_graph_batch
                     ).to_data_list()
@@ -278,7 +255,6 @@ def sampling(
                             tor_g**2 * dt_tor * tor_score
                             + tor_g * np.sqrt(dt_tor) * tor_z
                         )
-                    torsions_per_molecule = tor_perturb.shape[0] // b
                 else:
                     tor_perturb = None
 
@@ -388,63 +364,7 @@ def sampling(
                         order=2,
                     )
 
-            if confidence_model is not None:
-                if confidence_data_list is not None:
-                    confidence_complex_graph_batch = next(confidence_loader)
-                    confidence_complex_graph_batch["ligand"].pos = complex_graph_batch[
-                        "ligand"
-                    ].pos.cpu()
-
-                    if (
-                        hasattr(confidence_model_args, "crop_beyond")
-                        and confidence_model_args.crop_beyond is not None
-                    ):
-                        confidence_complex_graph_batch = (
-                            confidence_complex_graph_batch.to_data_list()
-                        )
-                        for batch in confidence_complex_graph_batch:
-                            crop_beyond(
-                                batch,
-                                confidence_model_args.crop_beyond,
-                                confidence_model_args.all_atoms,
-                            )
-                        confidence_complex_graph_batch = Batch.from_data_list(
-                            confidence_complex_graph_batch
-                        )
-
-                    confidence_complex_graph_batch = confidence_complex_graph_batch.to(
-                        device
-                    )
-                    set_time(
-                        confidence_complex_graph_batch,
-                        0,
-                        0,
-                        0,
-                        0,
-                        b,
-                        confidence_model_args.all_atoms,
-                        device,
-                    )
-                    out = confidence_model(confidence_complex_graph_batch)
-                else:
-                    out = confidence_model(complex_graph_batch)
-
-                if type(out) is tuple:
-                    out = out[0]
-                confidence.append(out)
-
-    if confidence_model is not None:
-        confidence = torch.cat(confidence, dim=0)
-        confidence = torch.nan_to_num(confidence, nan=-1000)
-
-    if return_full_trajectory:
-        return data_list, confidence, trajectory
-    elif return_features:
-        lig_features = torch.cat(lig_features, dim=0)
-        rec_features = torch.cat(rec_features, dim=0)
-        return data_list, confidence, lig_features, rec_features
-
-    return data_list, confidence
+    return data_list
 
 
 def compute_affinity(
