@@ -5,10 +5,10 @@ import numpy as np
 import rdkit.Chem
 import torch
 from rdkit import Geometry
-from rdkit.Chem.rdmolfiles import MolToPDBBlock, MolToPDBFile
+from rdkit.Chem.rdmolfiles import MolToPDBBlock, MolFromPDBBlock 
 
 
-class PDBFile:
+class PDBBlockFile:
     def __init__(self, mol):
         self.parts = defaultdict(dict)
         self.mol = copy.deepcopy(mol)
@@ -30,7 +30,7 @@ class PDBFile:
         block = MolToPDBBlock(self.mol).split("\n")[:-2]
         self.parts[part][order] = {"block": block, "repeat": repeat}
 
-    def write(self, path=None, limit_parts=None):
+    def to_pdb(self, limit_parts=None):
         is_first = True
         str_ = ""
         for part in sorted(self.parts.keys()):
@@ -50,7 +50,5 @@ class PDBFile:
                     str_ += "MODEL\n"
                     str_ += "\n".join(block)
                     str_ += "\nENDMDL\n"
-        if not path:
-            return str_
-        with open(path, "w") as f:
-            f.write(str_)
+
+        return str_

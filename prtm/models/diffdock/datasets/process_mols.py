@@ -2,10 +2,8 @@ import copy
 import warnings
 
 import numpy as np
-import prody as pr
 import torch
 import torch.nn.functional as F
-from Bio.PDB import PDBParser
 from prtm.models.diffdock.datasets.conformer_matching import (
     get_torsion_angles,
     optimize_rotatable_bonds,
@@ -14,14 +12,12 @@ from prtm.models.diffdock.datasets.constants import aa_short2long, atom_order
 from prtm.models.diffdock.datasets.parse_chi import (
     aa_idx2aa_short,
     get_chi_angles,
-    get_coords,
     get_onehot_sequence,
 )
 from prtm.models.diffdock.utils.torsion import get_transformation_mask
 from rdkit import Chem
 from rdkit.Chem import AllChem, GetPeriodicTable, RemoveHs
 from rdkit.Chem.rdchem import BondType as BT
-from rdkit.Geometry import Point3D
 from torch import cdist
 from torch_cluster import knn_graph
 
@@ -284,7 +280,7 @@ def safe_index(l, e):
 
 
 def moad_extract_receptor_structure(
-    path,
+    structure,
     complex_graph,
     neighbor_cutoff=20,
     max_neighbors=None,
@@ -295,16 +291,12 @@ def moad_extract_receptor_structure(
     atom_cutoff=None,
     atom_max_neighbors=None,
 ):
-    # load the entire pdb file
-    pdb = pr.parsePDB(path)
-    seq = pdb.ca.getSequence()
-    coords = get_coords(pdb)
+    coords = structure.atom_positions
+    seq = structure.sequence()
     one_hot = get_onehot_sequence(seq)
 
     chain_ids = np.zeros(len(one_hot))
-    res_chain_ids = pdb.ca.getChids()
-    res_seg_ids = pdb.ca.getSegnames()
-    res_chain_ids = np.asarray([s + c for s, c in zip(res_seg_ids, res_chain_ids)])
+    res_chain_ids = structure.chain_index
     ids = np.unique(res_chain_ids)
     sequences = []
     lm_embeddings = lm_embeddings if sequences_to_embeddings is None else []
@@ -333,6 +325,7 @@ def moad_extract_receptor_structure(
         atom_cutoff=atom_cutoff,
         atom_max_neighbors=atom_max_neighbors,
     )
+    return seq, coords, sequences, chain_ids
 
 
 def new_extract_receptor_structure(
@@ -683,16 +676,6 @@ def get_rec_misc_atom_feat(
         safe_index(allowable_features["possible_atom_type_3"], atom_name),
     ]
     return atom_feat
-
-
-def write_mol_with_coords(mol, new_coords, path):
-    w = Chem.SDWriter(path)
-    conf = mol.GetConformer()
-    for i in range(mol.GetNumAtoms()):
-        x, y, z = new_coords.astype(np.double)[i]
-        conf.SetAtomPosition(i, Point3D(x, y, z))
-    w.write(mol)
-    w.close()
 
 
 def read_molecule(molecule_file, sanitize=False, calc_charges=False, remove_hs=False):
