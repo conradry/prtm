@@ -4,6 +4,13 @@ import warnings
 import numpy as np
 import torch
 import torch.nn.functional as F
+from rdkit import Chem
+from rdkit.Chem import AllChem, GetPeriodicTable, RemoveHs
+from rdkit.Chem.rdchem import BondType as BT
+from torch import cdist
+from torch_cluster import knn_graph
+
+from prtm.ligand import generate_conformer
 from prtm.models.diffdock.datasets.conformer_matching import (
     get_torsion_angles,
     optimize_rotatable_bonds,
@@ -15,11 +22,6 @@ from prtm.models.diffdock.datasets.parse_chi import (
     get_onehot_sequence,
 )
 from prtm.models.diffdock.utils.torsion import get_transformation_mask
-from rdkit import Chem
-from rdkit.Chem import AllChem, GetPeriodicTable, RemoveHs
-from rdkit.Chem.rdchem import BondType as BT
-from torch import cdist
-from torch_cluster import knn_graph
 
 periodic_table = GetPeriodicTable()
 allowable_features = {
@@ -541,27 +543,6 @@ def get_lig_graph(mol, complex_graph):
     return
 
 
-def generate_conformer(mol):
-    ps = AllChem.ETKDGv2()
-    failures, id = 0, -1
-    while failures < 3 and id == -1:
-        if failures > 0:
-            print(f"rdkit coords could not be generated. trying again {failures}.")
-        id = AllChem.EmbedMolecule(mol, ps)
-        failures += 1
-    if id == -1:
-        print(
-            "rdkit coords could not be generated without using random coords. using random coords now."
-        )
-        ps.useRandomCoords = True
-        AllChem.EmbedMolecule(mol, ps)
-        AllChem.MMFFOptimizeMolecule(mol, confId=0)
-        return True
-    # else:
-    #    AllChem.MMFFOptimizeMolecule(mol, confId=0)
-    return False
-
-
 def get_lig_graph_with_matching(
     mol_,
     complex_graph,
@@ -597,7 +578,7 @@ def get_lig_graph_with_matching(
 
                 mol_rdkit.RemoveAllConformers()
                 mol_rdkit = AllChem.AddHs(mol_rdkit)
-                generate_conformer(mol_rdkit)
+                mol_rdkit = generate_conformer(mol_rdkit)
                 if remove_hs:
                     mol_rdkit = RemoveHs(mol_rdkit, sanitize=True)
                 mol_rdkit = AllChem.RemoveAllHs(mol_rdkit)

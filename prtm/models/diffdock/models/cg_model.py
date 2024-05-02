@@ -4,6 +4,12 @@ import numpy as np
 import torch
 from e3nn import o3
 from e3nn.o3 import Linear
+from torch import nn
+from torch.nn import functional as F
+from torch_cluster import radius, radius_graph
+from torch_scatter import scatter, scatter_mean
+
+from prtm.models.diffdock.config import ScoreModelConfig
 from prtm.models.diffdock.datasets.process_mols import (
     lig_feature_dims,
     rec_atom_feature_dims,
@@ -15,10 +21,6 @@ from prtm.models.diffdock.models.tensor_layers import (
     get_irrep_seq,
 )
 from prtm.models.diffdock.utils import so3, torus
-from torch import nn
-from torch.nn import functional as F
-from torch_cluster import radius, radius_graph
-from torch_scatter import scatter, scatter_mean
 
 
 class CGModel(torch.nn.Module):

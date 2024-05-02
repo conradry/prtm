@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from scipy.stats import beta
 from torch import nn
 
+from prtm.models.diffdock.config import ScoreModelConfig
 from prtm.models.diffdock.utils.geometry import (
     axis_angle_to_matrix,
     rigid_transform_Kabsch_3D_torch,
@@ -26,10 +27,15 @@ def sigmoid_schedule(t, k=10, m=0.5):
     return (s(t) - s(0)) / (s(1) - s(0))
 
 
-def t_to_sigma(t_tr, t_rot, t_tor, args):
-    tr_sigma = args.tr_sigma_min ** (1 - t_tr) * args.tr_sigma_max**t_tr
-    rot_sigma = args.rot_sigma_min ** (1 - t_rot) * args.rot_sigma_max**t_rot
-    tor_sigma = args.tor_sigma_min ** (1 - t_tor) * args.tor_sigma_max**t_tor
+def t_to_sigma(
+    t_tr: torch.Tensor,
+    t_rot: torch.Tensor,
+    t_tor: torch.Tensor,
+    model_cfg: ScoreModelConfig,
+):
+    tr_sigma = model_cfg.tr_sigma_min ** (1 - t_tr) * model_cfg.tr_sigma_max**t_tr
+    rot_sigma = model_cfg.rot_sigma_min ** (1 - t_rot) * model_cfg.rot_sigma_max**t_rot
+    tor_sigma = model_cfg.tor_sigma_min ** (1 - t_tor) * model_cfg.tor_sigma_max**t_tor
     return tr_sigma, rot_sigma, tor_sigma
 
 

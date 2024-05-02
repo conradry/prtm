@@ -6,6 +6,9 @@ import nglview as nv
 import numpy as np
 import py3Dmol
 from matplotlib import colormaps, colors
+from rdkit import Chem
+
+from prtm.ligand import generate_conformer
 from prtm.pdb_utils import overwrite_b_factors
 
 
@@ -62,7 +65,7 @@ def make_visualization_pdb(
     return to_viz_pdb, color_map
 
 
-def view_ligand(ligand: "ligand.Ligand") -> py3Dmol.view:
+def view_molecule(molecule: Chem.Mol) -> py3Dmol.view:
     """Renders a ligand structure.
 
     Args:
@@ -71,9 +74,13 @@ def view_ligand(ligand: "ligand.Ligand") -> py3Dmol.view:
     Returns:
         A py3Dmol.view object with the ligand rendered.
     """
+    if molecule.GetNumConformers() == 0:
+        molecule = generate_conformer(molecule)
+
     view = py3Dmol.view(width=800, height=600)
-    view.addModel(ligand.to_pdb(), "pdb")
-    view.setStyle({"stick": {}})
+    view.addModelsAsFrames(Chem.MolToPDBBlock(molecule))
+    mol_style = {"cartoon": {"colorscheme": {"prop": "b"}}, "stick": {}}
+    view.setStyle({"model": 0}, mol_style)
     view.zoomTo()
     return view
 

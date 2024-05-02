@@ -1,14 +1,14 @@
 from copy import deepcopy
 
 import torch
-from prtm.models.diffdock.datasets.process_mols import (
-    generate_conformer,
-    get_lig_graph_with_matching,
-    moad_extract_receptor_structure,
-    read_molecule,
-)
 from rdkit import Chem
 from torch_geometric.data import Dataset, HeteroData
+
+from prtm.ligand import generate_conformer
+from prtm.models.diffdock.datasets.process_mols import (
+    get_lig_graph_with_matching,
+    moad_extract_receptor_structure,
+)
 
 
 class InferenceDataset(Dataset):
@@ -61,9 +61,9 @@ class InferenceDataset(Dataset):
         else:
             mol = Chem.MolFromSmiles(mol)
             assert mol is not None
-            
+
         mol = Chem.AddHs(mol)
-        _ = generate_conformer(mol)
+        mol = generate_conformer(mol)
 
         get_lig_graph_with_matching(
             mol,
