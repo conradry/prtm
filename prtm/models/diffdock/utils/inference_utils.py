@@ -5,6 +5,7 @@ from rdkit import Chem
 from torch_geometric.data import Dataset, HeteroData
 
 from prtm.ligand import generate_conformer
+from prtm.models.diffdock.config import ScoreModelConfig
 from prtm.models.diffdock.datasets.process_mols import (
     get_lig_graph_with_matching,
     moad_extract_receptor_structure,
@@ -17,21 +18,15 @@ class InferenceDataset(Dataset):
         protein_structures,
         ligands,
         lm_embeddings,
-        receptor_radius=30,
-        c_alpha_max_neighbors=None,
-        remove_hs=False,
-        all_atoms=False,
-        atom_radius=5,
-        atom_max_neighbors=None,
-        knn_only_graph=False,
+        cfg: ScoreModelConfig = ScoreModelConfig(),
     ):
         super(InferenceDataset, self).__init__()
-        self.receptor_radius = receptor_radius
-        self.c_alpha_max_neighbors = c_alpha_max_neighbors
-        self.remove_hs = remove_hs
-        self.all_atoms = all_atoms
-        self.atom_radius, self.atom_max_neighbors = atom_radius, atom_max_neighbors
-        self.knn_only_graph = knn_only_graph
+        self.receptor_radius = cfg.receptor_radius
+        self.c_alpha_max_neighbors = cfg.c_alpha_max_neighbors
+        self.remove_hs = cfg.remove_hs
+        self.all_atoms = cfg.all_atoms
+        self.atom_radius, self.atom_max_neighbors = cfg.atom_radius, cfg.atom_max_neighbors
+        self.knn_only_graph = cfg.knn_only_graph
 
         self.ligands = ligands
 

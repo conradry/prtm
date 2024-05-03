@@ -20,6 +20,7 @@ from prtm.models.diffdock.models.tensor_layers import (
     TensorProductConvLayer,
     get_irrep_seq,
 )
+from prtm.models.diffdock.config import ScoreModelConfig
 from prtm.models.diffdock.utils import so3, torus
 
 
@@ -27,96 +28,55 @@ class CGModel(torch.nn.Module):
     def __init__(
         self,
         t_to_sigma,
-        device,
         timestep_emb_func,
-        in_lig_edge_features=4,
-        sigma_embed_dim=32,
-        sh_lmax=2,
-        ns=16,
-        nv=4,
-        num_conv_layers=2,
-        lig_max_radius=5,
-        rec_max_radius=30,
-        cross_max_distance=250,
-        center_max_distance=30,
-        distance_embed_dim=32,
-        cross_distance_embed_dim=32,
-        no_torsion=False,
-        scale_by_sigma=True,
-        norm_by_sigma=True,
-        use_second_order_repr=False,
-        batch_norm=True,
-        dynamic_max_cross=False,
-        dropout=0.0,
-        smooth_edges=False,
-        odd_parity=False,
-        separate_noise_schedule=False,
-        lm_embedding_type=None,
-        confidence_mode=False,
-        confidence_dropout=0,
-        confidence_no_batchnorm=False,
-        asyncronous_noise_schedule=False,
-        affinity_prediction=False,
-        parallel=1,
-        parallel_aggregators="mean max min std",
-        num_confidence_outputs=1,
-        atom_num_confidence_outputs=1,
-        fixed_center_conv=False,
-        no_aminoacid_identities=False,
-        include_miscellaneous_atoms=False,
-        differentiate_convolutions=True,
-        tp_weights_layers=2,
-        num_prot_emb_layers=0,
-        reduce_pseudoscalars=False,
-        embed_also_ligand=False,
-        atom_confidence=False,
-        sidechain_pred=False,
-        depthwise_convolution=False,
+        cfg: ScoreModelConfig = ScoreModelConfig(),
     ):
         super(CGModel, self).__init__()
-        assert parallel == 1, "not implemented"
-        assert (not no_aminoacid_identities) or (
-            lm_embedding_type is None
+        assert (not cfg.no_aminoacid_identities) or (
+            cfg.lm_embedding_type is None
         ), "no language model emb without identities"
         self.t_to_sigma = t_to_sigma
-        self.in_lig_edge_features = in_lig_edge_features
-        sigma_embed_dim *= 3 if separate_noise_schedule else 1
-        self.sigma_embed_dim = sigma_embed_dim
-        self.lig_max_radius = lig_max_radius
-        self.rec_max_radius = rec_max_radius
-        self.include_miscellaneous_atoms = include_miscellaneous_atoms
-        self.cross_max_distance = cross_max_distance
-        self.dynamic_max_cross = dynamic_max_cross
-        self.center_max_distance = center_max_distance
-        self.distance_embed_dim = distance_embed_dim
-        self.cross_distance_embed_dim = cross_distance_embed_dim
-        self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=sh_lmax)
-        self.ns, self.nv = ns, nv
-        self.scale_by_sigma = scale_by_sigma
-        self.norm_by_sigma = norm_by_sigma
-        self.device = device
-        self.no_torsion = no_torsion
-        self.smooth_edges = smooth_edges
-        self.odd_parity = odd_parity
         self.timestep_emb_func = timestep_emb_func
-        self.separate_noise_schedule = separate_noise_schedule
-        self.confidence_mode = confidence_mode
-        self.num_conv_layers = num_conv_layers
-        self.num_prot_emb_layers = num_prot_emb_layers
-        self.asyncronous_noise_schedule = asyncronous_noise_schedule
-        self.affinity_prediction = affinity_prediction
-        self.fixed_center_conv = fixed_center_conv
-        self.no_aminoacid_identities = no_aminoacid_identities
-        self.differentiate_convolutions = differentiate_convolutions
-        self.reduce_pseudoscalars = reduce_pseudoscalars
-        self.atom_confidence = atom_confidence
-        self.atom_num_confidence_outputs = atom_num_confidence_outputs
-        self.sidechain_pred = sidechain_pred
 
-        self.lm_embedding_type = lm_embedding_type
-        if lm_embedding_type is None:
+        self.in_lig_edge_features = cfg.in_lig_edge_features
+        sigma_embed_dim = (
+            3 * cfg.sigma_embed_dim 
+            if cfg.separate_noise_schedule else cfg.sigma_embed_dim
+        )
+        self.sigma_embed_dim = sigma_embed_dim
+        self.lig_max_radius = cfg.lig_max_radius
+        self.rec_max_radius = cfg.rec_max_radius
+        self.include_miscellaneous_atoms = cfg.include_miscellaneous_atoms
+        self.cross_max_distance = cfg.cross_max_distance
+        self.dynamic_max_cross = cfg.dynamic_max_cross
+        self.center_max_distance = cfg.center_max_distance
+        self.distance_embed_dim = cfg.distance_embed_dim
+        self.cross_distance_embed_dim = cfg.cross_distance_embed_dim
+        self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=cfg.sh_lmax)
+        self.ns, self.nv = cfg.ns, cfg.nv
+        self.scale_by_sigma = cfg.scale_by_sigma
+        self.norm_by_sigma = cfg.norm_by_sigma
+        self.no_torsion = cfg.no_torsion
+        self.smooth_edges = cfg.smooth_edges
+        self.odd_parity = cfg.odd_parity
+        self.separate_noise_schedule = cfg.separate_noise_schedule
+        self.confidence_mode = cfg.confidence_mode
+        self.num_conv_layers = cfg.num_conv_layers
+        self.num_prot_emb_layers = cfg.num_prot_emb_layers
+        self.asyncronous_noise_schedule = cfg.asyncronous_noise_schedule
+        self.affinity_prediction = cfg.affinity_prediction
+        self.fixed_center_conv = cfg.fixed_center_conv
+        self.no_aminoacid_identities = cfg.no_aminoacid_identities
+        self.differentiate_convolutions = cfg.differentiate_convolutions
+        self.reduce_pseudoscalars = cfg.reduce_pseudoscalars
+        self.atom_confidence = cfg.atom_confidence
+        self.atom_num_confidence_outputs = cfg.atom_num_confidence_outputs
+        self.sidechain_pred = cfg.sidechain_pred
+
+        self.lm_embedding_type = cfg.lm_embedding_type
+        if self.lm_embedding_type is None:
             lm_embedding_dim = 0
-        elif lm_embedding_type == "precomputed":
+        elif self.lm_embedding_type == "precomputed":
             lm_embedding_dim = 1280
         else:
             raise Exception
@@ -124,153 +84,153 @@ class CGModel(torch.nn.Module):
         atom_encoder_class = AtomEncoder
 
         self.lig_node_embedding = atom_encoder_class(
-            emb_dim=ns, feature_dims=lig_feature_dims, sigma_embed_dim=sigma_embed_dim
+            emb_dim=cfg.ns, feature_dims=lig_feature_dims, sigma_embed_dim=sigma_embed_dim
         )
         self.lig_edge_embedding = nn.Sequential(
-            nn.Linear(in_lig_edge_features + sigma_embed_dim + distance_embed_dim, ns),
+            nn.Linear(cfg.in_lig_edge_features + sigma_embed_dim + cfg.distance_embed_dim, cfg.ns),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(ns, ns),
+            nn.Dropout(cfg.dropout),
+            nn.Linear(cfg.ns, cfg.ns),
         )
 
         self.rec_node_embedding = atom_encoder_class(
-            emb_dim=ns,
+            emb_dim=cfg.ns,
             feature_dims=rec_residue_feature_dims,
             sigma_embed_dim=0,
             lm_embedding_dim=lm_embedding_dim,
         )
         self.rec_edge_embedding = nn.Sequential(
-            nn.Linear(distance_embed_dim, ns),
+            nn.Linear(cfg.distance_embed_dim, cfg.ns),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(ns, ns),
+            nn.Dropout(cfg.dropout),
+            nn.Linear(cfg.ns, cfg.ns),
         )
         self.rec_sigma_embedding = nn.Sequential(
-            nn.Linear(sigma_embed_dim, ns),
+            nn.Linear(sigma_embed_dim, cfg.ns),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(ns, ns),
+            nn.Dropout(cfg.dropout),
+            nn.Linear(cfg.ns, cfg.ns),
         )
 
         if self.include_miscellaneous_atoms:
             self.misc_atom_node_embedding = atom_encoder_class(
-                emb_dim=ns,
+                emb_dim=cfg.ns,
                 feature_dims=rec_atom_feature_dims,
                 sigma_embed_dim=sigma_embed_dim,
             )
             self.misc_atom_edge_embedding = nn.Sequential(
-                nn.Linear(sigma_embed_dim + distance_embed_dim, ns),
+                nn.Linear(sigma_embed_dim + cfg.distance_embed_dim, cfg.ns),
                 nn.ReLU(),
-                nn.Dropout(dropout),
-                nn.Linear(ns, ns),
+                nn.Dropout(cfg.dropout),
+                nn.Linear(cfg.ns, cfg.ns),
             )
             self.ar_edge_embedding = nn.Sequential(
-                nn.Linear(sigma_embed_dim + distance_embed_dim, ns),
+                nn.Linear(sigma_embed_dim + cfg.distance_embed_dim, cfg.ns),
                 nn.ReLU(),
-                nn.Dropout(dropout),
-                nn.Linear(ns, ns),
+                nn.Dropout(cfg.dropout),
+                nn.Linear(cfg.ns, cfg.ns),
             )
             self.la_edge_embedding = nn.Sequential(
-                nn.Linear(sigma_embed_dim + cross_distance_embed_dim, ns),
+                nn.Linear(sigma_embed_dim + cfg.cross_distance_embed_dim, cfg.ns),
                 nn.ReLU(),
-                nn.Dropout(dropout),
-                nn.Linear(ns, ns),
+                nn.Dropout(cfg.dropout),
+                nn.Linear(cfg.ns, cfg.ns),
             )
 
         self.cross_edge_embedding = nn.Sequential(
-            nn.Linear(sigma_embed_dim + cross_distance_embed_dim, ns),
+            nn.Linear(sigma_embed_dim + cfg.cross_distance_embed_dim, cfg.ns),
             nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(ns, ns),
+            nn.Dropout(cfg.dropout),
+            nn.Linear(cfg.ns, cfg.ns),
         )
 
         self.lig_distance_expansion = GaussianSmearing(
-            0.0, lig_max_radius, distance_embed_dim
+            0.0, cfg.lig_max_radius, cfg.distance_embed_dim
         )
         self.rec_distance_expansion = GaussianSmearing(
-            0.0, rec_max_radius, distance_embed_dim
+            0.0, cfg.rec_max_radius, cfg.distance_embed_dim
         )
         self.cross_distance_expansion = GaussianSmearing(
-            0.0, cross_max_distance, cross_distance_embed_dim
+            0.0, cfg.cross_max_distance, cfg.cross_distance_embed_dim
         )
 
-        irrep_seq = get_irrep_seq(ns, nv, use_second_order_repr, reduce_pseudoscalars)
+        irrep_seq = get_irrep_seq(cfg.ns, cfg.nv, cfg.use_second_order_repr, cfg.reduce_pseudoscalars)
 
         assert not self.include_miscellaneous_atoms, "currently not supported"
 
         rec_emb_layers = []
-        for i in range(num_prot_emb_layers):
+        for i in range(cfg.num_prot_emb_layers):
             in_irreps = irrep_seq[min(i, len(irrep_seq) - 1)]
             out_irreps = irrep_seq[min(i + 1, len(irrep_seq) - 1)]
             layer = TensorProductConvLayer(
                 in_irreps=in_irreps,
                 sh_irreps=self.sh_irreps,
                 out_irreps=out_irreps,
-                n_edge_features=3 * ns,
-                hidden_features=3 * ns,
+                n_edge_features=3 * cfg.ns,
+                hidden_features=3 * cfg.ns,
                 residual=True,
-                batch_norm=batch_norm,
-                dropout=dropout,
-                faster=sh_lmax == 1 and not use_second_order_repr,
-                tp_weights_layers=tp_weights_layers,
+                batch_norm=cfg.batch_norm,
+                dropout=cfg.dropout,
+                faster=cfg.sh_lmax == 1 and not cfg.use_second_order_repr,
+                tp_weights_layers=cfg.tp_weights_layers,
                 edge_groups=1,
-                depthwise=depthwise_convolution,
+                depthwise=cfg.depthwise_convolution,
             )
             rec_emb_layers.append(layer)
         self.rec_emb_layers = nn.ModuleList(rec_emb_layers)
 
-        self.embed_also_ligand = embed_also_ligand
-        if embed_also_ligand:
+        self.embed_also_ligand = cfg.embed_also_ligand
+        if cfg.embed_also_ligand:
             lig_emb_layers = []
-            for i in range(num_prot_emb_layers):
+            for i in range(cfg.num_prot_emb_layers):
                 in_irreps = irrep_seq[min(i, len(irrep_seq) - 1)]
                 out_irreps = irrep_seq[min(i + 1, len(irrep_seq) - 1)]
                 layer = TensorProductConvLayer(
                     in_irreps=in_irreps,
                     sh_irreps=self.sh_irreps,
                     out_irreps=out_irreps,
-                    n_edge_features=3 * ns,
-                    hidden_features=3 * ns,
+                    n_edge_features=3 * cfg.ns,
+                    hidden_features=3 * cfg.ns,
                     residual=True,
-                    batch_norm=batch_norm,
-                    dropout=dropout,
-                    faster=sh_lmax == 1 and not use_second_order_repr,
-                    tp_weights_layers=tp_weights_layers,
+                    batch_norm=cfg.batch_norm,
+                    dropout=cfg.dropout,
+                    faster=cfg.sh_lmax == 1 and not cfg.use_second_order_repr,
+                    tp_weights_layers=cfg.tp_weights_layers,
                     edge_groups=1,
-                    depthwise=depthwise_convolution,
+                    depthwise=cfg.depthwise_convolution,
                 )
                 lig_emb_layers.append(layer)
             self.lig_emb_layers = nn.ModuleList(lig_emb_layers)
 
         conv_layers = []
-        for i in range(num_prot_emb_layers, num_prot_emb_layers + num_conv_layers):
+        for i in range(cfg.num_prot_emb_layers, cfg.num_prot_emb_layers + cfg.num_conv_layers):
             in_irreps = irrep_seq[min(i, len(irrep_seq) - 1)]
             out_irreps = irrep_seq[min(i + 1, len(irrep_seq) - 1)]
             layer = TensorProductConvLayer(
                 in_irreps=in_irreps,
                 sh_irreps=self.sh_irreps,
                 out_irreps=out_irreps,
-                n_edge_features=3 * ns,
-                hidden_features=3 * ns,
+                n_edge_features=3 * cfg.ns,
+                hidden_features=3 * cfg.ns,
                 residual=True,
-                batch_norm=batch_norm,
-                dropout=dropout,
-                faster=sh_lmax == 1 and not use_second_order_repr,
-                tp_weights_layers=tp_weights_layers,
+                batch_norm=cfg.batch_norm,
+                dropout=cfg.dropout,
+                faster=cfg.sh_lmax == 1 and not cfg.use_second_order_repr,
+                tp_weights_layers=cfg.tp_weights_layers,
                 edge_groups=(
                     1
-                    if not differentiate_convolutions
-                    else (2 if i == num_prot_emb_layers + num_conv_layers - 1 else 4)
+                    if not cfg.differentiate_convolutions
+                    else (2 if i == cfg.num_prot_emb_layers + cfg.num_conv_layers - 1 else 4)
                 ),
-                depthwise=depthwise_convolution,
+                depthwise=cfg.depthwise_convolution,
             )
             conv_layers.append(layer)
         self.conv_layers = nn.ModuleList(conv_layers)
 
-        if sidechain_pred:
+        if cfg.sidechain_pred:
             self.sidechain_predictor = Linear(
                 irreps_in=irrep_seq[
-                    min(num_prot_emb_layers + num_conv_layers, len(irrep_seq) - 1)
+                    min(cfg.num_prot_emb_layers + cfg.num_conv_layers, len(irrep_seq) - 1)
                 ],
                 irreps_out="4x0e + 2x1e + 4x0o + 2x1o",
                 internal_weights=True,
@@ -279,106 +239,106 @@ class CGModel(torch.nn.Module):
 
         if self.confidence_mode:
             input_size = (
-                ns + (nv if reduce_pseudoscalars else ns)
-                if num_conv_layers + num_prot_emb_layers >= 3
-                else ns
+                cfg.ns + (cfg.nv if cfg.reduce_pseudoscalars else cfg.ns)
+                if cfg.num_conv_layers + cfg.num_prot_emb_layers >= 3
+                else cfg.ns
             )
 
             if self.atom_confidence:
                 self.atom_confidence_predictor = nn.Sequential(
-                    nn.Linear(input_size, ns),
+                    nn.Linear(input_size, cfg.ns),
                     (
-                        nn.BatchNorm1d(ns)
-                        if not confidence_no_batchnorm
+                        nn.BatchNorm1d(cfg.ns)
+                        if not cfg.confidence_no_batchnorm
                         else nn.Identity()
                     ),
                     nn.ReLU(),
-                    nn.Dropout(confidence_dropout),
-                    nn.Linear(ns, ns),
+                    nn.Dropout(cfg.confidence_dropout),
+                    nn.Linear(cfg.ns, cfg.ns),
                     (
-                        nn.BatchNorm1d(ns)
-                        if not confidence_no_batchnorm
+                        nn.BatchNorm1d(cfg.ns)
+                        if not cfg.confidence_no_batchnorm
                         else nn.Identity()
                     ),
                     nn.ReLU(),
-                    nn.Dropout(confidence_dropout),
-                    nn.Linear(ns, atom_num_confidence_outputs + ns),
+                    nn.Dropout(cfg.confidence_dropout),
+                    nn.Linear(cfg.ns, cfg.atom_num_confidence_outputs + cfg.ns),
                 )
-                input_size = ns
+                input_size = cfg.ns
 
             self.confidence_predictor = nn.Sequential(
-                nn.Linear(input_size, ns),
-                nn.BatchNorm1d(ns) if not confidence_no_batchnorm else nn.Identity(),
+                nn.Linear(input_size, cfg.ns),
+                nn.BatchNorm1d(cfg.ns) if not cfg.confidence_no_batchnorm else nn.Identity(),
                 nn.ReLU(),
-                nn.Dropout(confidence_dropout),
-                nn.Linear(ns, ns),
-                nn.BatchNorm1d(ns) if not confidence_no_batchnorm else nn.Identity(),
+                nn.Dropout(cfg.confidence_dropout),
+                nn.Linear(cfg.ns, cfg.ns),
+                nn.BatchNorm1d(cfg.ns) if not cfg.confidence_no_batchnorm else nn.Identity(),
                 nn.ReLU(),
-                nn.Dropout(confidence_dropout),
+                nn.Dropout(cfg.confidence_dropout),
                 nn.Linear(
-                    ns, num_confidence_outputs + (1 if self.affinity_prediction else 0)
+                    cfg.ns, cfg.num_confidence_outputs + (1 if self.affinity_prediction else 0)
                 ),
             )
 
         else:
             # center of mass translation and rotation components
             self.center_distance_expansion = GaussianSmearing(
-                0.0, center_max_distance, distance_embed_dim
+                0.0, cfg.center_max_distance, cfg.distance_embed_dim
             )
             self.center_edge_embedding = nn.Sequential(
-                nn.Linear(distance_embed_dim + sigma_embed_dim, ns),
+                nn.Linear(cfg.distance_embed_dim + sigma_embed_dim, cfg.ns),
                 nn.ReLU(),
-                nn.Dropout(dropout),
-                nn.Linear(ns, ns),
+                nn.Dropout(cfg.dropout),
+                nn.Linear(cfg.ns, cfg.ns),
             )
 
             self.final_conv = TensorProductConvLayer(
                 in_irreps=self.conv_layers[-1].out_irreps,
                 sh_irreps=self.sh_irreps,
                 out_irreps=f"2x1o + 2x1e" if not self.odd_parity else "1x1o + 1x1e",
-                n_edge_features=2 * ns,
+                n_edge_features=2 * cfg.ns,
                 residual=False,
-                dropout=dropout,
-                batch_norm=batch_norm,
+                dropout=cfg.dropout,
+                batch_norm=cfg.batch_norm,
             )
             self.tr_final_layer = nn.Sequential(
-                nn.Linear(1 + sigma_embed_dim, ns),
-                nn.Dropout(dropout),
+                nn.Linear(1 + sigma_embed_dim, cfg.ns),
+                nn.Dropout(cfg.dropout),
                 nn.ReLU(),
-                nn.Linear(ns, 1),
+                nn.Linear(cfg.ns, 1),
             )
             self.rot_final_layer = nn.Sequential(
-                nn.Linear(1 + sigma_embed_dim, ns),
-                nn.Dropout(dropout),
+                nn.Linear(1 + sigma_embed_dim, cfg.ns),
+                nn.Dropout(cfg.dropout),
                 nn.ReLU(),
-                nn.Linear(ns, 1),
+                nn.Linear(cfg.ns, 1),
             )
 
-            if not no_torsion:
+            if not cfg.no_torsion:
                 # torsion angles components
                 self.final_edge_embedding = nn.Sequential(
-                    nn.Linear(distance_embed_dim, ns),
+                    nn.Linear(cfg.distance_embed_dim, cfg.ns),
                     nn.ReLU(),
-                    nn.Dropout(dropout),
-                    nn.Linear(ns, ns),
+                    nn.Dropout(cfg.dropout),
+                    nn.Linear(cfg.ns, cfg.ns),
                 )
                 self.final_tp_tor = o3.FullTensorProduct(self.sh_irreps, "2e")
                 self.tor_bond_conv = TensorProductConvLayer(
                     in_irreps=self.conv_layers[-1].out_irreps,
                     sh_irreps=self.final_tp_tor.irreps_out,
                     out_irreps=(
-                        f"{ns}x0o + {ns}x0e" if not self.odd_parity else f"{ns}x0o"
+                        f"{cfg.ns}x0o + {cfg.ns}x0e" if not self.odd_parity else f"{cfg.ns}x0o"
                     ),
-                    n_edge_features=3 * ns,
+                    n_edge_features=3 * cfg.ns,
                     residual=False,
-                    dropout=dropout,
-                    batch_norm=batch_norm,
+                    dropout=cfg.dropout,
+                    batch_norm=cfg.batch_norm,
                 )
                 self.tor_final_layer = nn.Sequential(
-                    nn.Linear(2 * ns if not self.odd_parity else ns, ns, bias=False),
+                    nn.Linear(2 * cfg.ns if not self.odd_parity else cfg.ns, cfg.ns, bias=False),
                     nn.Tanh(),
-                    nn.Dropout(dropout),
-                    nn.Linear(ns, 1, bias=False),
+                    nn.Dropout(cfg.dropout),
+                    nn.Linear(cfg.ns, 1, bias=False),
                 )
 
     def ligand_embedding(self, data):
@@ -730,7 +690,7 @@ class CGModel(torch.nn.Module):
             )  # sum even and odd components
 
         if self.no_torsion or data["ligand"].edge_mask.sum() == 0:
-            return tr_pred, rot_pred, torch.empty(0, device=self.device), sidechain_pred
+            return tr_pred, rot_pred, torch.empty(0, device=rot_pred.device), sidechain_pred
 
         # torsional components
         (

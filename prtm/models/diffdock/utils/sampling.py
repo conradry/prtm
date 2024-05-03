@@ -4,7 +4,6 @@ import random
 import numpy as np
 import torch
 from prtm.models.diffdock.utils.diffusion_utils import (
-    modify_conformer,
     modify_conformer_batch,
     set_time,
 )
@@ -186,7 +185,7 @@ def sampling(
                     t_rot,
                     t_tor,
                     b,
-                    "all_atoms" in model_args and model_args.all_atoms,
+                    model_args.all_atoms,
                     device,
                 )
 
@@ -365,58 +364,3 @@ def sampling(
                     )
 
     return data_list
-
-
-def compute_affinity(
-    data_list,
-    affinity_model,
-    affinity_data_list,
-    device,
-    parallel,
-    all_atoms,
-    include_miscellaneous_atoms,
-):
-    with torch.no_grad():
-        if affinity_model is not None:
-            assert parallel <= len(data_list)
-            loader = DataLoader(data_list, batch_size=parallel)
-            complex_graph_batch = next(iter(loader)).to(device)
-            positions = complex_graph_batch["ligand"].pos
-
-            assert affinity_data_list is not None
-            complex_graph = affinity_data_list[0]
-            N = complex_graph["ligand"].num_nodes
-            complex_graph["ligand"].x = complex_graph["ligand"].x.repeat(parallel, 1)
-            complex_graph["ligand"].edge_mask = complex_graph[
-                "ligand"
-            ].edge_mask.repeat(parallel)
-            complex_graph["ligand", "ligand"].edge_index = torch.cat(
-                [
-                    N * i + complex_graph["ligand", "ligand"].edge_index
-                    for i in range(parallel)
-                ],
-                dim=1,
-            )
-            complex_graph["ligand", "ligand"].edge_attr = complex_graph[
-                "ligand", "ligand"
-            ].edge_attr.repeat(parallel, 1)
-            complex_graph["ligand"].pos = positions
-
-            affinity_loader = DataLoader([complex_graph], batch_size=1)
-            affinity_batch = next(iter(affinity_loader)).to(device)
-            set_time(
-                affinity_batch,
-                0,
-                0,
-                0,
-                0,
-                1,
-                all_atoms,
-                device,
-                include_miscellaneous_atoms=include_miscellaneous_atoms,
-            )
-            _, affinity = affinity_model(affinity_batch)
-        else:
-            affinity = None
-
-    return affinity
