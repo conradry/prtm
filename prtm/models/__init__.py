@@ -1,6 +1,7 @@
 import importlib
 
 from prtm.models.antiberty import *
+from prtm.models.diffdock import *
 from prtm.models.dmpfold2 import *
 from prtm.models.eigenfold import *
 from prtm.models.esm import *
