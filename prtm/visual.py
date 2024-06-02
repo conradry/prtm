@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Union
 
 import nglview as nv
 import numpy as np
@@ -227,4 +227,87 @@ def view_superimposed_ca_traces(
 
     view.center()
 
+    return view
+
+
+def view_structure_with_ligand(
+    structure: "protein.ProteinBase",
+    ligand: Union[Chem.Mol, List[Chem.Mol]],
+    ligand_color: str = "blue",
+    protein_color: str = "orange",
+    protein_surface_opacity: float = 1,
+):
+    view = py3Dmol.view(width=800, height=600)
+
+    view.addModelsAsFrames(structure.to_pdb())
+    view.addSurface(py3Dmol.VDW, {"opacity": 1})
+    prot_style = {"cartoon": {"color": "green"}}
+    view.setStyle({"model": 0}, prot_style)
+
+    if isinstance(ligand, Chem.Mol):
+        ligand = [ligand]
+
+    mol_style = {"cartoon": {"colorscheme": {"prop": "b"}}, "stick": {}}
+    for i, mol in enumerate(ligand, 1):
+        view.addModelsAsFrames(Chem.MolToPDBBlock(mol))
+        view.setStyle({"model": i}, mol_style)
+
+    view.zoomTo()
+    return view
+
+
+def view_ligand_docking_trajectory(
+    structure: "protein.ProteinBase",
+    trajectory: Union[str, List[str]],
+    surface_color: str = "#CCCCCC",
+    surface_opacity: float = 1,
+    ligand_cmap: str = "tab20",
+    animation_interval: int = 1000,
+):
+    """Renders a ligand docking trajectory with specified colors.
+
+    Args:
+        structure: The protein structure.
+        trajectory: The trajectory of the ligand.
+        surface_color: The color of the protein surface.
+        surface_opacity: The opacity of the protein surface.
+        ligand_cmap: The name of the matplotlib colormap to use.
+        animation_interval: The interval between frames in milliseconds.
+
+    Returns:
+        A py3Dmol.view object with the ligand docking trajectory rendered.
+    """
+    view = py3Dmol.view(width=800, height=600)
+
+    view.addModelsAsFrames(structure.to_pdb())
+    view.addSurface(py3Dmol.VDW, {"opacity": surface_opacity, "color": surface_color})
+    prot_style = {"cartoon": {"color": "gray"}}
+
+    if isinstance(trajectory, str):
+        trajectory = [trajectory]
+
+    # Get the colors from pyplot for each ligand in the trajectory list
+    n = len(trajectory)
+    color_map = colormaps.get_cmap(ligand_cmap).resampled(n)
+    if isinstance(color_map, colors.LinearSegmentedColormap):
+        ligand_colors = color_map(np.arange(0, color_map.N))
+    else:
+        ligand_colors = color_map.colors
+
+    # Get the colors as HEX
+    ligand_colors = [colors.to_hex(c) for c in ligand_colors]
+
+    for mol_color, mol_traj in zip(ligand_colors, trajectory):
+        view.addModelsAsFrames(mol_traj)
+        n_models = len(mol_traj.split("ENDMDL\n"))
+        for i in range(1, n_models):
+            default = {"stick": {"color": mol_color}}
+            view.setStyle({"model": -1, "serial": i + 1}, default)
+
+        view.setStyle({"model": -1}, default)
+
+    view.setStyle({"model": 0}, prot_style)
+
+    view.zoomTo()
+    view.animate({"loop": "forward", "interval": animation_interval})
     return view

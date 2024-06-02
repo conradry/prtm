@@ -12,11 +12,10 @@ from torch_geometric.loader import DataLoader
 from prtm import protein
 from prtm.models.diffdock import config
 from prtm.models.diffdock.models.cg_model import CGModel
-from prtm.models.diffdock.utils.diffusion_utils import (
-    get_t_schedule,
-    get_timestep_embedding,
-)
-from prtm.models.diffdock.utils.diffusion_utils import t_to_sigma as t_to_sigma_compl
+from prtm.models.diffdock.utils.diffusion_utils import (get_t_schedule,
+                                                        get_timestep_embedding)
+from prtm.models.diffdock.utils.diffusion_utils import \
+    t_to_sigma as t_to_sigma_compl
 from prtm.models.diffdock.utils.inference_utils import InferenceDataset
 from prtm.models.diffdock.utils.sampling import randomize_position, sampling
 from prtm.models.diffdock.utils.visualise import PDBBlockFile
@@ -108,7 +107,18 @@ class DiffDockForLigandDocking:
         return_trajectory: bool = True,
         inference_config: config.InferenceConfig = config.InferenceConfig(),
     ) -> Tuple[List[Chem.Mol], Dict[str, Any]]:
-        """Find a docking pose for a ligand given a protein structure."""
+        """Find a docking pose for a ligand given a protein structure.
+
+        Args:
+            structure: The protein structure.
+            ligand: The ligand to dock. Can be a SMILES string or an RDKit molecule.
+            num_samples: The number of samples to generate.
+            return_trajectory: Whether to return the trajectory of the ligand during docking.
+            inference_config: The inference configuration.
+
+        Returns:
+            A list of RDKit molecules representing the docking poses.
+        """
         structure = structure.to_protein14()
         sequences = [
             structure.get_chain(chain_id).sequence() for chain_id in structure.chains
