@@ -19,6 +19,7 @@ from __future__ import annotations
 import io
 import os
 import string
+import warnings
 from collections import namedtuple
 from typing import Any, Dict, Mapping, Optional, Sequence, Union
 
@@ -144,10 +145,16 @@ def parse_pdb_string(
             continue
         for res in chain:
             if res.id[2] != " ":
-                raise ValueError(
+                #raise ValueError(
+                #    f"PDB contains an insertion code at chain {chain.id} and residue "
+                #    f"index {res.id[1]}. These are not supported."
+                #)
+                # Warn the user about insertion codes
+                warnings.warn(
                     f"PDB contains an insertion code at chain {chain.id} and residue "
                     f"index {res.id[1]}. These are not supported."
                 )
+                continue
             res_shortname = residue_constants.restype_3to1.get(res.resname, "X")
             restype_idx = residue_constants.restype_order.get(
                 res_shortname, residue_constants.restype_num

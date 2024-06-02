@@ -12,9 +12,10 @@ The goal of `prtm` is to provide an (hopefully) enjoyable and interactive API fo
 chaining together protein DL models. Currently covered use cases include:
 
 - Folding
-- Inverse Folding
+- Inverse folding
 - Structure design
 - Sequence language modeling
+- Ligand docking
 
 With many more to come!
 
@@ -51,7 +52,23 @@ visual.view_superimposed_structures(designed_structure, predicted_designed_struc
 # Convert to PBD
 pdb_str = predicted_designed_structure.to_pdb()
 
+# Try docking a ligand (methotrexate) to to the designed structure
+ligand = "CN(CC1=CN=C2C(=N1)C(=NC(=N2)N)N)C3=CC=C(C=C3)C(=O)NC(CCC(=O)O)C(=O)O"
+docker = models.DiffDockForLigandDocking()
+poses, aux_output = docker(predicted_designed_structure, ligand)
+
+# Visualize the predicted ligand poses
+visual.view_structure_with_ligand(predicted_designed_structure, poses)
+
 ```
+
+We can use any structures generated in `prtm` for downstream tasks like docking:
+
+```python
+docker = DiffDockForLigandDocking()
+
+```
+
 
 ## Installation
 
@@ -110,6 +127,7 @@ we may decide to subsume the `OpenFold` models under `Uni-Fold`.
 | SE3-Diffusion | Design | [Notebook](./notebooks/model_notebooks/SE3Diffusion.ipynb) | https://github.com/jasonkyuyim/se3_diffusion | [MIT License](https://github.com/jasonkyuyim/se3_diffusion/blob/master/LICENSE) |
 | EigenFold | Fold sampling | [Notebook](./notebooks/model_notebooks/EigenFold.ipynb) | https://github.com/bjing2016/EigenFold | [MIT License](https://github.com/bjing2016/EigenFold/blob/master/LICENSE) |
 | AntiBERTy | Antibody language modeling | [Notebook](./notebooks/model_notebooks/AntiBERTy.ipynb) | https://github.com/jeffreyruffolo/AntiBERTy | [MIT License](https://github.com/jeffreyruffolo/AntiBERTy/blob/main/LICENSE.MD) |
+| DiffDock | Ligand docking | [Notebook](./notebooks/model_notebooks/DiffDock.ipynb) | https://github.com/gcorso/DiffDock | [MIT License](https://github.com/gcorso/DiffDock/blob/main/LICENSE) |
 
 Links for papers can be found on the Github repos for each model.
 

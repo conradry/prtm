@@ -1,11 +1,13 @@
 import random
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union, List
 
 import numpy as np
 import torch
 from prtm import protein
 from prtm.models.esm import config
+from prtm.models.esm.data import FastaBatchedDataset
+from prtm.models.esm.esm2 import ESM2
 from prtm.models.esm.esmfold import ESMFold
 from prtm.models.esm.inverse_folding.gvp_transformer import GVPTransformerModel
 from prtm.models.openfold.utils.feats import atom14_to_atom37
@@ -14,6 +16,7 @@ __all__ = ["ESMForFolding", "ESMForInverseFolding"]
 
 ESM_MODEL_URLS = {
     "esm2_3B": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t36_3B_UR50D.pt",
+    "esm2_650M": "https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt",
 }
 ESMFOLD_MODEL_URLS = {
     "esmfold_3B_v0": "https://dl.fbaipublicfiles.com/fair-esm/models/esmfold_3B_v0.pt",
@@ -21,6 +24,10 @@ ESMFOLD_MODEL_URLS = {
 }
 ESMIF_MODEL_URLS = {
     "esm_if1_gvp4_t16_142M_UR50": "https://dl.fbaipublicfiles.com/fair-esm/models/esm_if1_gvp4_t16_142M_UR50.pt",
+}
+ESM_MODEL_CONFIGS = {
+    "esm2_3B": config.ESM2Config(),
+    "esm2_650M": config.ESM2Config(num_layers=33, embed_dim=1280, attention_heads=20),
 }
 ESMFOLD_MODEL_CONFIGS = {
     "esmfold_3B_v0": config.ESMFoldV0(),
@@ -31,6 +38,11 @@ ESMIF_MODEL_CONFIGS = {
 }
 
 
+def _get_esm_model_config(model_name: str) -> config.ESM2Config:
+    """Get the model config for a given model name."""
+    return ESM_MODEL_CONFIGS[model_name]
+
+
 def _get_esmfold_model_config(model_name: str) -> config.ESMFoldConfig:
     """Get the model config for a given model name."""
     return ESMFOLD_MODEL_CONFIGS[model_name]
@@ -39,6 +51,111 @@ def _get_esmfold_model_config(model_name: str) -> config.ESMFoldConfig:
 def _get_esmif_model_config(model_name: str) -> config.ESMIFConfig:
     """Get the model config for a given model name."""
     return ESMIF_MODEL_CONFIGS[model_name]
+
+
+class ESMForSequenceEmbedding:
+    def __init__(
+        self, 
+        model_name: str = "esm2_3B",
+        tokens_per_batch: int = 4096,
+        truncation_seq_length: int = 1022,
+        half_precision: bool = True,
+    ):
+        self.model_name = model_name
+        self.cfg = _get_esm_model_config(model_name)
+        self.model = ESM2(cfg=self.cfg)
+
+        self.load_weights(ESM_MODEL_URLS[model_name])
+
+        if half_precision:
+            self.model.half()
+
+        self.model.eval()
+        if torch.cuda.is_available():
+            self.device = torch.cuda.current_device()
+        else:
+            self.device = torch.device("cpu")
+
+        self.model = self.model.to(self.device)
+        self.tokens_per_batch = tokens_per_batch
+        self.truncation_seq_length = truncation_seq_length
+
+    @classmethod
+    @property
+    def available_models(cls):
+        return list(ESM_MODEL_CONFIGS.keys())
+
+    def load_weights(self, weights_url: str):
+        """Load weights from a weights url."""
+        model_state = torch.hub.load_state_dict_from_url(
+            weights_url, progress=True, map_location="cpu"
+        )["model"]
+
+        def upgrade_state_dict(state_dict):
+            """Removes prefixes 'model.encoder.sentence_encoder.' and 'model.encoder.'."""
+            prefixes = ["encoder.sentence_encoder.", "encoder."]
+            pattern = re.compile("^" + "|".join(prefixes))
+            state_dict = {
+                pattern.sub("", name): param
+                for name, param in state_dict.items()
+            }
+            return state_dict
+
+        model_state = upgrade_state_dict(model_state)
+
+        expected_missing = {
+            "contact_head.regression.weight",
+            "contact_head.regression.bias",
+        }
+
+        expected_keys = set(self.model.state_dict().keys()).difference(expected_missing)
+        found_keys = set(model_state.keys())
+
+        assert expected_keys.issubset(found_keys), f"Missing keys: {expected_keys - found_keys}"
+        msg = self.model.load_state_dict(model_state, strict=False)
+
+    def _get_token_dataloader(self, sequences: List[str]) -> torch.utils.data.DataLoader:
+        """Takes an amino acid sequence and returns a tokenized tensor along
+        with an attention mask for the sequence.
+        """
+        # Replace masked residues with [MASK]
+        labels = [f"sequence_{i}" for i in range(len(sequences))]
+        dataset = FastaBatchedDataset(labels, sequences)
+        batches = dataset.get_batch_indices(self.tokens_per_batch, extra_toks_per_seq=1)
+        collate_fn = self.cfg.alphabet.get_batch_converter(self.truncation_seq_length)
+        data_loader = torch.utils.data.DataLoader(
+            dataset,
+            collate_fn=collate_fn,
+            batch_sampler=batches,
+        )
+        return data_loader
+
+    @torch.no_grad()
+    def __call__(
+        self,
+        sequence: Union[str, List[str]],
+        hidden_layer: int = -1,
+    ) -> Tuple[Dict[str, List[torch.Tensor]], Dict[str, Any]]:
+        """Embeds a protein sequence or list of sequences."""
+        if isinstance(sequence, str):
+            sequence = [sequence]
+
+        # Get the layer number and handle negative indexing
+        num_layers = self.model.num_layers
+        repr_layer = (hidden_layer + num_layers + 1) % (num_layers + 1)
+
+        embeddings = []
+        sequence_token_loader = self._get_token_dataloader(sequence)
+        for labels, strs, toks in sequence_token_loader:
+            toks = toks.to(self.device, non_blocking=True)
+            out = self.model(toks, repr_layers=[repr_layer], return_contacts=False)
+            representations = out["representations"]
+
+            for i, label in enumerate(labels):
+                truncate_len = min(self.truncation_seq_length, len(strs[i]))
+                embeddings.append(representations[repr_layer][i, 1 : truncate_len + 1].clone())
+
+        return embeddings, {}
 
 
 class ESMForFolding:

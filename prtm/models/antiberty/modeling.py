@@ -1,7 +1,7 @@
 import os
 import random
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Union
 
 import numpy as np
 import torch
@@ -74,20 +74,22 @@ class _AntiBERTyBase:
         )
         self.model.load_state_dict(state_dict)
 
-    def _prepare_sequence(self, sequence: str) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_sequences(self, sequences: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Takes an amino acid sequence and returns a tokenized tensor along
         with an attention mask for the sequence.
         """
-        sequence = list(sequence)
         # Replace masked residues with [MASK]
-        for i, res in enumerate(sequence):
-            if res == "_":
-                sequence[i] = "[MASK]"
+        masked_sequences = []
+        for sequence in sequences:
+            for i, res in enumerate(sequence):
+                if res == "_":
+                    sequence[i] = "[MASK]"
+
+            sequence = " ".join(sequence)
 
         # Tokenize the sequence
-        sequence = " ".join(sequence)
         tokenizer_out = self.tokenizer(
-            [sequence],
+            masked_sequences,
             return_tensors="pt",
             padding=True,
         )
@@ -103,10 +105,13 @@ class _AntiBERTyBase:
 class AntiBERTyForSequenceEmbedding(_AntiBERTyBase):
     @torch.no_grad()
     def __call__(
-        self, sequence: str, hidden_layer: Optional[int] = -1
-    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
-        """Embed a single sequence."""
-        tokens, attention_mask = self._prepare_sequence(sequence)
+        self, sequence: Union[str, List[str]], hidden_layer: Optional[int] = -1
+    ) -> Tuple[List[torch.Tensor], Dict[str, Any]]:
+        """Embed a single sequence or list of sequences."""
+        if isinstance(sequence, str):
+            sequence = [sequence]
+
+        tokens, attention_mask = self._prepare_sequences(sequence)
         outputs = self.model(
             input_ids=tokens,
             attention_mask=attention_mask,
@@ -134,15 +139,19 @@ class AntiBERTyForSequenceEmbedding(_AntiBERTyBase):
         for i, a in enumerate(attention_mask):
             attentions[i] = attentions[i][:, :, a == 1]
             attentions[i] = attentions[i][:, :, :, a == 1]
+            attentions[i] = attentions[i].flatten(0, 1)
 
-        return embeddings[0], {"attention": attentions[0].flatten(0, 1)}
+        return embeddings, {"attention": attentions}
 
 
 class AntiBERTyForSequenceInpainting(_AntiBERTyBase):
     @torch.no_grad()
-    def __call__(self, sequence: str) -> Tuple[torch.Tensor, Dict[str, Any]]:
+    def __call__(self, sequence: Union[str, List[str]]) -> Tuple[List[str], Dict[str, Any]]:
         """Inpaint a single sequence."""
-        tokens, attention_mask = self._prepare_sequence(sequence)
+        if isinstance(sequence, str):
+            sequence = [sequence]
+
+        tokens, attention_mask = self._prepare_sequences(sequence)
         outputs = self.model(
             input_ids=tokens,
             attention_mask=attention_mask,
@@ -161,7 +170,7 @@ class AntiBERTyForSequenceInpainting(_AntiBERTyBase):
         )
         predicted_seqs = [s.replace(" ", "") for s in predicted_seqs]
 
-        return predicted_seqs[0], {}
+        return predicted_seqs, {}
 
 
 class AntiBERTyForAntibodySequenceClassification(_AntiBERTyBase):
@@ -176,9 +185,12 @@ class AntiBERTyForAntibodySequenceClassification(_AntiBERTyBase):
     LABEL_TO_CHAIN = {0: "Heavy", 1: "Light"}
 
     @torch.no_grad()
-    def __call__(self, sequence: str) -> Tuple[Dict[str, str], Dict[str, Any]]:
+    def __call__(self, sequence: Union[str, List[str]]) -> Tuple[Dict[str, List[str]], Dict[str, Any]]:
         """Classify an antibody sequence."""
-        tokens, attention_mask = self._prepare_sequence(sequence)
+        if isinstance(sequence, str):
+            sequence = [sequence]
+
+        tokens, attention_mask = self._prepare_sequences(sequence)
         outputs = self.model(
             input_ids=tokens,
             attention_mask=attention_mask,
