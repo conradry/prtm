@@ -62,14 +62,6 @@ visual.view_structure_with_ligand(predicted_designed_structure, poses)
 
 ```
 
-We can use any structures generated in `prtm` for downstream tasks like docking:
-
-```python
-docker = DiffDockForLigandDocking()
-
-```
-
-
 ## Installation
 
 At this early stage, `prtm` has only been tested on a Linux system with a CUDA-enabled GPU.
