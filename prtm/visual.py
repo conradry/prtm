@@ -77,7 +77,7 @@ def view_molecule(molecule: Chem.Mol) -> py3Dmol.view:
     if molecule.GetNumConformers() == 0:
         molecule = generate_conformer(molecule)
 
-    view = py3Dmol.view(width=800, height=600)
+    view = py3Dmol.view(width=300, height=200)
     view.addModelsAsFrames(Chem.MolToPDBBlock(molecule))
     mol_style = {"cartoon": {"colorscheme": {"prop": "b"}}, "stick": {}}
     view.setStyle({"model": 0}, mol_style)

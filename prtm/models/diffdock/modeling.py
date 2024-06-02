@@ -73,7 +73,9 @@ class DiffDockForLigandDocking:
     def load_weights(self, weights_url: str):
         """Load weights from a weights url."""
         state_dict = load_state_dict_from_zip(
-            weights_url, extract_member="score_model/best_ema_inference_epoch_model.pt"
+            weights_url,
+            name_prefix="diffdock",
+            extract_member="score_model/best_ema_inference_epoch_model.pt"
         )
 
         msg = self.model.load_state_dict(state_dict, strict=True)
