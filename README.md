@@ -52,7 +52,7 @@ visual.view_superimposed_structures(designed_structure, predicted_designed_struc
 # Convert to PBD
 pdb_str = predicted_designed_structure.to_pdb()
 
-# Try docking a ligand (methotrexate) to to the designed structure
+# Try docking a ligand (methotrexate) to the designed structure
 ligand = "CN(CC1=CN=C2C(=N1)C(=NC(=N2)N)N)C3=CC=C(C=C3)C(=O)NC(CCC(=O)O)C(=O)O"
 docker = models.DiffDockForLigandDocking()
 poses, aux_output = docker(predicted_designed_structure, ligand)
