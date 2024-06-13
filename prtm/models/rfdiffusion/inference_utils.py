@@ -6,6 +6,7 @@ from typing import List, Optional
 import numpy as np
 import torch
 from prtm import protein
+from prtm.constants.residue_constants import PDB_CHAIN_IDS
 from prtm.common_modules.rosetta.util import ComputeAllAtomCoords, rigid_from_3_points
 from prtm.models.rfdiffusion import config
 from prtm.models.rfdiffusion.diffusion import get_beta_schedule
@@ -787,7 +788,7 @@ class Target:
         hotspots = [] if hotspots is None else hotspots
         self.hotspots = np.array(
             [
-                True if f"{protein.PDB_CHAIN_IDS[cix]}{rix}" in hotspots else False
+                True if f"{PDB_CHAIN_IDS[cix]}{rix}" in hotspots else False
                 for cix, rix in zip(
                     target_struct.chain_index, target_struct.residue_index
                 )
@@ -830,7 +831,7 @@ class Target:
         # add residue offset between chains if multiple chains in receptor file
         pdb_idx = list(
             zip(
-                [protein.PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index],
+                [PDB_CHAIN_IDS[i] for i in self.target_struct.chain_index],
                 self.target_struct.residue_index,
             )
         )

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from prtm import protein
-from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import alphabetical_restypes
 from prtm.models.pifold import config
 from prtm.models.pifold.featurizer import featurize_structure
 from prtm.models.pifold.model import PiFoldModel
@@ -67,7 +67,7 @@ class PiFoldForInverseFolding:
         """Design a protein sequence for a given structure."""
         # Expects 3 atom protein structure
         structure = structure.to_protein4()
-        alphabet = "".join(proteinmppn_restypes)
+        alphabet = "".join(alphabetical_restypes)
         X, S, score, mask = featurize_structure(structure, device=self.device)
 
         (

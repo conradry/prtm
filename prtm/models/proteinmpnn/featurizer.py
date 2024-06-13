@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import alphabetical_restypes_x
 from prtm.models.proteinmpnn.config import DesignableProtein, TiedFeaturizeOutput
 
 
@@ -19,7 +19,7 @@ def get_sequence_scores(S, log_probs, mask):
 
 def decode_sequence(S, mask):
     return "".join(
-        [proteinmppn_restypes[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0]
+        [alphabetical_restypes_x[c] for c, m in zip(S.tolist(), mask.tolist()) if m > 0]
     )
 
 

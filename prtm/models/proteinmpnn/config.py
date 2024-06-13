@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 from prtm import protein
-from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import alphabetical_restypes_x
 
 
 @dataclass
@@ -45,12 +45,12 @@ class InferenceConfig:
     pssm_bias_flag: bool = False
 
     # Unbiased
-    bias_aas: np.ndarray = np.zeros(len(proteinmppn_restypes), dtype=np.float32)
+    bias_aas: np.ndarray = np.zeros(len(alphabetical_restypes_x), dtype=np.float32)
     omit_aas_mask: np.ndarray = field(init=False)
 
     def __post_init__(self):
         self.omit_aas_mask: np.ndarray = np.array(
-            [aa in self.omit_aas for aa in proteinmppn_restypes]
+            [aa in self.omit_aas for aa in alphabetical_restypes_x]
         ).astype(np.float32)
 
 

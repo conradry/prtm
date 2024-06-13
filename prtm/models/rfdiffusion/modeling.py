@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import torch
 from prtm import protein
+from prtm.constants.residue_constants import PDB_CHAIN_IDS
 from prtm.models.rfdiffusion import config
 from prtm.models.rfdiffusion.rosettafold_model import RoseTTAFoldModule
 from prtm.models.rfdiffusion.samplers import (
@@ -240,7 +241,7 @@ class RFDiffusionForStructureDesign:
             residue_index=np.arange(1, len(final_seq) + 1, dtype=np.int32),
             b_factors=bfacts[:, None].repeat(14, axis=-1),
             chain_index=np.array(
-                [protein.PDB_CHAIN_IDS.index(char) for char in sampler.chain_idx]
+                [PDB_CHAIN_IDS.index(char) for char in sampler.chain_idx]
             ),
         )
         return result, {}

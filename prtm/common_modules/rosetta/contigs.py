@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from prtm import protein
+from prtm.constants import residue_constants
 from prtm.common_modules.rosetta.kinematics import *
 from prtm.common_modules.rosetta.util import *
 
@@ -559,7 +560,7 @@ class ContigMap:
         hal_idx0_receptor = []
         pdb_idx = list(
             zip(
-                [protein.PDB_CHAIN_IDS[i] for i in self.structure.chain_index],
+                [residue_constants.PDB_CHAIN_IDS[i] for i in self.structure.chain_index],
                 self.structure.residue_index,
             )
         )

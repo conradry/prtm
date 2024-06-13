@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import numpy as np
 import torch
 from prtm import protein
-from prtm.constants.residue_constants import proteinmppn_restypes
+from prtm.constants.residue_constants import alphabetical_restypes_x
 from prtm.models.proteinmpnn import config
 from prtm.models.proteinmpnn.featurizer import (
     decode_sequence,
@@ -38,7 +38,7 @@ def _get_model_config(model_name: str) -> config.ProteinMPNNConfig:
 
 def _get_default_design_params(sequence_length: int) -> config.DesignParams:
     """Make default design params for a given sequence length."""
-    num_aa = len(proteinmppn_restypes)
+    num_aa = len(alphabetical_restypes_x)
     design_params = config.DesignParams(
         design_mask=np.ones(sequence_length),
         design_aatype_mask=np.zeros([sequence_length, num_aa], np.int32),

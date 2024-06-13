@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import torch
 from prtm import protein
-from prtm.constants.residue_constants import restypes
+from prtm.constants.residue_constants import PDB_CHAIN_IDS, restypes
 from prtm.models.protein_generator import config
 from prtm.models.protein_generator.rosettafold_model import RoseTTAFoldModule
 from prtm.models.protein_generator.sampler import SeqDiffSampler
@@ -131,7 +131,7 @@ class ProteinGeneratorForJointDesign:
             residue_index=np.array([t[1] for t in features["pdb_idx"]]),
             b_factors=100 * bfactors,
             chain_index=np.array(
-                [protein.PDB_CHAIN_IDS.index(t[0]) for t in features["pdb_idx"]]
+                [PDB_CHAIN_IDS.index(t[0]) for t in features["pdb_idx"]]
             ),
         )
 

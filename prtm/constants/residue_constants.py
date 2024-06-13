@@ -586,6 +586,7 @@ atom_types = [
     "NZ",
     "OXT",
 ]
+backbone4_atoms = ["N", "CA", "C", "O"]
 atom_order = {atom_type: i for i, atom_type in enumerate(atom_types)}
 atom_type_num = len(atom_types)  # := 37.
 
@@ -984,10 +985,8 @@ restype_order = {restype: i for i, restype in enumerate(restypes)}
 restype_num = len(restypes)  # := 20.
 unk_restype_index = restype_num  # Catch-all index for unknown restypes.
 
-proteinmppn_restypes = sorted(restypes) + ["X"]
-proteinmpnn_restype_order = {
-    restype: i for i, restype in enumerate(proteinmppn_restypes)
-}
+alphabetical_restypes = sorted(restypes)
+alphabetical_restypes_x = sorted(restypes) + ["X"]
 restypes_with_x = restypes + ["X"]
 restypes_with_x_dash = restypes_with_x + ["-"]
 restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
@@ -1064,12 +1063,15 @@ restype_1to3 = {
     "X": "UNK",
 }
 
-
 # NB: restype_3to1 differs from Bio.PDB.protein_letters_3to1 by being a simple
 # 1-to-1 mapping of 3 letter names to one letter names. The latter contains
 # many more, and less common, three letter names as keys and maps many of these
 # to the same one letter name (including 'X' and 'U' which we don't use here).
 restype_3to1 = {v: k for k, v in restype_1to3.items()}
+
+# Add handling of non-standard residues for Chroma
+restype_3to1.update({res: "H" for res in ["HSD", "HSE", "HSC", "HSP"]})
+restype_3to1.update({"MSE": "M", "SEC": "C"})
 
 restype2atom14_mask = np.zeros([len(restypes_with_x), 14])
 for k, v in restype_name_to_atom14_names.items():
@@ -1486,7 +1488,14 @@ for resname, swap in residue_atom_renaming_swaps.items():
         mask_ambiguous[restype, atom_idx2] = 1
 
 restype_3 = [restype_1to3[res] for res in restypes]
+alphabetical_restype_3 = [restype_1to3[res] for res in alphabetical_restypes]
 restype_3 += ["UNK"]
+
+num_atoms_per_alphabetical_aa = [
+    len(list(filter(None, restype_name_to_atom14_names[c])))
+    for c in alphabetical_restype_3
+]
+num_chi_per_alphabetical_aa = [len(chi_angles_atoms[c]) for c in alphabetical_restype_3]
 
 all_matrices = {res: np.eye(14, dtype=np.float32) for res in restype_3}
 for resname, swap in residue_atom_renaming_swaps.items():
@@ -1584,6 +1593,13 @@ def substitute(res: str):
             else:
                 # did not get anything that works
                 return None
+
+
+PICO_TO_ANGSTROM = 0.01
+
+PDB_CHAIN_IDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+PDB_MAX_CHAINS = len(PDB_CHAIN_IDS)
+assert PDB_MAX_CHAINS == 62
 
 
 esm_proteinseq_toks = {
