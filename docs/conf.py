@@ -26,28 +26,29 @@ author = "prtm community"
 
 extensions = [
     "sphinx.ext.napoleon",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
+    #"sphinx.ext.autodoc",
+    #"sphinx.ext.autosummary",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    #"sphinxext.rediraffe",
-    #"sphinx_design",
-    #"sphinx_copybutton",
+    "sphinxext.rediraffe",
+    "sphinx_design",
+    "sphinx_copybutton",
     #"autoapi.extension",
     #"_extension.gallery_directive",
     # For extension examples and demos
-    #"ablog",
-    #"jupyter_sphinx",
-    #"matplotlib.sphinxext.plot_directive",
+    "ablog",
+    "jupyter_sphinx",
+    "matplotlib.sphinxext.plot_directive",
     #"myst_nb",
-    #"sphinxcontrib.youtube",
+    # "sphinxcontrib.youtube",
     # "nbsphinx",  # Uncomment and comment-out MyST-NB for local testing purposes.
-    #"numpydoc",
-    #"sphinx_togglebutton",
+    "numpydoc",
+    "sphinx_togglebutton",
     #"jupyterlite_sphinx",
-    #"sphinx_favicon",
-    #"myst_parser",
+    "sphinx_favicon",
+    "myst_parser",
 ]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -75,7 +76,7 @@ language = "en"
 # -- MyST options ------------------------------------------------------------
 
 # This allows us to use ::: to denote directives, useful for admonitions
-myst_enable_extensions = ["colon_fence", "linkify", "substitution"]
+myst_enable_extensions = ["colon_fence", "substitution"]
 myst_heading_anchors = 2
 myst_substitutions = {"rtd": "[Read the Docs](https://readthedocs.org/)"}
 
@@ -131,20 +132,8 @@ html_theme_options = {
         },
         {
             "name": "GitHub",
-            "url": "https://github.com/pydata/pydata-sphinx-theme",
+            "url": "https://github.com/conradry/proteome",
             "icon": "fa-brands fa-github",
-        },
-        {
-            "name": "PyPI",
-            "url": "https://pypi.org/project/pydata-sphinx-theme",
-            "icon": "fa-custom fa-pypi",
-        },
-        {
-            "name": "PyData",
-            "url": "https://pydata.org",
-            "icon": "_static/pydata-logo.png",
-            "type": "local",
-            "attributes": {"target": "_blank"},
         },
     ],
     # alternative way to set twitter and github header icons
@@ -247,13 +236,12 @@ autodoc_member_order = "groupwise"
 
 # -- Options for autoapi -------------------------------------------------------
 autoapi_type = "python"
-autoapi_dirs = ["../src/pydata_sphinx_theme"]
+autoapi_dirs = ["../proteome"]
 autoapi_keep_files = True
 autoapi_root = "api"
 autoapi_member_order = "groupwise"
 
 # -- application setup -------------------------------------------------------
-
 
 def setup_to_main(
     app: Sphinx, pagename: str, templatename: str, context, doctree
